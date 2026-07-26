@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, ReactNode, useCallback } from 'react';
+import { FC, Fragment, ReactNode, useCallback } from 'react';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -16,6 +16,9 @@ interface MenuItemInterface {
   hide?: boolean;
   requireBilling?: boolean;
   onClick?: () => void;
+  // Group label shown above this item (approved-artifact "glabel"). Only the
+  // first item of each group carries it; hidden when the sidebar is collapsed.
+  section?: string;
 }
 
 export const useMenuItem = () => {
@@ -55,6 +58,7 @@ export const useMenuItem = () => {
       path: '/dashboard',
     },
     {
+      section: 'Workspace',
       name: t('clients', 'Clients'),
       icon: (
         <svg
@@ -118,6 +122,7 @@ export const useMenuItem = () => {
       path: '/launches',
     },
     {
+      section: 'Insights',
       name: t('analytics', 'Analytics'),
       icon: (
         <svg
@@ -139,6 +144,7 @@ export const useMenuItem = () => {
       path: '/analytics',
     },
     {
+      section: 'Library',
       name: t('post_library', 'Post Library'),
       icon: (
         <svg
@@ -181,6 +187,7 @@ export const useMenuItem = () => {
       path: '/media-library',
     },
     {
+      section: 'System',
       name: t('plugs', 'Plugs'),
       icon: (
         <svg
@@ -323,14 +330,20 @@ export const TopMenu: FC<{ collapsed?: boolean; group?: 'first' | 'second' }> = 
               // @ts-ignore
               (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
               firstMenu.filter(filterFn).map((item) => (
-                <MenuItem
-                  path={item.path}
-                  label={item.name}
-                  icon={item.icon}
-                  key={item.name}
-                  onClick={item.onClick}
-                  collapsed={collapsed}
-                />
+                <Fragment key={item.name}>
+                  {item.section && !collapsed && (
+                    <div className="px-[12px] pt-[12px] pb-[5px] text-[9px] font-[600] uppercase tracking-[0.2em] text-textItemBlur whitespace-nowrap select-none">
+                      {item.section}
+                    </div>
+                  )}
+                  <MenuItem
+                    path={item.path}
+                    label={item.name}
+                    icon={item.icon}
+                    onClick={item.onClick}
+                    collapsed={collapsed}
+                  />
+                </Fragment>
               ))
           }
         </div>

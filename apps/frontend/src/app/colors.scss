@@ -15,7 +15,7 @@
     --new-blockSeparator: #1e222c;
     --new-btn-simple: #1e222c;
     --new-btn-text: #ffffff;
-    --new-btn-primary: #5c9ad6;
+    --new-btn-primary: #6ba3da;
     --new-ai-btn: #7d9ff0;
     --new-box-hover: #1a1e28;
     --new-table-border: #242833;
@@ -36,6 +36,9 @@
     --gline: rgba(255, 255, 255, 0.10);
     --gloss: inset 0 1px 0 rgba(255, 255, 255, 0.14);
     --gshadow: 0 26px 54px -32px rgba(0, 0, 0, 0.7);
+    /* Accent — exact from the approved artifact (dark). Brighter sky blue. */
+    --accent: #6ba3da;
+    --accent-dim: rgba(107, 163, 218, 0.16);
     --menu-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.5);
     --popup-color: rgba(65, 64, 66, 0.3);
     --border-preview: transparent;
@@ -89,6 +92,9 @@
     --gline: rgba(255, 255, 255, 0.8);
     --gloss: inset 0 1px 0 rgba(255, 255, 255, 0.9);
     --gshadow: 0 26px 50px -34px rgba(30, 55, 90, 0.42);
+    /* Accent — exact from the approved artifact (light). */
+    --accent: #3f86bd;
+    --accent-dim: rgba(63, 134, 189, 0.14);
     --menu-shadow: -22px 83px 24px 0 rgba(55, 52, 75, 0),
       -14px 53px 22px 0 rgba(55, 52, 75, 0.01),
       -8px 30px 19px 0 rgba(55, 52, 75, 0.05),
@@ -121,7 +127,7 @@
     --color-secondary: #090b13;
     --color-text: #ffffff;
     --color-third: #080b13;
-    --color-forth: #5c9ad6;
+    --color-forth: #6ba3da;
     --color-fifth: var(--new-bgLineColor);
     --color-sixth: var(--new-table-header);
     --color-seventh: #7236f1;
@@ -191,7 +197,7 @@
     --color-secondary: #fff;
     --color-text: #000;
     --color-third: white;
-    --color-forth: #5c9ad6;
+    --color-forth: #3f86bd;
     --color-fifth: var(--new-bgLineColor);
     --color-sixth: var(--new-table-header);
     --color-seventh: #7236f1;
