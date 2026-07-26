@@ -31,17 +31,45 @@
 }
 
 body {
-  /* Mapped Out — dreamy depth, exact glows from the approved artifact
-     (3 base radials + 2 softer "drift" glows layered in for depth). */
+  /* Mapped Out — dreamy depth (approved artifact), boosted so the glows read
+     over the dark shell. The animated drift layer lives in body::before. */
   background:
-    radial-gradient(46% 40% at 84% -6%, rgba(140, 158, 205, 0.20), transparent 62%),
-    radial-gradient(44% 46% at 2% 106%, rgba(158, 146, 196, 0.16), transparent 60%),
-    radial-gradient(50% 44% at 58% 48%, rgba(96, 124, 175, 0.07), transparent 72%),
-    radial-gradient(22% 24% at 30% 26%, rgba(150, 165, 210, 0.10), transparent 60%),
-    radial-gradient(20% 22% at 72% 64%, rgba(120, 140, 190, 0.08), transparent 62%),
+    radial-gradient(48% 42% at 84% -6%, rgba(140, 158, 205, 0.30), transparent 60%),
+    radial-gradient(46% 48% at 2% 106%, rgba(158, 146, 196, 0.24), transparent 58%),
+    radial-gradient(52% 46% at 58% 48%, rgba(96, 124, 175, 0.12), transparent 70%),
     var(--new-bgColor) !important;
   background-attachment: fixed !important;
   color: var(--new-btn-text);
+}
+
+/* Animated dreamy drift layer — the depth the approved artifact has
+   (its .studio::before). Sits behind all content (z-index:-1). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(22% 24% at 30% 26%, rgba(150, 165, 210, 0.22), transparent 60%),
+    radial-gradient(20% 22% at 72% 64%, rgba(120, 140, 190, 0.18), transparent 62%);
+  filter: blur(34px);
+  animation: mo-drift 30s ease-in-out infinite alternate;
+}
+@keyframes mo-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(3%, 2%, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
+/* Mapped Out — approved font: Apple SF Pro / system stack, overriding the
+   default Plus Jakarta Sans everywhere (matches the approved artifact). */
+body,
+body * {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Segoe UI', system-ui, sans-serif !important;
 }
 
 body * {
