@@ -14,7 +14,7 @@ import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { ToolTip } from '@gitroom/frontend/components/layout/top.tip';
@@ -31,17 +31,13 @@ import { CopilotKit } from '@copilotkit/react-core';
 import { MantineWrapper } from '@gitroom/react/helpers/mantine.wrapper';
 import { Impersonate } from '@gitroom/frontend/components/layout/impersonate';
 import { AnnouncementBanner } from '@gitroom/frontend/components/layout/announcement.banner';
-import { Title } from '@gitroom/frontend/components/layout/title';
 import { TopMenu } from '@gitroom/frontend/components/layout/top.menu';
 import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
-import { ChromeExtensionComponent } from '@gitroom/frontend/components/layout/chrome.extension.component';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
-import { StreakComponent } from '@gitroom/frontend/components/layout/streak.component';
 import useCookie from 'react-use-cookie';
 import { AccountMenu } from '@gitroom/frontend/components/new-layout/account.menu';
 import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-condition.component';
-import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
 import { ClientPortal } from '@gitroom/frontend/components/new-layout/client.portal';
@@ -59,6 +55,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   // Feedback icon component attaches Sentry feedback to a top-bar icon when DSN is present
   const searchParams = useSearchParams();
+  const router = useRouter();
   const load = useCallback(async (path: string) => {
     return await (await fetch(path)).json();
   }, []);
@@ -125,10 +122,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       id="left-menu"
                       className={clsx(
                         'flex flex-col gap-[8px] shrink-0 transition-[width] duration-200',
-                        isCollapsed ? 'w-[76px]' : 'w-[232px]'
+                        isCollapsed ? 'w-[84px]' : 'w-[248px]'
                       )}
                     >
-                      <div className="rounded-[16px] glass-surface py-[14px] px-[12px] flex items-center justify-center">
+                      <div className="flex items-center justify-center h-[46px] px-[6px]">
                         <Logo withText={!isCollapsed} collapsed={isCollapsed} />
                       </div>
                       <div className="rounded-[16px] glass-surface p-[8px]">
@@ -143,7 +140,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           </svg>
                         </button>
                       </div>
-                      <div className="flex-1 rounded-[16px] glass-surface py-[12px] px-[10px] overflow-y-auto no-scrollbar">
+                      <div className="flex-1 rounded-[22px] glass-surface py-[10px] px-[8px] overflow-y-auto no-scrollbar">
                         <TopMenu group="first" collapsed={isCollapsed} />
                       </div>
                       <div className="rounded-[16px] glass-surface py-[10px] px-[10px]">
@@ -151,19 +148,63 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col gap-[8px] blurMe">
-                      <div className="glass-surface rounded-[16px] flex h-[74px] px-[22px] items-center shrink-0">
-                        <div className="text-[24px] font-[600] flex flex-1">
-                          <Title />
-                        </div>
-                        <div className="flex gap-[20px] text-textItemBlur items-center">
-                          <StreakComponent />
-                          <div className="w-[1px] h-[20px] bg-blockSeparator" />
+                      <div className="glass-surface rounded-[16px] flex h-[74px] px-[18px] items-center gap-[14px] shrink-0">
+                        {/* Search — approved-artifact command bar (left) */}
+                        <button
+                          type="button"
+                          onClick={() => router.push('/launches')}
+                          className="flex items-center gap-[9px] flex-1 max-w-[420px] h-[42px] px-[15px] rounded-[13px] glass-surface text-textItemBlur hover:text-textItemFocused transition-colors"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <circle cx="11" cy="11" r="7" />
+                            <path d="m21 21-4-4" strokeLinecap="round" />
+                          </svg>
+                          <span className="text-[12.5px]">Search anything…</span>
+                          <kbd className="ms-auto text-[10px] px-[6px] py-[2px] rounded-[5px] bg-[var(--glass-2)] border border-[var(--gline)]">
+                            ⌘K
+                          </kbd>
+                        </button>
+
+                        <div className="flex-1" />
+
+                        {/* Actions + account (right) */}
+                        <div className="flex items-center gap-[9px] text-textItemBlur">
+                          <button
+                            type="button"
+                            onClick={() => router.push('/launches')}
+                            className="hidden xl:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemFocused hover:-translate-y-[1px] transition-transform"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 8v4l3 2" strokeLinecap="round" />
+                            </svg>
+                            Set Reminder
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => router.push('/launches')}
+                            className="hidden md:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemFocused hover:-translate-y-[1px] transition-transform"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <rect x="3" y="4" width="18" height="17" rx="2" />
+                              <path d="M3 9h18M8 2v4M16 2v4" />
+                            </svg>
+                            Schedule Post
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => router.push('/launches')}
+                            className="inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] bg-btnPrimary text-white text-[12px] font-[600] hover:brightness-110 transition"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 8v8M8 12h8" strokeLinecap="round" />
+                            </svg>
+                            Add Task
+                          </button>
+                          <ModeComponent />
                           <OrganizationSelector />
-                          <ChromeExtensionComponent />
-                          <div className="w-[1px] h-[20px] bg-blockSeparator" />
-                          <AttachToFeedbackIcon />
                           <NotificationComponent />
-                          <div className="w-[1px] h-[20px] bg-blockSeparator" />
                           <AccountMenu />
                         </div>
                       </div>
