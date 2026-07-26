@@ -128,10 +128,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         isCollapsed ? 'w-[76px]' : 'w-[232px]'
                       )}
                     >
-                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[14px] px-[12px] flex items-center justify-center">
+                      <div className="rounded-[16px] glass-surface py-[14px] px-[12px] flex items-center justify-center">
                         <Logo withText={!isCollapsed} collapsed={isCollapsed} />
                       </div>
-                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] p-[8px]">
+                      <div className="rounded-[16px] glass-surface p-[8px]">
                         <button
                           type="button"
                           onClick={() => setCollapsed(isCollapsed ? '0' : '1')}
@@ -143,19 +143,19 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           </svg>
                         </button>
                       </div>
-                      <div className="flex-1 rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[12px] px-[10px] overflow-y-auto no-scrollbar">
+                      <div className="flex-1 rounded-[16px] glass-surface py-[12px] px-[10px] overflow-y-auto no-scrollbar">
                         <TopMenu group="first" collapsed={isCollapsed} />
                       </div>
-                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[10px] px-[10px]">
+                      <div className="rounded-[16px] glass-surface py-[10px] px-[10px]">
                         <TopMenu group="second" collapsed={isCollapsed} />
                       </div>
                     </div>
-                    <div className="flex-1 bg-[var(--glass-surface)] backdrop-blur-xl rounded-[16px] overflow-hidden flex flex-col gap-[1px] blurMe border border-[var(--glass-border)]">
-                      <div className="flex bg-[var(--glass-surface)] backdrop-blur-xl h-[74px] px-[22px] items-center border-b border-[var(--glass-border)]">
+                    <div className="flex-1 min-w-0 flex flex-col gap-[8px] blurMe">
+                      <div className="glass-surface rounded-[16px] flex h-[74px] px-[22px] items-center shrink-0">
                         <div className="text-[24px] font-[600] flex flex-1">
                           <Title />
                         </div>
-                        <div className="flex gap-[20px] text-textItemBlur">
+                        <div className="flex gap-[20px] text-textItemBlur items-center">
                           <StreakComponent />
                           <div className="w-[1px] h-[20px] bg-blockSeparator" />
                           <OrganizationSelector />
@@ -167,7 +167,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <AccountMenu />
                         </div>
                       </div>
-                      <div className="flex flex-1 gap-[1px]">{children}</div>
+                      <div className="flex flex-1 gap-[1px] min-h-0">{children}</div>
                     </div>
                   </div>
                 </>

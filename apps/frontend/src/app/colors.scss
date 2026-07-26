@@ -30,6 +30,12 @@
     --glass-surface: rgba(22, 27, 38, 0.42);
     --glass-border: rgba(255, 255, 255, 0.12);
     --glass-hover: rgba(255, 255, 255, 0.10);
+    /* Glossy glass recipe — exact values from the approved artifact (dark). */
+    --glass: linear-gradient(158deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.028));
+    --glass-2: linear-gradient(158deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    --gline: rgba(255, 255, 255, 0.10);
+    --gloss: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    --gshadow: 0 26px 54px -32px rgba(0, 0, 0, 0.7);
     --menu-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.5);
     --popup-color: rgba(65, 64, 66, 0.3);
     --border-preview: transparent;
@@ -77,6 +83,12 @@
     --glass-surface: rgba(255, 255, 255, 0.55);
     --glass-border: rgba(255, 255, 255, 0.75);
     --glass-hover: rgba(20, 40, 70, 0.08);
+    /* Glossy glass recipe — exact values from the approved artifact (light). */
+    --glass: linear-gradient(158deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+    --glass-2: linear-gradient(158deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.36));
+    --gline: rgba(255, 255, 255, 0.8);
+    --gloss: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    --gshadow: 0 26px 50px -34px rgba(30, 55, 90, 0.42);
     --menu-shadow: -22px 83px 24px 0 rgba(55, 52, 75, 0),
       -14px 53px 22px 0 rgba(55, 52, 75, 0.01),
       -8px 30px 19px 0 rgba(55, 52, 75, 0.05),

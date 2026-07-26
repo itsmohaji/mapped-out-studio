@@ -13,16 +13,17 @@
    every premium card/panel/cell uses (Accounts, Client Dashboard, Calendar
    headers, composer modal, …). */
 .glass-surface {
-  background: var(--glass-surface) !important;
-  border: 1px solid var(--glass-border) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
+  background: var(--glass) !important;
+  border: 1px solid var(--gline) !important;
+  box-shadow: var(--gloss), var(--gshadow);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  backdrop-filter: blur(26px) saturate(1.5);
 }
 .glass-hover {
   transition: background-color 0.15s ease;
 }
 .glass-hover:hover {
-  background: var(--glass-hover) !important;
+  background: var(--glass-2) !important;
 }
 
 @keyframes spin {
@@ -30,11 +31,14 @@
 }
 
 body {
-  /* Mapped Out — dreamy depth over the base ground (Phase 1) */
+  /* Mapped Out — dreamy depth, exact glows from the approved artifact
+     (3 base radials + 2 softer "drift" glows layered in for depth). */
   background:
-    radial-gradient(1200px 720px at 78% -12%, rgba(64, 132, 226, 0.42), transparent 58%),
-    radial-gradient(1000px 780px at -8% 112%, rgba(56, 116, 210, 0.32), transparent 58%),
-    radial-gradient(820px 560px at 55% 122%, rgba(88, 156, 236, 0.22), transparent 62%),
+    radial-gradient(46% 40% at 84% -6%, rgba(140, 158, 205, 0.20), transparent 62%),
+    radial-gradient(44% 46% at 2% 106%, rgba(158, 146, 196, 0.16), transparent 60%),
+    radial-gradient(50% 44% at 58% 48%, rgba(96, 124, 175, 0.07), transparent 72%),
+    radial-gradient(22% 24% at 30% 26%, rgba(150, 165, 210, 0.10), transparent 60%),
+    radial-gradient(20% 22% at 72% 64%, rgba(120, 140, 190, 0.08), transparent 62%),
     var(--new-bgColor) !important;
   background-attachment: fixed !important;
   color: var(--new-btn-text);
