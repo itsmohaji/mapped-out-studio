@@ -38,6 +38,8 @@ import { ChromeExtensionComponent } from '@gitroom/frontend/components/layout/ch
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
 import { StreakComponent } from '@gitroom/frontend/components/layout/streak.component';
+import useCookie from 'react-use-cookie';
+import { AccountMenu } from '@gitroom/frontend/components/new-layout/account.menu';
 import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-condition.component';
 import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
@@ -67,6 +69,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     refreshWhenOffline: false,
     refreshWhenHidden: false,
   });
+
+  const [collapsed, setCollapsed] = useCookie('navCollapsed', '0');
+  const isCollapsed = collapsed === '1';
 
   if (!user) return null;
 
@@ -118,11 +123,31 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     <Support />
                     <div
                       id="left-menu"
-                      className="flex flex-col w-[232px] shrink-0 rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)]"
+                      className={clsx(
+                        'flex flex-col gap-[8px] shrink-0 transition-[width] duration-200',
+                        isCollapsed ? 'w-[76px]' : 'w-[232px]'
+                      )}
                     >
-                      <div className="flex flex-col h-full gap-[18px] flex-1 py-[18px] px-[12px] overflow-y-auto no-scrollbar">
-                        <Logo />
-                        <TopMenu />
+                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[14px] px-[12px] flex items-center justify-center">
+                        <Logo withText={!isCollapsed} collapsed={isCollapsed} />
+                      </div>
+                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] p-[8px]">
+                        <button
+                          type="button"
+                          onClick={() => setCollapsed(isCollapsed ? '0' : '1')}
+                          title="Toggle menu"
+                          className="w-full h-[40px] rounded-[10px] flex items-center justify-center text-textItemBlur hover:text-textItemFocused hover:bg-[var(--glass-hover)] transition-colors"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                            <path d="M3 6h18M3 12h18M3 18h18" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex-1 rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[12px] px-[10px] overflow-y-auto no-scrollbar">
+                        <TopMenu group="first" collapsed={isCollapsed} />
+                      </div>
+                      <div className="rounded-[16px] bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-border)] py-[10px] px-[10px]">
+                        <TopMenu group="second" collapsed={isCollapsed} />
                       </div>
                     </div>
                     <div className="flex-1 bg-[var(--glass-surface)] backdrop-blur-xl rounded-[16px] overflow-hidden flex flex-col gap-[1px] blurMe border border-[var(--glass-border)]">
@@ -138,6 +163,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <div className="w-[1px] h-[20px] bg-blockSeparator" />
                           <AttachToFeedbackIcon />
                           <NotificationComponent />
+                          <div className="w-[1px] h-[20px] bg-blockSeparator" />
+                          <AccountMenu />
                         </div>
                       </div>
                       <div className="flex flex-1 gap-[1px]">{children}</div>

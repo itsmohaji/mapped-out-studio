@@ -286,72 +286,69 @@ export const useMenuItem = () => {
   };
 };
 
-export const TopMenu: FC = () => {
+export const TopMenu: FC<{ collapsed?: boolean; group?: 'first' | 'second' }> = ({
+  collapsed,
+  group,
+}) => {
   const user = useUser();
   const { firstMenu, secondMenu } = useMenuItem();
   const { isGeneral, billingEnabled } = useVariables();
+
+  const filterFn = (f: MenuItemInterface) => {
+    if (f.hide) {
+      return false;
+    }
+    if (f.requireBilling && !billingEnabled) {
+      return false;
+    }
+    if (f.name === 'Billing' && user?.isLifetime) {
+      return false;
+    }
+    if (f.role) {
+      return f.role.includes(user?.role!);
+    }
+    return true;
+  };
+
+  const showFirst = !group || group === 'first';
+  const showSecond = !group || group === 'second';
+
   return (
     <>
-      <div className="flex flex-1 flex-col minCustom:gap-[16px] blurMe">
-        {
-          // @ts-ignore
-          user?.orgId &&
+      {showFirst && (
+        <div className="flex flex-1 flex-col gap-[6px] blurMe">
+          {
             // @ts-ignore
-            (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
-            firstMenu
-              .filter((f) => {
-                if (f.hide) {
-                  return false;
-                }
-                if (f.requireBilling && !billingEnabled) {
-                  return false;
-                }
-                if (f.name === 'Billing' && user?.isLifetime) {
-                  return false;
-                }
-                if (f.role) {
-                  return f.role.includes(user?.role!);
-                }
-                return true;
-              })
-              .map((item, index) => (
+            user?.orgId &&
+              // @ts-ignore
+              (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
+              firstMenu.filter(filterFn).map((item) => (
                 <MenuItem
                   path={item.path}
                   label={item.name}
                   icon={item.icon}
                   key={item.name}
                   onClick={item.onClick}
+                  collapsed={collapsed}
                 />
               ))
-        }
-      </div>
-      <div className="flex flex-col minCustom:gap-[20px] custom:gap-[8px] blurMe">
-        {secondMenu
-          .filter((f) => {
-            if (f.hide) {
-              return false;
-            }
-            if (f.requireBilling && !billingEnabled) {
-              return false;
-            }
-            if (f.name === 'Billing' && user?.isLifetime) {
-              return false;
-            }
-            if (f.role) {
-              return f.role.includes(user?.role!);
-            }
-            return true;
-          })
-          .map((item, index) => (
+          }
+        </div>
+      )}
+      {showSecond && (
+        <div className="flex flex-col gap-[6px] blurMe">
+          {secondMenu.filter(filterFn).map((item) => (
             <MenuItem
               path={item.path}
               label={item.name}
               icon={item.icon}
               key={item.name}
               onClick={item.onClick}
+              collapsed={collapsed}
             />
           ))}
-      </div>
+        </div>
+      )}
     </>
   );
 };

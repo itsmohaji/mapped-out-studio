@@ -1,15 +1,24 @@
 'use client';
 
 // Mapped Out brand mark. Uses currentColor so it adapts to dark/light themes.
-export const Logo = () => {
+// `withText` shows the "Mapped Out" wordmark (expanded sidebar); `collapsed`
+// renders a smaller mark for the icon-rail.
+export const Logo = ({
+  withText,
+  collapsed,
+}: {
+  withText?: boolean;
+  collapsed?: boolean;
+} = {}) => {
   return (
+    <div className="flex items-center gap-[10px] justify-center">
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="60"
-      height="41"
+      width={collapsed ? 38 : 52}
+      height={collapsed ? 26 : 35}
       viewBox="0 0 668.01 453.98"
       fill="none"
-      className="mt-[8px] min-w-[60px]"
+      className="shrink-0"
       aria-label="Mapped Out"
     >
       <path
@@ -25,5 +34,11 @@ export const Logo = () => {
         d="M307.9,31.54c-28.31,0-56.63.01-84.94.01h-8.91c-.2,0-.44,0-.69-.01h94.54Z"
       />
     </svg>
+      {withText && (
+        <span className="text-[16px] font-[600] whitespace-nowrap tracking-tight">
+          Mapped Out
+        </span>
+      )}
+    </div>
   );
 };
