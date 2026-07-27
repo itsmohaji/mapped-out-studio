@@ -122,7 +122,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       id="left-menu"
                       className={clsx(
                         'flex flex-col gap-[8px] shrink-0 transition-[width] duration-200',
-                        isCollapsed ? 'w-[66px]' : 'w-[236px]'
+                        isCollapsed ? 'w-[60px]' : 'w-[224px]'
                       )}
                     >
                       <div className="flex items-center justify-center h-[46px] px-[6px]">

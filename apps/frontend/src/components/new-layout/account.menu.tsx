@@ -27,6 +27,15 @@ export const AccountMenu: FC = () => {
   const email: string = user?.email || '';
   const name: string = user?.name || email;
   const initial = (name || email || '?').trim().slice(0, 1).toUpperCase();
+  const roleRaw = (user?.role || '').toString().toUpperCase();
+  const roleLabel =
+    roleRaw === 'SUPERADMIN'
+      ? 'Super Admin'
+      : roleRaw === 'ADMIN'
+      ? 'Admin'
+      : roleRaw === 'USER'
+      ? 'Member'
+      : '';
 
   return (
     <div className="relative" ref={ref}>
@@ -34,9 +43,21 @@ export const AccountMenu: FC = () => {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={t('account', 'Account')}
-        className="w-[34px] h-[34px] rounded-full bg-[var(--glass-hover)] border border-[var(--glass-border)] flex items-center justify-center text-[13px] font-[600] text-newTextColor hover:brightness-125 transition"
+        className="flex items-center gap-[9px] ps-[12px] pe-[5px] py-[5px] rounded-[14px] glass-surface hover:brightness-110 transition"
       >
-        {initial}
+        {name && (
+          <div className="hidden sm:block text-end leading-tight">
+            <div className="text-[12.5px] font-[600] text-newTextColor truncate max-w-[140px]">
+              {name}
+            </div>
+            {roleLabel && (
+              <div className="text-[10px] text-textItemBlur">{roleLabel}</div>
+            )}
+          </div>
+        )}
+        <div className="w-[30px] h-[30px] rounded-[9px] bg-[linear-gradient(140deg,#8fbbe4,var(--new-btn-primary))] flex items-center justify-center text-[11px] font-[700] text-white shrink-0">
+          {initial}
+        </div>
       </button>
       {open && (
         <div className="absolute end-0 mt-[10px] min-w-[210px] bg-newBgColorInner border border-newTableBorder rounded-[12px] shadow-xl p-[6px] z-[300]">

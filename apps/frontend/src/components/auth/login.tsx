@@ -58,6 +58,9 @@ export function Login() {
         });
       }
       setLoading(false);
+    } else {
+      // Always land on the Dashboard (first page) after a successful login.
+      window.location.href = '/dashboard';
     }
   };
   return (

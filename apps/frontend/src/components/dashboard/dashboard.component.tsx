@@ -7,6 +7,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
 
 interface Customer {
   id: string;
@@ -171,6 +172,8 @@ export const DashboardComponent: FC = () => {
   const t = useT();
   const router = useRouter();
   const toast = useToaster();
+  const user = useUser() as any;
+  const firstName = (((user?.name as string) || '').trim().split(/\s+/)[0]) || '';
 
   const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
   const loadPosts = useCallback(
@@ -273,6 +276,7 @@ export const DashboardComponent: FC = () => {
         <div className="flex-1 min-w-0">
           <h1 className="text-[26px] font-[600] leading-tight">
             {t(`greeting_${greeting().toLowerCase().replace(' ', '_')}`, greeting())}
+            {firstName ? `, ${firstName}` : ''}
           </h1>
           <p className="text-[13px] text-textItemBlur mt-[3px]">
             {t('dashboard_subtitle', "Here's what's happening with your social media today.")}
