@@ -121,14 +121,14 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     <div
                       id="left-menu"
                       className={clsx(
-                        'flex flex-col gap-[8px] shrink-0 transition-[width] duration-200',
-                        isCollapsed ? 'w-[60px]' : 'w-[224px]'
+                        'flex flex-col gap-[6px] shrink-0 transition-[width] duration-200',
+                        isCollapsed ? 'w-[50px]' : 'w-[220px]'
                       )}
                     >
                       <div className="flex items-center justify-center h-[46px] px-[6px]">
                         <Logo withText={!isCollapsed} collapsed={isCollapsed} />
                       </div>
-                      <div className="rounded-[16px] glass-surface p-[8px]">
+                      <div className="rounded-[14px] glass-surface p-[5px]">
                         <button
                           type="button"
                           onClick={() => setCollapsed(isCollapsed ? '0' : '1')}
@@ -140,10 +140,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           </svg>
                         </button>
                       </div>
-                      <div className="flex-1 rounded-[20px] glass-surface py-[8px] px-[6px] overflow-y-auto no-scrollbar">
+                      <div className="flex-1 rounded-[18px] glass-surface py-[6px] px-[4px] overflow-y-auto no-scrollbar">
                         <TopMenu group="first" collapsed={isCollapsed} />
                       </div>
-                      <div className="rounded-[16px] glass-surface py-[10px] px-[10px]">
+                      <div className="rounded-[14px] glass-surface p-[5px]">
                         <TopMenu group="second" collapsed={isCollapsed} />
                       </div>
                     </div>
@@ -171,8 +171,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         <div className="flex items-center gap-[9px] text-textItemBlur">
                           <button
                             type="button"
-                            onClick={() => router.push('/launches')}
-                            className="hidden xl:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemFocused hover:-translate-y-[1px] transition-transform"
+                            disabled
+                            title="Coming soon"
+                            className="hidden xl:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur opacity-55 cursor-not-allowed"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                               <circle cx="12" cy="12" r="9" />
@@ -183,7 +184,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <button
                             type="button"
                             onClick={() => router.push('/launches')}
-                            className="hidden md:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemFocused hover:-translate-y-[1px] transition-transform"
+                            className="inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] bg-btnPrimary text-white text-[12px] font-[600] hover:brightness-110 transition"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                               <rect x="3" y="4" width="18" height="17" rx="2" />
@@ -194,7 +195,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <button
                             type="button"
                             onClick={() => router.push('/launches')}
-                            className="inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] bg-btnPrimary text-white text-[12px] font-[600] hover:brightness-110 transition"
+                            disabled
+                            title="Coming soon"
+                            className="hidden md:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur opacity-55 cursor-not-allowed"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                               <circle cx="12" cy="12" r="9" />
