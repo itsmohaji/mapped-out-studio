@@ -34,7 +34,7 @@ import { GlobalSettings } from '@gitroom/frontend/components/settings/global.set
 import AccountComponent from '@gitroom/frontend/components/settings/account.component';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
-import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
+import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 export const SettingsPopup: FC<{
   getRef?: Ref<any>;
 }> = (props) => {
@@ -200,7 +200,7 @@ export const SettingsPopup: FC<{
                         {t('language_help', 'Choose your interface language')}
                       </div>
                     </div>
-                    <LanguageComponent />
+                    <LanguageToggle />
                   </div>
                 </div>
               )}

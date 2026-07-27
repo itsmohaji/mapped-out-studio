@@ -60,7 +60,7 @@ export const useMenuItem = () => {
       path: '/dashboard',
     },
     {
-      section: 'Workspace',
+      section: t('nav_group_workspace', 'Workspace'),
       name: t('clients', 'Clients'),
       icon: (
         <svg
@@ -124,7 +124,7 @@ export const useMenuItem = () => {
       path: '/launches',
     },
     {
-      section: 'Insights',
+      section: t('nav_group_insights', 'Insights'),
       name: t('analytics', 'Analytics'),
       icon: (
         <svg
@@ -167,7 +167,7 @@ export const useMenuItem = () => {
       path: '/tasks',
     },
     {
-      section: 'Library',
+      section: t('nav_group_library', 'Library'),
       name: t('post_library', 'Post Library'),
       icon: (
         <svg
@@ -210,7 +210,7 @@ export const useMenuItem = () => {
       path: '/media-library',
     },
     {
-      section: 'System',
+      section: t('nav_group_system', 'System'),
       name: t('plugs', 'Plugs'),
       icon: (
         <svg

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { ReactNode, useCallback } from 'react';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Logo } from '@gitroom/frontend/components/new-layout/logo';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 const ModeComponent = dynamic(
@@ -51,6 +52,7 @@ const jakartaSans = Plus_Jakarta_Sans({
 });
 
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {
+  const t = useT();
   const fetch = useFetch();
   const modals = useModals();
 
@@ -72,7 +74,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   const openAddTask = useCallback(() => {
     modals.openModal({
-      title: 'Add Task',
+      title: t('add_task', 'Add Task'),
       withCloseButton: true,
       classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
       children: <TaskForm onSaved={() => {}} />,
@@ -81,7 +83,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   const openSetReminder = useCallback(() => {
     modals.openModal({
-      title: 'Set Reminder',
+      title: t('set_reminder', 'Set Reminder'),
       withCloseButton: true,
       classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
       children: <TaskForm compact onSaved={() => {}} />,
@@ -180,7 +182,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                             <circle cx="11" cy="11" r="7" />
                             <path d="m21 21-4-4" strokeLinecap="round" />
                           </svg>
-                          <span className="text-[12.5px]">Search anything…</span>
+                          <span className="text-[12.5px]">{t('search_anything', 'Search anything…')}</span>
                           <kbd className="ms-auto text-[10px] px-[6px] py-[2px] rounded-[5px] bg-[var(--glass-2)] border border-[var(--gline)]">
                             ⌘K
                           </kbd>
@@ -199,7 +201,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                               <circle cx="12" cy="12" r="9" />
                               <path d="M12 8v4l3 2" strokeLinecap="round" />
                             </svg>
-                            Set Reminder
+                            {t('set_reminder', 'Set Reminder')}
                           </button>
                           <button
                             type="button"
@@ -210,7 +212,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                               <rect x="3" y="4" width="18" height="17" rx="2" />
                               <path d="M3 9h18M8 2v4M16 2v4" />
                             </svg>
-                            Schedule Post
+                            {t('schedule_post', 'Schedule Post')}
                           </button>
                           <button
                             type="button"
@@ -221,7 +223,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                               <circle cx="12" cy="12" r="9" />
                               <path d="M12 8v8M8 12h8" strokeLinecap="round" />
                             </svg>
-                            Add Task
+                            {t('add_task', 'Add Task')}
                           </button>
                           <ModeComponent />
                           <OrganizationSelector />
