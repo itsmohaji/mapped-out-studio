@@ -47,8 +47,13 @@ export class TasksController {
   async update(@GetOrgFromRequest() org: Organization, @Param('id') id: string, @Body() body: UpdateTaskDto) {
     const existing = await this._tasks.getOne(org.id, id);
     if (!existing) throw new ForbiddenException();
+    // Only convert date fields that were actually sent. Passing `undefined`
+    // leaves the column untouched (Prisma); passing `null` would clear it — a
+    // partial update (e.g. just {status}) must NOT wipe dueAt/remindAt.
     return this._tasks.update(org.id, id, {
-      ...body, dueAt: d(body.dueAt), remindAt: d(body.remindAt),
+      ...body,
+      dueAt: body.dueAt !== undefined ? d(body.dueAt) : undefined,
+      remindAt: body.remindAt !== undefined ? d(body.remindAt) : undefined,
     });
   }
 

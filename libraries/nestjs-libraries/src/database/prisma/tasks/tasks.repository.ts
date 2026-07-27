@@ -75,7 +75,22 @@ export class TasksRepository {
   }
 
   update(orgId: string, id: string, data: TaskWrite & { completedAt?: Date | null }) {
-    return this._task.model.task.updateMany({ where: { id, orgId, deletedAt: null }, data });
+    // Allowlist the writable columns — never spread the raw body into Prisma.
+    // This blocks mass-assignment of orgId/id/createdById (tenant-move bypass)
+    // and only writes fields that were actually provided (undefined = untouched).
+    const allow = [
+      'title', 'description', 'type', 'status', 'priority',
+      'dueAt', 'remindAt', 'assigneeId', 'customerId', 'completedAt',
+    ] as const;
+    const patch: Record<string, unknown> = {};
+    for (const key of allow) {
+      const value = (data as Record<string, unknown>)[key];
+      if (value !== undefined) patch[key] = value;
+    }
+    return this._task.model.task.updateMany({
+      where: { id, orgId, deletedAt: null },
+      data: patch,
+    });
   }
 
   softDelete(orgId: string, id: string) {

@@ -8,7 +8,7 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { useTasksApi, TaskRow } from '@gitroom/frontend/components/tasks/task.api';
+import { TaskRow } from '@gitroom/frontend/components/tasks/task.api';
 
 interface Customer {
   id: string;
