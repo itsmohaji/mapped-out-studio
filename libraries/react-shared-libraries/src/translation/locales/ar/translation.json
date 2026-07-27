@@ -785,5 +785,8 @@
   "total_followers": "إجمالي المتابعين",
   "reconnect_needed": "يلزم إعادة الاتصال",
   "no_analytics_yet": "لا تتوفر تحليلات بعد.",
-  "no_channels_connected": "لا توجد قنوات متصلة بعد."
+  "no_channels_connected": "لا توجد قنوات متصلة بعد.",
+  "api_and_keys": "واجهة البرمجة والمفاتيح",
+  "file_deleted": "تم حذف الملف",
+  "delete_image_confirm": "حذف هذا الملف نهائيًا؟ ستتم إزالته من مكتبة الوسائط ومن الخادم."
 }

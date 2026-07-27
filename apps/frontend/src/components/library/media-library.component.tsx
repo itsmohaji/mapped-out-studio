@@ -41,8 +41,9 @@ const MediaTile: FC<{
   m: MediaItem;
   folders: Folder[];
   onMove: (id: string, folderId: string | null) => void;
+  onDelete: (id: string) => void;
   t: (k: string, d: string) => string;
-}> = ({ m, folders, onMove, t }) => {
+}> = ({ m, folders, onMove, onDelete, t }) => {
   const dir = useMediaDirectory();
   const url = dir.set(m.path);
   const poster = m.thumbnail ? dir.set(m.thumbnail) : undefined;
@@ -77,6 +78,19 @@ const MediaTile: FC<{
             </svg>
           </div>
         )}
+        <button
+          type="button"
+          title={t('delete', 'Delete')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(m.id);
+          }}
+          className="absolute top-[8px] start-[8px] w-[26px] h-[26px] rounded-full bg-black/55 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+          </svg>
+        </button>
       </div>
       <div className="p-[8px] flex flex-col gap-[6px]">
         <div className="text-[11px] text-textItemBlur truncate" title={m.originalName || m.name}>
@@ -230,6 +244,27 @@ export const MediaLibraryComponent: FC = () => {
             ? t('moved_to_folder', 'Moved to folder')
             : t('moved_to_unfiled', 'Moved to Unfiled')
         );
+      } else {
+        toast.show(t('action_failed', 'Action failed'), 'warning');
+      }
+    },
+    [refresh, t]
+  );
+
+  const removeMedia = useCallback(
+    async (mediaId: string) => {
+      const ok = await deleteDialog(
+        t(
+          'delete_image_confirm',
+          'Delete this file permanently? It will be removed from the media library and the backend.'
+        ),
+        t('yes_delete', 'Yes, delete')
+      );
+      if (!ok) return;
+      const res = await fetch(`/media/${mediaId}`, { method: 'DELETE' });
+      if (res.ok) {
+        refresh();
+        toast.show(t('file_deleted', 'File deleted'));
       } else {
         toast.show(t('action_failed', 'Action failed'), 'warning');
       }
@@ -439,6 +474,7 @@ export const MediaLibraryComponent: FC = () => {
                     m={m}
                     folders={folders}
                     onMove={move}
+                    onDelete={removeMedia}
                     t={t}
                   />
                 ))}

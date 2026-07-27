@@ -22,7 +22,7 @@ import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { LogoutComponent } from '@gitroom/frontend/components/layout/logout.component';
 import { useSearchParams } from 'next/navigation';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { PublicComponent } from '@gitroom/frontend/components/public-api/public.component';
+import ApiAndKeysComponent from '@gitroom/frontend/components/settings/api-and-keys.component';
 import Link from 'next/link';
 import { Webhooks } from '@gitroom/frontend/components/webhooks/webhooks';
 import { Sets } from '@gitroom/frontend/components/sets/sets';
@@ -32,7 +32,6 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
 import AccountComponent from '@gitroom/frontend/components/settings/account.component';
-import AiKeysComponent from '@gitroom/frontend/components/settings/ai-keys.component';
 import IntegrationsComponent from '@gitroom/frontend/components/settings/integrations.component';
 import EmailNotificationsComponent from '@gitroom/frontend/components/settings/email-notifications.component';
 export const SettingsPopup: FC<{
@@ -57,6 +56,8 @@ export const SettingsPopup: FC<{
   }, []);
   const url = useSearchParams();
   const showLogout = !url.get('onboarding') || user?.tier?.current === 'FREE';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const showApiTab = !!(user?.tier?.public_api && isGeneral && showLogout);
   const loadProfile = useCallback(async () => {
     const personal = await (await fetch('/user/personal')).json();
     form.setValue('fullname', personal.name || '');
@@ -91,11 +92,11 @@ export const SettingsPopup: FC<{
     const arr = [];
     arr.push({ tab: 'account', label: t('account', 'Account') });
     arr.push({ tab: 'notifications', label: t('notifications', 'Notifications') });
-    // AI provider keys — admins only (workspace-wide, encrypted at rest)
-    if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
-      arr.push({ tab: 'ai_keys', label: t('ai_keys', 'AI Keys') });
-    }
     arr.push({ tab: 'integrations', label: t('integrations', 'Integrations') });
+    // AI provider keys + public API / developers, together in one section
+    if (isAdmin || showApiTab) {
+      arr.push({ tab: 'developer', label: t('api_and_keys', 'API & Keys') });
+    }
     arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
     // Populate tabs based on user permissions
     if (user?.tier?.team_members && isGeneral) {
@@ -113,12 +114,9 @@ export const SettingsPopup: FC<{
     if (user?.tier.current !== 'FREE') {
       arr.push({ tab: 'signatures', label: t('signatures', 'Signatures') });
     }
-    if (user?.tier?.public_api && isGeneral && showLogout) {
-      arr.push({ tab: 'api', label: t('developers', 'API & Developers') });
-    }
 
     return arr;
-  }, [user, isGeneral, showLogout, t]);
+  }, [user, isGeneral, showLogout, isAdmin, showApiTab, t]);
 
   useEffect(() => {
     loadProfile();
@@ -174,9 +172,12 @@ export const SettingsPopup: FC<{
                   <AccountComponent />
                 </div>
               )}
-              {tab === 'ai_keys' && (
+              {tab === 'developer' && (
                 <div>
-                  <AiKeysComponent />
+                  <ApiAndKeysComponent
+                    showAiKeys={isAdmin}
+                    showApi={showApiTab}
+                  />
                 </div>
               )}
               {tab === 'notifications' && (
@@ -226,15 +227,6 @@ export const SettingsPopup: FC<{
                   <SignaturesComponent />
                 </div>
               )}
-
-              {tab === 'api' &&
-                !!user?.tier?.public_api &&
-                isGeneral &&
-                showLogout && (
-                  <div>
-                    <PublicComponent />
-                  </div>
-                )}
 
             </div>
           </form>
