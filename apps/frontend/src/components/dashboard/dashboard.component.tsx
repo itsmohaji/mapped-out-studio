@@ -119,21 +119,29 @@ const PlatformAvatar: FC<{ p?: PostItem['integration']; size?: number; dim?: boo
 const StatCard: FC<{
   label: string;
   value: React.ReactNode;
+  icon?: React.ReactNode;
   sub?: string;
   accent?: string;
   onClick?: () => void;
-}> = ({ label, value, sub, accent, onClick }) => (
+}> = ({ label, value, icon, sub, accent, onClick }) => (
   <div
     onClick={onClick}
-    className={`glass-surface rounded-[16px] p-[16px] ${
-      onClick ? 'cursor-pointer hover:border-btnPrimary/40 transition-colors' : ''
+    className={`glass-surface rounded-[18px] p-[16px] ${
+      onClick ? 'cursor-pointer hover:-translate-y-[1px] transition-transform' : ''
     }`}
   >
-    <div className={`text-[26px] font-[700] tabular-nums leading-none ${accent || ''}`}>
+    <div className="flex items-center justify-between">
+      <div className="text-[11px] font-[600] text-textItemBlur">{label}</div>
+      {icon && (
+        <div className="w-[28px] h-[28px] rounded-[9px] bg-[var(--glass-2)] border border-[var(--gline)] flex items-center justify-center text-btnPrimary shrink-0">
+          {icon}
+        </div>
+      )}
+    </div>
+    <div className={`text-[25px] font-[600] tabular-nums leading-none mt-[10px] ${accent || ''}`}>
       {value}
     </div>
-    <div className="text-[12px] text-textItemBlur mt-[7px]">{label}</div>
-    {sub && <div className="text-[11px] text-textItemBlur mt-[2px]">{sub}</div>}
+    {sub && <div className="text-[11px] text-textItemBlur mt-[3px]">{sub}</div>}
   </div>
 );
 
@@ -261,17 +269,36 @@ export const DashboardComponent: FC = () => {
   return (
     <div className="flex-1 flex flex-col gap-[18px] p-[22px] overflow-y-auto">
       {/* Greeting */}
-      <div>
-        <h1 className="text-[26px] font-[600] leading-tight">
-          {t(`greeting_${greeting().toLowerCase().replace(' ', '_')}`, greeting())}
-        </h1>
-        <p className="text-[13px] text-textItemBlur mt-[3px]">{today}</p>
+      <div className="flex flex-wrap items-end gap-[12px]">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[26px] font-[600] leading-tight">
+            {t(`greeting_${greeting().toLowerCase().replace(' ', '_')}`, greeting())}
+          </h1>
+          <p className="text-[13px] text-textItemBlur mt-[3px]">
+            {t('dashboard_subtitle', "Here's what's happening with your social media today.")}
+          </p>
+        </div>
+        <span className="glass-surface rounded-[12px] px-[13px] py-[9px] text-[12px] text-textItemBlur flex items-center gap-[7px] shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="3" y="4" width="18" height="17" rx="2" />
+            <path d="M3 9h18M8 2v4M16 2v4" />
+          </svg>
+          {today}
+        </span>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-[12px]">
         <StatCard
           label={t('connected_accounts', 'Connected accounts')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <circle cx="18" cy="5" r="2.5" />
+              <circle cx="6" cy="12" r="2.5" />
+              <circle cx="18" cy="19" r="2.5" />
+              <path d="M8.2 10.8 15.8 6.2M8.2 13.2l7.6 4.6" />
+            </svg>
+          }
           value={
             <>
               {activeChannels}
@@ -282,25 +309,55 @@ export const DashboardComponent: FC = () => {
         />
         <StatCard
           label={t('scheduled', 'Scheduled')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="17" rx="2" />
+              <path d="M3 9h18M8 2v4M16 2v4" />
+            </svg>
+          }
           value={scheduled?.total ?? scheduledPosts.length}
           onClick={() => router.push('/launches')}
         />
         <StatCard
           label={t('published_30d', 'Published (30d)')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 3a9 9 0 1 0 9 9" />
+              <path d="m8 12 3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          }
           value={published30}
           accent="text-[#47b985]"
         />
         <StatCard
           label={t('drafts', 'Drafts')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+              <path d="M14 3v5h5" />
+            </svg>
+          }
           value={drafts?.total ?? 0}
         />
         <StatCard
           label={t('clients', 'Clients')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M3 9h18M8 4v16" />
+            </svg>
+          }
           value={customers?.length ?? 0}
           onClick={() => router.push('/clients')}
         />
         <StatCard
           label={t('needs_attention', 'Needs attention')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 3 2 20h20z" strokeLinejoin="round" />
+              <path d="M12 10v4M12 17h.01" strokeLinecap="round" />
+            </svg>
+          }
           value={attention}
           accent={attention ? 'text-[#daa646]' : ''}
           onClick={() => router.push('/accounts')}

@@ -122,7 +122,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       id="left-menu"
                       className={clsx(
                         'flex flex-col gap-[8px] shrink-0 transition-[width] duration-200',
-                        isCollapsed ? 'w-[84px]' : 'w-[248px]'
+                        isCollapsed ? 'w-[66px]' : 'w-[236px]'
                       )}
                     >
                       <div className="flex items-center justify-center h-[46px] px-[6px]">
@@ -140,7 +140,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           </svg>
                         </button>
                       </div>
-                      <div className="flex-1 rounded-[22px] glass-surface py-[10px] px-[8px] overflow-y-auto no-scrollbar">
+                      <div className="flex-1 rounded-[20px] glass-surface py-[8px] px-[6px] overflow-y-auto no-scrollbar">
                         <TopMenu group="first" collapsed={isCollapsed} />
                       </div>
                       <div className="rounded-[16px] glass-surface py-[10px] px-[10px]">
@@ -148,7 +148,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col gap-[8px] blurMe">
-                      <div className="glass-surface rounded-[16px] flex h-[74px] px-[18px] items-center gap-[14px] shrink-0">
+                      <div className="flex h-[60px] items-center gap-[12px] shrink-0 px-[2px]">
                         {/* Search — approved-artifact command bar (left) */}
                         <button
                           type="button"
