@@ -1,9 +1,11 @@
 'use client';
 
 import { FC, Fragment, ReactNode, useCallback } from 'react';
+import useSWR from 'swr';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { MenuItem } from '@gitroom/frontend/components/new-layout/menu-item';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { AgentMediaModal } from '@gitroom/frontend/components/layout/agent.media.modal';
@@ -142,6 +144,27 @@ export const useMenuItem = () => {
         </svg>
       ),
       path: '/analytics',
+    },
+    {
+      name: t('tasks', 'Tasks'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 13l2 2 4-4"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/tasks',
     },
     {
       section: 'Library',
@@ -300,6 +323,12 @@ export const TopMenu: FC<{ collapsed?: boolean; group?: 'first' | 'second' }> = 
   const user = useUser();
   const { firstMenu, secondMenu } = useMenuItem();
   const { isGeneral, billingEnabled } = useVariables();
+  const fetch = useFetch();
+  const { data: taskSummary } = useSWR<{ open: number; overdue: number }>(
+    user?.orgId ? '/tasks/summary' : null,
+    async (url: string) => (await fetch(url)).json(),
+    { refreshInterval: 60000 }
+  );
 
   const filterFn = (f: MenuItemInterface) => {
     if (f.hide) {
@@ -342,6 +371,7 @@ export const TopMenu: FC<{ collapsed?: boolean; group?: 'first' | 'second' }> = 
                     icon={item.icon}
                     onClick={item.onClick}
                     collapsed={collapsed}
+                    badge={item.path === '/tasks' ? taskSummary?.open : undefined}
                   />
                 </Fragment>
               ))

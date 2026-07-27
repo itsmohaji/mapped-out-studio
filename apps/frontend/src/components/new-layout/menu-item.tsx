@@ -4,13 +4,14 @@ import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import Link from 'next/link';
 
-export const MenuItem: FC<{ label: string; icon: ReactNode; path: string; onClick?: () => void; collapsed?: boolean }> = ({
-  label,
-  icon,
-  path,
-  onClick,
-  collapsed,
-}) => {
+export const MenuItem: FC<{
+  label: string;
+  icon: ReactNode;
+  path: string;
+  onClick?: () => void;
+  collapsed?: boolean;
+  badge?: number;
+}> = ({ label, icon, path, onClick, collapsed, badge }) => {
   const currentPath = usePathname();
   const isActive =
     path === '/dashboard'
@@ -29,8 +30,13 @@ export const MenuItem: FC<{ label: string; icon: ReactNode; path: string; onClic
         {icon}
       </div>
       {!collapsed && (
-        <div className="leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis">
-          {label}
+        <div className="leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex items-center gap-[8px]">
+          <span className="overflow-hidden text-ellipsis">{label}</span>
+          {!!badge && (
+            <span className="rounded-full bg-btnPrimary text-white text-[10px] px-[6px] py-[1px] leading-[1.4] shrink-0">
+              {badge}
+            </span>
+          )}
         </div>
       )}
     </>
