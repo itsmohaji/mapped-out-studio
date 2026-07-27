@@ -776,5 +776,14 @@
   "test_failed": "فشل الاختبار",
   "integrations_help": "اربط التطبيقات والخدمات الخارجية بمساحة عملك.",
   "coming_soon": "قريبًا",
-  "soon": "قريبًا"
+  "soon": "قريبًا",
+  "overview": "نظرة عامة",
+  "overview_help": "كل القنوات المتصلة في لمحة.",
+  "by_channel": "حسب القناة",
+  "channels_connected": "القنوات المتصلة",
+  "active_channels": "نشطة",
+  "total_followers": "إجمالي المتابعين",
+  "reconnect_needed": "يلزم إعادة الاتصال",
+  "no_analytics_yet": "لا تتوفر تحليلات بعد.",
+  "no_channels_connected": "لا توجد قنوات متصلة بعد."
 }
