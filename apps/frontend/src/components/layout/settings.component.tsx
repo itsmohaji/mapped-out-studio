@@ -179,10 +179,10 @@ export const SettingsPopup: FC<{
                         {t('theme', 'Theme')}
                       </div>
                       <div className="text-[12px] text-textItemBlur mt-[2px]">
-                        {t('theme_help', 'Switch between light and dark mode')}
+                        {t('theme_help', 'Light, dark, or match your system')}
                       </div>
                     </div>
-                    <ModeComponent />
+                    <ModeComponent variant="segmented" />
                   </div>
                   <div className="flex items-center justify-between glass-surface rounded-[12px] px-[16px] py-[14px]">
                     <div>
