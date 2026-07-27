@@ -18,7 +18,7 @@ import dynamic from 'next/dynamic';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { ToolTip } from '@gitroom/frontend/components/layout/top.tip';
 import { ShowMediaBoxModal } from '@gitroom/frontend/components/media/media.component';
@@ -80,10 +80,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   // dashboard card, reminder watcher) and take the user to the board so the
   // new item is actually visible — otherwise the button feels like a no-op.
   const afterTaskSaved = useCallback(() => {
-    mutate(
-      (key: any) => typeof key === 'string' && key.startsWith('/tasks'),
-      undefined,
-      { revalidate: true }
+    // Global mutate — the key-filter form. The `mutate` bound to '/user/self'
+    // would have treated this function as that key's data updater instead.
+    globalMutate(
+      (key: any) => typeof key === 'string' && key.startsWith('/tasks')
     );
     router.push('/tasks');
   }, [router]);

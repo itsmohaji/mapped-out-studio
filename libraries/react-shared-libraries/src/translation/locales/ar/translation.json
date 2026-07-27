@@ -793,5 +793,13 @@
   "status_doing": "قيد التنفيذ",
   "status_done": "مكتملة",
   "drop_here": "أفلت هنا",
-  "start_now": "ابدأ الآن"
+  "start_now": "ابدأ الآن",
+  "general": "عام",
+  "automation": "الأتمتة",
+  "publishing_presets": "إعدادات النشر المسبقة",
+  "post_signature": "توقيع المنشور",
+  "select_all": "تحديد الكل",
+  "clear_selection": "إلغاء التحديد",
+  "delete_selected": "حذف المحدد",
+  "delete_files_confirm": "حذف هذه الملفات نهائيًا؟"
 }

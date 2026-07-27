@@ -1,21 +1,7 @@
 'use client';
 
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import React, {
-  FC,
-  Ref,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
-import { showMediaBox } from '@gitroom/frontend/components/media/media.component';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import { classValidatorResolver } from '@hookform/resolvers/class-validator';
-import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
-import { useToaster } from '@gitroom/react/toaster/toaster';
-import { useSWRConfig } from 'swr';
+import React, { FC, Ref, useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { TeamsComponent } from '@gitroom/frontend/components/settings/teams.component';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -34,93 +20,85 @@ import { GlobalSettings } from '@gitroom/frontend/components/settings/global.set
 import AccountComponent from '@gitroom/frontend/components/settings/account.component';
 import IntegrationsComponent from '@gitroom/frontend/components/settings/integrations.component';
 import EmailNotificationsComponent from '@gitroom/frontend/components/settings/email-notifications.component';
+import { SubTab, SubTabs } from '@gitroom/frontend/components/settings/sub.tabs';
+
 export const SettingsPopup: FC<{
   getRef?: Ref<any>;
-}> = (props) => {
+}> = () => {
   const { isGeneral } = useVariables();
-  const { getRef } = props;
-  const fetch = useFetch();
-  const toast = useToaster();
-  const swr = useSWRConfig();
   const user = useUser();
-  const resolver = useMemo(() => {
-    return classValidatorResolver(UserDetailDto);
-  }, []);
-  const form = useForm({
-    resolver,
-  });
-  const picture = form.watch('picture');
-  const modal = useModals();
-  const close = useCallback(() => {
-    return modal.closeAll();
-  }, []);
+  const t = useT();
   const url = useSearchParams();
   const showLogout = !url.get('onboarding') || user?.tier?.current === 'FREE';
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const showApiTab = !!(user?.tier?.public_api && isGeneral && showLogout);
-  const loadProfile = useCallback(async () => {
-    const personal = await (await fetch('/user/personal')).json();
-    form.setValue('fullname', personal.name || '');
-    form.setValue('bio', personal.bio || '');
-    form.setValue('picture', personal.picture);
-  }, []);
-  const openMedia = useCallback(() => {
-    showMediaBox((values) => {
-      form.setValue('picture', values);
-    });
-  }, []);
-  const remove = useCallback(() => {
-    form.setValue('picture', null);
-  }, []);
-
-  const submit = useCallback(async (val: any) => {
-    await fetch('/user/personal', {
-      method: 'POST',
-      body: JSON.stringify(val),
-    });
-    if (getRef) {
-      return;
-    }
-    toast.show(t('profile_updated', 'Profile updated'));
-    close();
-  }, []);
+  const paid = user?.tier?.current !== 'FREE';
 
   const [tab, setTab] = useState('account');
 
-  const t = useT();
+  // General = global settings + webhooks
+  const generalTabs = useMemo<SubTab[]>(() => {
+    const arr: SubTab[] = [
+      {
+        key: 'global',
+        label: t('global_settings', 'Global Settings'),
+        render: () => <GlobalSettings />,
+      },
+    ];
+    if (user?.tier?.webhooks) {
+      arr.push({
+        key: 'webhooks',
+        label: t('webhooks_1', 'Webhooks'),
+        render: () => <Webhooks />,
+      });
+    }
+    return arr;
+  }, [user, t]);
+
+  // Automation = auto post + publishing presets + post signature
+  const automationTabs = useMemo<SubTab[]>(() => {
+    const arr: SubTab[] = [];
+    if (user?.tier?.autoPost) {
+      arr.push({
+        key: 'autopost',
+        label: t('auto_post', 'Auto Post'),
+        render: () => <Autopost />,
+      });
+    }
+    if (paid) {
+      arr.push({
+        key: 'sets',
+        label: t('publishing_presets', 'Publishing Presets'),
+        render: () => <Sets />,
+      });
+      arr.push({
+        key: 'signatures',
+        label: t('post_signature', 'Post Signature'),
+        render: () => <SignaturesComponent />,
+      });
+    }
+    return arr;
+  }, [user, paid, t]);
+
   const list = useMemo(() => {
-    const arr = [];
-    arr.push({ tab: 'account', label: t('account', 'Account') });
-    arr.push({ tab: 'notifications', label: t('notifications', 'Notifications') });
-    arr.push({ tab: 'integrations', label: t('integrations', 'Integrations') });
+    const arr: { tab: string; label: string }[] = [
+      { tab: 'account', label: t('account', 'Account') },
+      { tab: 'notifications', label: t('notifications', 'Notifications') },
+      { tab: 'integrations', label: t('integrations', 'Integrations') },
+    ];
     // AI provider keys + public API / developers, together in one section
     if (isAdmin || showApiTab) {
       arr.push({ tab: 'developer', label: t('api_and_keys', 'API & Keys') });
     }
-    arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
-    // Populate tabs based on user permissions
+    arr.push({ tab: 'general', label: t('general', 'General') });
+    if (automationTabs.length) {
+      arr.push({ tab: 'automation', label: t('automation', 'Automation') });
+    }
     if (user?.tier?.team_members && isGeneral) {
       arr.push({ tab: 'teams', label: t('teams', 'Teams') });
     }
-    if (user?.tier?.webhooks) {
-      arr.push({ tab: 'webhooks', label: t('webhooks_1', 'Webhooks') });
-    }
-    if (user?.tier?.autoPost) {
-      arr.push({ tab: 'autopost', label: t('auto_post', 'Auto Post') });
-    }
-    if (user?.tier.current !== 'FREE') {
-      arr.push({ tab: 'sets', label: t('sets', 'Sets') });
-    }
-    if (user?.tier.current !== 'FREE') {
-      arr.push({ tab: 'signatures', label: t('signatures', 'Signatures') });
-    }
-
     return arr;
-  }, [user, isGeneral, showLogout, isAdmin, showApiTab, t]);
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  }, [user, isGeneral, isAdmin, showApiTab, automationTabs, t]);
 
   return (
     <>
@@ -156,85 +134,37 @@ export const SettingsPopup: FC<{
         </div>
       </div>
       <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px] rounded-e-[16px]">
-        <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(submit)}>
-            {!!getRef && (
-              <button type="submit" className="hidden" ref={getRef}></button>
-            )}
-            <div
-              className={clsx(
-                'w-full mx-auto gap-[24px] flex flex-col relative',
-                !getRef && 'rounded-[4px]'
-              )}
-            >
-              {tab === 'account' && (
-                <div>
-                  <AccountComponent />
-                </div>
-              )}
-              {tab === 'developer' && (
-                <div>
-                  <ApiAndKeysComponent
-                    showAiKeys={isAdmin}
-                    showApi={showApiTab}
-                  />
-                </div>
-              )}
-              {tab === 'notifications' && (
-                <div className="flex flex-col gap-[16px]">
-                  <div className="text-[18px] font-[600]">
-                    {t('notifications', 'Notifications')}
-                  </div>
-                  <EmailNotificationsComponent />
-                </div>
-              )}
-              {tab === 'integrations' && (
-                <div>
-                  <IntegrationsComponent />
-                </div>
-              )}
-              {tab === 'global_settings' && (
-                <div>
-                  <GlobalSettings />
-                </div>
-              )}
-              {tab === 'teams' && !!user?.tier?.team_members && isGeneral && (
-                <div>
-                  <TeamsComponent />
-                </div>
-              )}
+        <div className="w-full mx-auto gap-[24px] flex flex-col relative rounded-[4px]">
+          {tab === 'account' && <AccountComponent />}
 
-              {tab === 'webhooks' && !!user?.tier?.webhooks && (
-                <div>
-                  <Webhooks />
-                </div>
-              )}
+          {tab === 'developer' && (
+            <ApiAndKeysComponent showAiKeys={isAdmin} showApi={showApiTab} />
+          )}
 
-              {tab === 'autopost' && !!user?.tier?.autoPost && (
-                <div>
-                  <Autopost />
-                </div>
-              )}
-
-              {tab === 'sets' && user?.tier.current !== 'FREE' && (
-                <div>
-                  <Sets />
-                </div>
-              )}
-
-              {tab === 'signatures' && user?.tier.current !== 'FREE' && (
-                <div>
-                  <SignaturesComponent />
-                </div>
-              )}
-
+          {tab === 'notifications' && (
+            <div className="flex flex-col gap-[16px]">
+              <div className="text-[18px] font-[600]">
+                {t('notifications', 'Notifications')}
+              </div>
+              <EmailNotificationsComponent />
             </div>
-          </form>
-        </FormProvider>
+          )}
+
+          {tab === 'integrations' && <IntegrationsComponent />}
+
+          {tab === 'general' && <SubTabs tabs={generalTabs} />}
+
+          {tab === 'automation' && <SubTabs tabs={automationTabs} />}
+
+          {tab === 'teams' && !!user?.tier?.team_members && isGeneral && (
+            <TeamsComponent />
+          )}
+        </div>
       </div>
     </>
   );
 };
+
 export const SettingsComponent = () => {
   const settings = useModals();
   const user = useUser();

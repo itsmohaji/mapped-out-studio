@@ -3,14 +3,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Input } from '@gitroom/react/form/input';
 import { Button } from '@gitroom/react/form/button';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
-import { useRouter } from 'next/navigation';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 
@@ -39,7 +38,6 @@ const AccountComponent = () => {
   const user = useUser();
   const mediaDirectory = useMediaDirectory();
   const { data: personal, mutate } = usePersonal();
-  const router = useRouter();
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -80,15 +78,16 @@ const AccountComponent = () => {
           return;
         }
         await mutate();
-        // Refresh the server-rendered user context so the name updates in the
-        // top-right account menu immediately (no full reload).
-        router.refresh();
+        // The top-right account menu reads the user from the CLIENT SWR key
+        // '/user/self' (LayoutComponent), not from a server render — so
+        // router.refresh() never updated it. Revalidate that key instead.
+        await globalMutate('/user/self');
         toaster.show(t('profile_saved', 'Profile saved'), 'success');
       } finally {
         setSavingProfile(false);
       }
     },
-    [fetch, personal?.bio, personal?.picture, mutate, router, toaster, t]
+    [fetch, personal?.bio, personal?.picture, mutate, toaster, t]
   );
 
   const savePassword = useCallback(

@@ -308,7 +308,7 @@ export const DbuAssociationPanel: FC<{
               disabled={!linkChannelId || linking}
               onClick={doLink}
               style={{
-                background: '#612BD3',
+                background: '#6ba3da',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,

@@ -388,8 +388,14 @@ export const areYouSure = ({
 export const DecisionEverywhere: FC = () => {
   const decision = useDecisionModal();
   useEffect(() => {
+    // Exactly ONE listener, ever. Without this, a remount (or a second mount)
+    // leaves the old handler attached and every confirm dialog opens twice.
+    decisionModalEmitter.removeAllListeners('open');
     decisionModalEmitter.on('open', decision.open);
-  }, []);
+    return () => {
+      decisionModalEmitter.off('open', decision.open);
+    };
+  }, [decision.open]);
   return null;
 };
 

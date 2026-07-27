@@ -42,17 +42,28 @@ const MediaTile: FC<{
   folders: Folder[];
   onMove: (id: string, folderId: string | null) => void;
   onDelete: (id: string) => void;
+  selected: boolean;
+  selecting: boolean;
+  onToggleSelect: (id: string) => void;
   t: (k: string, d: string) => string;
-}> = ({ m, folders, onMove, onDelete, t }) => {
+}> = ({ m, folders, onMove, onDelete, selected, selecting, onToggleSelect, t }) => {
   const dir = useMediaDirectory();
   const url = dir.set(m.path);
   const poster = m.thumbnail ? dir.set(m.thumbnail) : undefined;
   const video = isVideoPath(m.path);
   return (
-    <div className="glass-surface bg-newBgColorInner border border-newTableBorder rounded-[14px] overflow-hidden flex flex-col group">
+    <div
+      className={`glass-surface bg-newBgColorInner border rounded-[14px] overflow-hidden flex flex-col group ${
+        selected ? 'border-btnPrimary' : 'border-newTableBorder'
+      }`}
+    >
       <div
         className="relative aspect-square bg-newBgLineColor cursor-pointer"
-        onClick={() => window.open(url, '_blank')}
+        onClick={() =>
+          // While anything is selected, a tile click extends the selection
+          // instead of opening the file — otherwise multi-select is unusable.
+          selecting ? onToggleSelect(m.id) : window.open(url, '_blank')
+        }
       >
         {video ? (
           <video
@@ -80,12 +91,31 @@ const MediaTile: FC<{
         )}
         <button
           type="button"
+          title={t('select', 'Select')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(m.id);
+          }}
+          className={`absolute top-[8px] start-[8px] w-[22px] h-[22px] rounded-[6px] border-2 flex items-center justify-center transition-opacity ${
+            selected
+              ? 'bg-btnPrimary border-btnPrimary opacity-100'
+              : 'bg-black/45 border-white/70 opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {selected && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          )}
+        </button>
+        <button
+          type="button"
           title={t('delete', 'Delete')}
           onClick={(e) => {
             e.stopPropagation();
             onDelete(m.id);
           }}
-          className="absolute top-[8px] start-[8px] w-[26px] h-[26px] rounded-full bg-black/55 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-[8px] end-[8px] w-[26px] h-[26px] rounded-full bg-black/55 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -125,6 +155,7 @@ export const MediaLibraryComponent: FC = () => {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState('');
   const [busy, setBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // debounce search
   useEffect(() => {
@@ -156,6 +187,12 @@ export const MediaLibraryComponent: FC = () => {
   );
   const results: MediaItem[] = mediaData?.results || [];
   const pages: number = mediaData?.pages || 0;
+
+  // Changing folder / page / search shows different files — a carried-over
+  // selection would silently delete things that are no longer on screen.
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [mediaKey]);
 
   const refresh = useCallback(() => {
     mutateMedia();
@@ -251,26 +288,59 @@ export const MediaLibraryComponent: FC = () => {
     [refresh, t]
   );
 
-  const removeMedia = useCallback(
-    async (mediaId: string) => {
+  // One code path for 1 file or 50 — one confirm, one refresh, one toast.
+  const deleteIds = useCallback(
+    async (ids: string[]) => {
+      if (!ids.length) return;
       const ok = await deleteDialog(
-        t(
-          'delete_image_confirm',
-          'Delete this file permanently? It will be removed from the media library and the backend.'
-        ),
+        ids.length === 1
+          ? t(
+              'delete_image_confirm',
+              'Delete this file permanently? It will be removed from the media library and the backend.'
+            )
+          : `${t('delete_files_confirm', 'Delete these files permanently?')} (${
+              ids.length
+            })`,
         t('yes_delete', 'Yes, delete')
       );
       if (!ok) return;
-      const res = await fetch(`/media/${mediaId}`, { method: 'DELETE' });
-      if (res.ok) {
+      setBusy(true);
+      try {
+        const results = await Promise.all(
+          ids.map((id) =>
+            fetch(`/media/${id}`, { method: 'DELETE' })
+              .then((r) => r.ok)
+              .catch(() => false)
+          )
+        );
+        const failed = results.filter((r) => !r).length;
+        setSelectedIds([]);
         refresh();
-        toast.show(t('file_deleted', 'File deleted'));
-      } else {
-        toast.show(t('action_failed', 'Action failed'), 'warning');
+        if (failed) {
+          toast.show(
+            `${t('action_failed', 'Action failed')} (${failed}/${ids.length})`,
+            'warning'
+          );
+        } else {
+          toast.show(t('file_deleted', 'File deleted'));
+        }
+      } finally {
+        setBusy(false);
       }
     },
     [refresh, t]
   );
+
+  const removeMedia = useCallback(
+    (mediaId: string) => deleteIds([mediaId]),
+    [deleteIds]
+  );
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
 
   const FolderButton: FC<{
     id: string;
@@ -435,6 +505,33 @@ export const MediaLibraryComponent: FC = () => {
                 : folders.find((f) => f.id === selected)?.name ||
                   t('folder', 'Folder')}
             </div>
+            {results.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedIds(
+                    selectedIds.length === results.length
+                      ? []
+                      : results.map((r) => r.id)
+                  )
+                }
+                className="px-[12px] py-[8px] rounded-[10px] text-[12.5px] font-[600] bg-newBgColorInner border border-newTableBorder text-newTextColor hover:brightness-110"
+              >
+                {selectedIds.length === results.length
+                  ? t('clear_selection', 'Clear selection')
+                  : t('select_all', 'Select all')}
+              </button>
+            )}
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => deleteIds(selectedIds)}
+                className="px-[12px] py-[8px] rounded-[10px] text-[12.5px] font-[600] bg-red-500 text-white hover:brightness-110 disabled:opacity-50"
+              >
+                {t('delete_selected', 'Delete selected')} ({selectedIds.length})
+              </button>
+            )}
             <div className="flex items-center gap-[8px] bg-newBgColorInner border border-newTableBorder rounded-[12px] px-[14px] py-[9px] min-w-[200px]">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-textItemBlur">
                 <circle cx="11" cy="11" r="7" />
@@ -475,6 +572,9 @@ export const MediaLibraryComponent: FC = () => {
                     folders={folders}
                     onMove={move}
                     onDelete={removeMedia}
+                    selected={selectedIds.includes(m.id)}
+                    selecting={selectedIds.length > 0}
+                    onToggleSelect={toggleSelect}
                     t={t}
                   />
                 ))}
