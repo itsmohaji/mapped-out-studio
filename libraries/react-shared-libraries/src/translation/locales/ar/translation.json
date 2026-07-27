@@ -773,5 +773,8 @@
   "ai_key_not_set": "غير مضبوط",
   "test_connection": "اختبار",
   "api_key": "مفتاح API",
-  "test_failed": "فشل الاختبار"
+  "test_failed": "فشل الاختبار",
+  "integrations_help": "اربط التطبيقات والخدمات الخارجية بمساحة عملك.",
+  "coming_soon": "قريبًا",
+  "soon": "قريبًا"
 }

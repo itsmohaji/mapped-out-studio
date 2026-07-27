@@ -33,7 +33,8 @@ import { SVGLine } from '@gitroom/frontend/components/launches/launches.componen
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
 import AccountComponent from '@gitroom/frontend/components/settings/account.component';
 import AiKeysComponent from '@gitroom/frontend/components/settings/ai-keys.component';
-import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
+import IntegrationsComponent from '@gitroom/frontend/components/settings/integrations.component';
+import EmailNotificationsComponent from '@gitroom/frontend/components/settings/email-notifications.component';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 export const SettingsPopup: FC<{
@@ -91,12 +92,14 @@ export const SettingsPopup: FC<{
   const list = useMemo(() => {
     const arr = [];
     arr.push({ tab: 'account', label: t('account', 'Account') });
-    arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
+    arr.push({ tab: 'notifications', label: t('notifications', 'Notifications') });
     arr.push({ tab: 'appearance', label: t('appearance', 'Appearance') });
     // AI provider keys — admins only (workspace-wide, encrypted at rest)
     if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
       arr.push({ tab: 'ai_keys', label: t('ai_keys', 'AI Keys') });
     }
+    arr.push({ tab: 'integrations', label: t('integrations', 'Integrations') });
+    arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
     // Populate tabs based on user permissions
     if (user?.tier?.team_members && isGeneral) {
       arr.push({ tab: 'teams', label: t('teams', 'Teams') });
@@ -116,7 +119,6 @@ export const SettingsPopup: FC<{
     if (user?.tier?.public_api && isGeneral && showLogout) {
       arr.push({ tab: 'api', label: t('developers', 'API & Developers') });
     }
-    arr.push({ tab: 'approved_apps', label: t('approved_apps', 'Connected Apps') });
 
     return arr;
   }, [user, isGeneral, showLogout, t]);
@@ -178,6 +180,19 @@ export const SettingsPopup: FC<{
               {tab === 'ai_keys' && (
                 <div>
                   <AiKeysComponent />
+                </div>
+              )}
+              {tab === 'notifications' && (
+                <div className="flex flex-col gap-[16px]">
+                  <div className="text-[18px] font-[600]">
+                    {t('notifications', 'Notifications')}
+                  </div>
+                  <EmailNotificationsComponent />
+                </div>
+              )}
+              {tab === 'integrations' && (
+                <div>
+                  <IntegrationsComponent />
                 </div>
               )}
               {tab === 'global_settings' && (
@@ -253,11 +268,6 @@ export const SettingsPopup: FC<{
                   </div>
                 )}
 
-              {tab === 'approved_apps' && (
-                <div>
-                  <ApprovedAppsComponent />
-                </div>
-              )}
             </div>
           </form>
         </FormProvider>
