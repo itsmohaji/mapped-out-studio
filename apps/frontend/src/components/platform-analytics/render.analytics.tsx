@@ -63,7 +63,7 @@ const AnalyticsCard: FC<{
   if (notAvailable) {
     return (
       <div className="group relative">
-        <div className="flex flex-col h-full bg-newTableHeader border border-newTableBorder rounded-[12px] overflow-hidden">
+        <div className="flex flex-col h-full glass-surface rounded-[18px] overflow-hidden">
           <div className="flex items-center gap-[10px] px-[16px] pt-[14px] pb-[8px]">
             <div className="w-[8px] h-[8px] rounded-full bg-newTableBorder" />
             <span className="text-[15px] font-medium text-newTableText">
@@ -85,12 +85,11 @@ const AnalyticsCard: FC<{
       <div
         className={`
           flex flex-col h-full
-          bg-newTableHeader
-          border border-newTableBorder
-          rounded-[12px]
+          glass-surface
+          rounded-[18px]
           overflow-hidden
-          transition-all duration-200
-          hover:border-[#5c9ad6]/50
+          transition-all duration-300
+          hover:-translate-y-[2px] hover:shadow-[0_12px_36px_-12px_rgba(107,163,218,0.35)]
         `}
       >
         {/* Header */}
@@ -147,7 +146,7 @@ const EmptyState: FC<{ onRefresh: () => void }> = ({ onRefresh }) => {
   const t = useT();
 
   return (
-    <div className="col-span-full flex flex-col items-center justify-center py-[48px] px-[24px] bg-newTableHeader border border-newTableBorder rounded-[12px]">
+    <div className="col-span-full flex flex-col items-center justify-center py-[48px] px-[24px] glass-surface rounded-[18px]">
       <div className="w-[48px] h-[48px] mb-[16px] rounded-full bg-[#5c9ad6]/10 flex items-center justify-center">
         <svg
           width="24"
@@ -243,7 +242,7 @@ const TopPosts: FC<{ integration: Integration; date: number }> = ({
             href={post.permalink}
             target="_blank"
             rel="noreferrer"
-            className="bg-newTableHeader border border-newTableBorder rounded-[12px] overflow-hidden hover:border-[#5c9ad6]/50 transition-all flex flex-col"
+            className="glass-surface rounded-[18px] overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_12px_36px_-12px_rgba(107,163,218,0.35)] transition-all duration-300 flex flex-col"
           >
             {post.thumbnail && (
               // eslint-disable-next-line @next/next/no-img-element

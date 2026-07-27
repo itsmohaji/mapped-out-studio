@@ -10,6 +10,9 @@ import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Input } from '@gitroom/react/form/input';
 import { Button } from '@gitroom/react/form/button';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
+import { useRouter } from 'next/navigation';
+import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
+import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 
 interface Personal {
   id: string;
@@ -36,9 +39,11 @@ const AccountComponent = () => {
   const user = useUser();
   const mediaDirectory = useMediaDirectory();
   const { data: personal, mutate } = usePersonal();
+  const router = useRouter();
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const profileForm = useForm({
     values: { fullname: personal?.name || user?.name || '' },
@@ -75,12 +80,15 @@ const AccountComponent = () => {
           return;
         }
         await mutate();
+        // Refresh the server-rendered user context so the name updates in the
+        // top-right account menu immediately (no full reload).
+        router.refresh();
         toaster.show(t('profile_saved', 'Profile saved'), 'success');
       } finally {
         setSavingProfile(false);
       }
     },
-    [fetch, personal?.bio, personal?.picture, mutate, toaster, t]
+    [fetch, personal?.bio, personal?.picture, mutate, router, toaster, t]
   );
 
   const savePassword = useCallback(
@@ -117,6 +125,7 @@ const AccountComponent = () => {
           newPassword: '',
           confirmPassword: '',
         });
+        setShowPassword(false);
         toaster.show(t('password_changed', 'Password changed'), 'success');
       } finally {
         setSavingPassword(false);
@@ -183,12 +192,51 @@ const AccountComponent = () => {
         </FormProvider>
       </div>
 
-      {/* Change password */}
+      {/* Appearance: theme + language */}
       <div className="glass-surface rounded-[12px] p-[20px] flex flex-col gap-[16px]">
         <div className="text-[15px] font-[600]">
-          {t('change_password', 'Change password')}
+          {t('appearance', 'Appearance')}
         </div>
-        {isLocalAccount ? (
+        <div className="flex items-center justify-between gap-[12px] flex-wrap">
+          <div>
+            <div className="text-[14px] font-[600]">{t('theme', 'Theme')}</div>
+            <div className="text-[12px] text-textItemBlur mt-[2px]">
+              {t('theme_help', 'Light, dark, or match your system')}
+            </div>
+          </div>
+          <ModeComponent variant="segmented" />
+        </div>
+        <div className="flex items-center justify-between gap-[12px] flex-wrap">
+          <div>
+            <div className="text-[14px] font-[600]">{t('language', 'Language')}</div>
+            <div className="text-[12px] text-textItemBlur mt-[2px]">
+              {t('language_help', 'Choose your interface language')}
+            </div>
+          </div>
+          <LanguageToggle />
+        </div>
+      </div>
+
+      {/* Change password — collapsed behind a button */}
+      <div className="glass-surface rounded-[12px] p-[20px] flex flex-col gap-[16px]">
+        <div className="flex items-center justify-between gap-[12px]">
+          <div className="text-[15px] font-[600]">
+            {t('change_password', 'Change password')}
+          </div>
+          {isLocalAccount && !showPassword && (
+            <Button type="button" secondary onClick={() => setShowPassword(true)}>
+              {t('change_password', 'Change password')}
+            </Button>
+          )}
+        </div>
+        {!isLocalAccount ? (
+          <div className="text-[13px] text-textItemBlur">
+            {t(
+              'password_social_hint',
+              'You signed in with a social account, so there is no password to change.'
+            )}
+          </div>
+        ) : showPassword ? (
           <FormProvider {...passwordForm}>
             <form
               onSubmit={passwordForm.handleSubmit(savePassword)}
@@ -212,21 +260,28 @@ const AccountComponent = () => {
                 type="password"
                 autoComplete="new-password"
               />
-              <div>
+              <div className="flex items-center gap-[12px]">
                 <Button type="submit" loading={savingPassword}>
                   {t('update_password', 'Update password')}
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPassword(false);
+                    passwordForm.reset({
+                      password: '',
+                      newPassword: '',
+                      confirmPassword: '',
+                    });
+                  }}
+                  className="text-[13px] text-textItemBlur hover:underline"
+                >
+                  {t('cancel', 'Cancel')}
+                </button>
               </div>
             </form>
           </FormProvider>
-        ) : (
-          <div className="text-[13px] text-textItemBlur">
-            {t(
-              'password_social_hint',
-              'You signed in with a social account, so there is no password to change.'
-            )}
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

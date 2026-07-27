@@ -751,10 +751,10 @@ html[dir='rtl'] [dir='ltr'] {
   }
 
   .mention {
-    background-color: var(--purple-light);
+    background-color: rgba(107, 163, 218, 0.15);
     border-radius: 0.4rem;
     box-decoration-break: clone;
-    color: #ae8afc;
+    color: #6ba3da;
     &::after {
       content: '\200B';
     }

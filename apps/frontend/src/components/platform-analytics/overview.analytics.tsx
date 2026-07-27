@@ -60,7 +60,7 @@ const followerCount = (data: MetricItem[] | null): number | null => {
 const DATE_OPTIONS = [7, 30, 90];
 
 const StatTile = ({ label, value }: { label: string; value: string }) => (
-  <div className="bg-newTableHeader border border-newTableBorder rounded-[12px] px-[18px] py-[16px] flex flex-col gap-[4px]">
+  <div className="glass-surface rounded-[16px] px-[18px] py-[16px] flex flex-col gap-[4px]">
     <div className="text-[12px] text-textItemBlur">{label}</div>
     <div className="text-[26px] font-[600] leading-tight">{value}</div>
   </div>
@@ -72,7 +72,7 @@ const ChannelCard = ({ block }: { block: ChannelBlock }) => {
   const metrics = (data || []).filter((m) => m.available !== false).slice(0, 3);
 
   return (
-    <div className="bg-newTableHeader border border-newTableBorder rounded-[12px] overflow-hidden flex flex-col">
+    <div className="glass-surface rounded-[18px] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_12px_36px_-12px_rgba(107,163,218,0.35)]">
       <div className="flex items-center gap-[10px] px-[16px] pt-[14px] pb-[10px]">
         <div className="relative w-[34px] h-[34px] shrink-0">
           <ImageWithFallback

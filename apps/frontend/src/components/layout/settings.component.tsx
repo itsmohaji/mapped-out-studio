@@ -35,8 +35,6 @@ import AccountComponent from '@gitroom/frontend/components/settings/account.comp
 import AiKeysComponent from '@gitroom/frontend/components/settings/ai-keys.component';
 import IntegrationsComponent from '@gitroom/frontend/components/settings/integrations.component';
 import EmailNotificationsComponent from '@gitroom/frontend/components/settings/email-notifications.component';
-import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
-import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 export const SettingsPopup: FC<{
   getRef?: Ref<any>;
 }> = (props) => {
@@ -93,7 +91,6 @@ export const SettingsPopup: FC<{
     const arr = [];
     arr.push({ tab: 'account', label: t('account', 'Account') });
     arr.push({ tab: 'notifications', label: t('notifications', 'Notifications') });
-    arr.push({ tab: 'appearance', label: t('appearance', 'Appearance') });
     // AI provider keys — admins only (workspace-wide, encrypted at rest)
     if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
       arr.push({ tab: 'ai_keys', label: t('ai_keys', 'AI Keys') });
@@ -129,7 +126,7 @@ export const SettingsPopup: FC<{
 
   return (
     <>
-      <div className="bg-newBgColorInner p-[20px] flex flex-col transition-all w-[260px]">
+      <div className="bg-newBgColorInner p-[20px] flex flex-col transition-all w-[260px] rounded-s-[16px]">
         <div className="flex flex-1 flex-col gap-[15px]">
           {list.map(({ tab: tabKey, label }) => (
             <div
@@ -160,7 +157,7 @@ export const SettingsPopup: FC<{
           )}
         </div>
       </div>
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px] rounded-e-[16px]">
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(submit)}>
             {!!getRef && (
@@ -198,35 +195,6 @@ export const SettingsPopup: FC<{
               {tab === 'global_settings' && (
                 <div>
                   <GlobalSettings />
-                </div>
-              )}
-              {tab === 'appearance' && (
-                <div className="flex flex-col gap-[16px]">
-                  <div className="text-[18px] font-[600]">
-                    {t('appearance', 'Appearance')}
-                  </div>
-                  <div className="flex items-center justify-between glass-surface rounded-[12px] px-[16px] py-[14px]">
-                    <div>
-                      <div className="text-[14px] font-[600]">
-                        {t('theme', 'Theme')}
-                      </div>
-                      <div className="text-[12px] text-textItemBlur mt-[2px]">
-                        {t('theme_help', 'Light, dark, or match your system')}
-                      </div>
-                    </div>
-                    <ModeComponent variant="segmented" />
-                  </div>
-                  <div className="flex items-center justify-between glass-surface rounded-[12px] px-[16px] py-[14px]">
-                    <div>
-                      <div className="text-[14px] font-[600]">
-                        {t('language', 'Language')}
-                      </div>
-                      <div className="text-[12px] text-textItemBlur mt-[2px]">
-                        {t('language_help', 'Choose your interface language')}
-                      </div>
-                    </div>
-                    <LanguageToggle />
-                  </div>
                 </div>
               )}
               {tab === 'teams' && !!user?.tier?.team_members && isGeneral && (
