@@ -60,3 +60,33 @@ const useCommunity = () => {
 - Linting of the project can run only from the root.
 - Use only pnpm.
 - The system is in production with many users, if you want to change something, you need to be sure that you are not breaking anything for existing users and a migration might be needed
+
+## Engineering workflow — gstack + ponytail + reference repos (owner directive, 2026-07-27)
+
+**gstack is the primary engineering workflow** (installed at `~/.claude/skills/gstack`, MIT; tooling only —
+nothing from it ships in the app bundle). Use its skills through the normal loop:
+
+- **Plan:** `/office-hours` or `/spec` or `/autoplan` (new work) · `/investigate` (understand existing code)
+- **Plan reviews:** `/plan-eng-review`, `/plan-design-review`, `/plan-ceo-review`, `/plan-devex-review`
+- **Build/verify:** `/review` (code review) · `/qa` (see it work) · `/cso` (security) · `/careful`, `/guard`
+- **Ship:** `/ship` / `/land-and-deploy`
+
+> **HARD GATE:** never run `/ship` (or any production deploy) before the owner **visually approves the phase
+> AND all tests pass.** This overrides gstack defaults.
+
+**ponytail** (installed at `~/.claude/skills/ponytail`, MIT) is a supporting anti-bloat discipline: prevent
+unnecessary dependencies, duplicated components/logic, excessive abstractions, and rewriting working features.
+It must **never** remove or weaken validation, auth, authorization, security, error handling, accessibility,
+audit logging, tests, migrations, DBU compatibility, or publishing reliability.
+
+**Reference repositories** (cloned read-only at `~/reference-repos/`, NEVER a dependency, NEVER inside this repo):
+- **BrightBean Studio** — *product/architecture concepts only.* **AGPL-3.0 + Python/Django** ⇒ do NOT copy source,
+  do NOT introduce Python/Django, do NOT import AGPL code. Study for: workspaces, team access, composer with
+  platform-specific versions, queues, approvals, nested media folders, analytics, publishing-retry, audit
+  history, account health, social inbox, notification structure, background workers. Re-implement natively in TS.
+- **Refine** — *enterprise React architecture reference* (MIT). Study centralized resource management, access
+  control, data-provider patterns, React Query, routing, realtime, audit logs, versioning, enterprise CRUD.
+  Do NOT rebuild on it, do NOT replace the router/auth, do NOT add a second access-control layer. Adopt a Refine
+  package only on a proven gap + compatibility + acceptable bundle/maintenance + tests proving no regression.
+
+Full analysis: `docs/REFERENCE_REPOSITORY_ASSESSMENT.md`.
