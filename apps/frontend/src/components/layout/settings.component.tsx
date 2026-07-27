@@ -32,6 +32,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
 import AccountComponent from '@gitroom/frontend/components/settings/account.component';
+import AiKeysComponent from '@gitroom/frontend/components/settings/ai-keys.component';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
@@ -92,6 +93,10 @@ export const SettingsPopup: FC<{
     arr.push({ tab: 'account', label: t('account', 'Account') });
     arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
     arr.push({ tab: 'appearance', label: t('appearance', 'Appearance') });
+    // AI provider keys — admins only (workspace-wide, encrypted at rest)
+    if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
+      arr.push({ tab: 'ai_keys', label: t('ai_keys', 'AI Keys') });
+    }
     // Populate tabs based on user permissions
     if (user?.tier?.team_members && isGeneral) {
       arr.push({ tab: 'teams', label: t('teams', 'Teams') });
@@ -168,6 +173,11 @@ export const SettingsPopup: FC<{
               {tab === 'account' && (
                 <div>
                   <AccountComponent />
+                </div>
+              )}
+              {tab === 'ai_keys' && (
+                <div>
+                  <AiKeysComponent />
                 </div>
               )}
               {tab === 'global_settings' && (

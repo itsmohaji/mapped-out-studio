@@ -15,21 +15,31 @@ import { z } from 'zod';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { GeneratorDto } from '@gitroom/nestjs-libraries/dtos/generator/generator.dto';
+import { aiKeyStore } from '@gitroom/nestjs-libraries/openai/ai.keys.store';
 
 const tools = !process.env.TAVILY_API_KEY
   ? []
   : [new TavilySearch({ maxResults: 3 })];
 const toolNode = new ToolNode(tools);
 
-const model = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'gpt-4.1',
-  temperature: 0.7,
-});
+// Rebuilt whenever the workspace OpenAI key changes (boot-load or admin save).
+const makeModel = () =>
+  new ChatOpenAI({
+    apiKey: aiKeyStore.openAiKey,
+    model: 'gpt-4.1',
+    temperature: 0.7,
+  });
+const makeDalle = () =>
+  new DallEAPIWrapper({
+    apiKey: aiKeyStore.openAiKey,
+    model: 'chatgpt-image-latest',
+  });
 
-const dalle = new DallEAPIWrapper({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'chatgpt-image-latest',
+let model = makeModel();
+let dalle = makeDalle();
+aiKeyStore.onChange(() => {
+  model = makeModel();
+  dalle = makeDalle();
 });
 
 interface WorkflowChannelsState {

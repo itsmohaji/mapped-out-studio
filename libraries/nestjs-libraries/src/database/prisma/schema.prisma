@@ -1086,3 +1086,12 @@ model Announcement {
   color       AnnouncementColor @default(INFO)
   createdAt   DateTime          @default(now())
 }
+
+// Global workspace settings (key/value). Used for admin-set AI provider keys
+// (stored ENCRYPTED at rest via encrypt_legacy_using_IV). Additive-only.
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt
+}

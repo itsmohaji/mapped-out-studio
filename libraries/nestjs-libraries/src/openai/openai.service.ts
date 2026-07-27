@@ -3,9 +3,12 @@ import OpenAI from 'openai';
 import { shuffle } from 'lodash';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
+import { aiKeyStore } from '@gitroom/nestjs-libraries/openai/ai.keys.store';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
+// Rebuilt whenever the workspace OpenAI key changes (boot-load or admin save).
+let openai = new OpenAI({ apiKey: aiKeyStore.openAiKey });
+aiKeyStore.onChange(() => {
+  openai = new OpenAI({ apiKey: aiKeyStore.openAiKey });
 });
 
 const PicturePrompt = z.object({

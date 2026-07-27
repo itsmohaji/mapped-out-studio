@@ -19,6 +19,7 @@ import { TypedSearchAttributes } from '@temporalio/common';
 import {
   organizationId,
 } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
+import { aiKeyStore } from '@gitroom/nestjs-libraries/openai/ai.keys.store';
 const parser = new Parser();
 
 interface WorkflowChannelsState {
@@ -35,15 +36,23 @@ interface WorkflowChannelsState {
   };
 }
 
-const model = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'gpt-4.1',
-  temperature: 0.7,
-});
-
-const dalle = new DallEAPIWrapper({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'chatgpt-image-latest',
+// Rebuilt whenever the workspace OpenAI key changes (boot-load or admin save).
+const makeModel = () =>
+  new ChatOpenAI({
+    apiKey: aiKeyStore.openAiKey,
+    model: 'gpt-4.1',
+    temperature: 0.7,
+  });
+const makeDalle = () =>
+  new DallEAPIWrapper({
+    apiKey: aiKeyStore.openAiKey,
+    model: 'chatgpt-image-latest',
+  });
+let model = makeModel();
+let dalle = makeDalle();
+aiKeyStore.onChange(() => {
+  model = makeModel();
+  dalle = makeDalle();
 });
 
 const generateContent = z.object({

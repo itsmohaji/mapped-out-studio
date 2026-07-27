@@ -9,6 +9,8 @@ import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/in
 import { AddTeamMemberDto } from '@gitroom/nestjs-libraries/dtos/settings/add.team.member.dto';
 import { AssignMemberDto } from '@gitroom/nestjs-libraries/dtos/settings/assign.member.dto';
 import { ShortlinkPreferenceDto } from '@gitroom/nestjs-libraries/dtos/settings/shortlink-preference.dto';
+import { AiKeyDto } from '@gitroom/nestjs-libraries/dtos/settings/ai-key.dto';
+import { AiKeysService } from '@gitroom/nestjs-libraries/openai/ai.keys.service';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthorizationActions, Sections } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 
@@ -17,8 +19,27 @@ import { AuthorizationActions, Sections } from '@gitroom/backend/services/auth/p
 export class SettingsController {
   constructor(
     private _organizationService: OrganizationService,
-    private _integrationService: IntegrationService
+    private _integrationService: IntegrationService,
+    private _aiKeysService: AiKeysService
   ) {}
+
+  @Get('/ai-keys')
+  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  async getAiKeys() {
+    return this._aiKeysService.getStatus();
+  }
+
+  @Post('/ai-keys')
+  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  async setAiKey(@Body() body: AiKeyDto) {
+    return this._aiKeysService.setKey(body.provider, body.apiKey || '');
+  }
+
+  @Post('/ai-keys/test')
+  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  async testAiKey(@Body() body: AiKeyDto) {
+    return this._aiKeysService.testKey(body.provider, body.apiKey);
+  }
 
   @Get('/team')
   @OrgRoles(Role.SUPERADMIN, Role.ADMIN)

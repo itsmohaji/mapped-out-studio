@@ -7,11 +7,18 @@ import { agentCategories } from '@gitroom/nestjs-libraries/agent/agent.categorie
 import { z } from 'zod';
 import { agentTopics } from '@gitroom/nestjs-libraries/agent/agent.topics';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
+import { aiKeyStore } from '@gitroom/nestjs-libraries/openai/ai.keys.store';
 
-const model = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'gpt-4o-2024-08-06',
-  temperature: 0,
+// Rebuilt whenever the workspace OpenAI key changes (boot-load or admin save).
+const makeModel = () =>
+  new ChatOpenAI({
+    apiKey: aiKeyStore.openAiKey,
+    model: 'gpt-4o-2024-08-06',
+    temperature: 0,
+  });
+let model = makeModel();
+aiKeyStore.onChange(() => {
+  model = makeModel();
 });
 
 interface WorkflowChannelsState {
