@@ -8,6 +8,7 @@ import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useRouter } from 'next/navigation';
+import { useAddProvider } from '@gitroom/frontend/components/launches/add.provider.component';
 
 interface Customer {
   id: string;
@@ -107,7 +108,7 @@ export const ClientsComponent = () => {
     '/integrations/customers',
     load
   );
-  const { data: integrationsRaw } = useSWR('/integrations/list', load);
+  const { data: integrationsRaw, mutate: mutateIntegrations } = useSWR('/integrations/list', load);
   const integrations: Integration[] = useMemo(
     () => integrationsRaw?.integrations || integrationsRaw || [],
     [integrationsRaw]
@@ -145,6 +146,13 @@ export const ClientsComponent = () => {
     });
   }, [t, mutateCustomers]);
 
+  // Opens the real "Add Channel" (connect a social account) flow, so users can
+  // connect a channel straight from the Clients page instead of the calendar.
+  const addChannel = useAddProvider(() => {
+    mutateCustomers();
+    mutateIntegrations();
+  });
+
   const loading = !customers;
   const ungrouped = integrations.filter((i) => !i.customer?.id).length;
 
@@ -161,7 +169,20 @@ export const ClientsComponent = () => {
             )}
           </p>
         </div>
-        <Button onClick={addClient}>+ {t('add_client', 'Add Client')}</Button>
+        <div className="flex items-center gap-[10px] shrink-0">
+          <button
+            type="button"
+            onClick={addChannel}
+            className="inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[12px] glass-surface text-[13px] font-[600] text-newTextColor hover:-translate-y-[1px] transition-transform"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="17" rx="2" />
+              <path d="M12 9v7M8.5 12.5h7" strokeLinecap="round" />
+            </svg>
+            {t('add_channel', 'Add Channel')}
+          </button>
+          <Button onClick={addClient}>+ {t('add_client', 'Add Client')}</Button>
+        </div>
       </div>
 
       {/* Toolbar */}
