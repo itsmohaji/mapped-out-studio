@@ -8,6 +8,7 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { useTasksApi, TaskRow } from '@gitroom/frontend/components/tasks/task.api';
 
 interface Customer {
   id: string;
@@ -190,6 +191,23 @@ export const DashboardComponent: FC = () => {
   const { data: scheduled } = useSWR('/posts/list?state=scheduled&page=0&limit=100', loadPosts);
   const { data: published } = useSWR('/posts/list?state=published&page=0&limit=100', loadPosts);
   const { data: drafts } = useSWR('/posts/list?state=draft&page=0&limit=50', loadPosts);
+  const { data: myTasksRaw } = useSWR<TaskRow[]>(
+    user?.id ? `/tasks?assigneeId=${user.id}` : null,
+    load
+  );
+
+  const myOpenTasks = useMemo(
+    () =>
+      (myTasksRaw || [])
+        .filter((task) => task.status !== 'done')
+        .sort((a, b) => {
+          const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
+          const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
+          return ad - bd;
+        })
+        .slice(0, 6),
+    [myTasksRaw]
+  );
 
   const channels: Integration[] = useMemo(
     () => integrationsRaw?.integrations || integrationsRaw || [],
@@ -460,8 +478,58 @@ export const DashboardComponent: FC = () => {
           </Card>
         </div>
 
-        {/* Right: accounts health + clients */}
+        {/* Right: my tasks + accounts health + clients */}
         <div className="flex flex-col gap-[16px]">
+          <Card
+            title={t('my_tasks', 'My tasks')}
+            action={
+              <button
+                onClick={() => router.push('/tasks')}
+                className="text-[11.5px] text-btnPrimary hover:underline"
+              >
+                {t('view_all', 'View all')}
+              </button>
+            }
+          >
+            {!myTasksRaw ? (
+              <div className="px-[16px] py-[24px] text-center text-textItemBlur text-[12.5px]">
+                {t('loading', 'Loading…')}
+              </div>
+            ) : myOpenTasks.length === 0 ? (
+              <div className="px-[16px] py-[24px] text-center text-textItemBlur text-[12.5px]">
+                {t('no_open_tasks', 'No open tasks.')}
+              </div>
+            ) : (
+              myOpenTasks.map((task) => {
+                const overdue =
+                  !!task.dueAt && new Date(task.dueAt).getTime() < Date.now();
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => router.push('/tasks')}
+                    className="flex items-center gap-[11px] px-[16px] py-[10px] border-b border-newTableBorder last:border-b-0 cursor-pointer hover:bg-newBgLineColor/40 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12.5px] font-[600] truncate">
+                        {task.title}
+                      </div>
+                      {(task.dueAt || task.remindAt) && (
+                        <div className="text-[11px] text-textItemBlur mt-[2px]">
+                          {fmtDate(task.dueAt || task.remindAt || undefined)}
+                        </div>
+                      )}
+                    </div>
+                    {overdue && (
+                      <span className="shrink-0 text-[10px] font-[700] px-[8px] py-[3px] rounded-full text-[#e2685f] bg-[#e2685f]/15">
+                        {t('overdue', 'Overdue')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </Card>
+
           <Card
             title={t('accounts_health', 'Accounts health')}
             action={

@@ -32,6 +32,8 @@ import { MantineWrapper } from '@gitroom/react/helpers/mantine.wrapper';
 import { Impersonate } from '@gitroom/frontend/components/layout/impersonate';
 import { AnnouncementBanner } from '@gitroom/frontend/components/layout/announcement.banner';
 import { TopMenu } from '@gitroom/frontend/components/layout/top.menu';
+import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { TaskForm } from '@gitroom/frontend/components/tasks/task-form';
 import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
@@ -50,6 +52,7 @@ const jakartaSans = Plus_Jakarta_Sans({
 
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const fetch = useFetch();
+  const modals = useModals();
 
   const { backendUrl, billingEnabled, isGeneral } = useVariables();
 
@@ -66,6 +69,24 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     refreshWhenOffline: false,
     refreshWhenHidden: false,
   });
+
+  const openAddTask = useCallback(() => {
+    modals.openModal({
+      title: 'Add Task',
+      withCloseButton: true,
+      classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
+      children: <TaskForm onSaved={() => {}} />,
+    });
+  }, [modals]);
+
+  const openSetReminder = useCallback(() => {
+    modals.openModal({
+      title: 'Set Reminder',
+      withCloseButton: true,
+      classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
+      children: <TaskForm compact onSaved={() => {}} />,
+    });
+  }, [modals]);
 
   const [collapsed, setCollapsed] = useCookie('navCollapsed', '0');
   const isCollapsed = collapsed === '1';
@@ -171,9 +192,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         <div className="flex items-center gap-[9px] text-textItemBlur">
                           <button
                             type="button"
-                            disabled
-                            title="Coming soon"
-                            className="hidden xl:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur opacity-55 cursor-not-allowed"
+                            onClick={openSetReminder}
+                            className="hidden xl:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur hover:text-textItemFocused transition-colors"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                               <circle cx="12" cy="12" r="9" />
@@ -194,10 +214,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => router.push('/launches')}
-                            disabled
-                            title="Coming soon"
-                            className="hidden md:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur opacity-55 cursor-not-allowed"
+                            onClick={openAddTask}
+                            className="hidden md:inline-flex items-center gap-[7px] h-[40px] px-[14px] rounded-[13px] glass-surface text-[12px] font-[600] text-textItemBlur hover:text-textItemFocused transition-colors"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                               <circle cx="12" cy="12" r="9" />
