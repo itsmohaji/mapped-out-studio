@@ -1,20 +1,12 @@
 export const fallbackLng = 'en';
-export const languages = [
-  fallbackLng,
-  'he',
-  'ru',
-  'zh',
-  'fr',
-  'es',
-  'pt',
-  'de',
-  'it',
-  'ja',
-  'ko',
-  'ar',
-  'tr',
-  'vi',
-];
+// Mapped Out ships only English + Arabic (Arabic drives full RTL). Any stale cookie
+// for a removed language falls back to `fallbackLng` via i18next `supportedLngs`.
+export const languages = [fallbackLng, 'ar'];
+
+// Languages that render right-to-left. Single source of truth for SSR + client dir.
+export const rtlLanguages = ['ar', 'he'];
+export const isRtlLanguage = (language?: string) =>
+  !!language && rtlLanguages.includes(language);
 
 export const defaultNS = 'translation';
 export const cookieName = 'i18next';

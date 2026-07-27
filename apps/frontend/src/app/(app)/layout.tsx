@@ -20,6 +20,7 @@ import { cookies } from 'next/headers';
 import {
   cookieName,
   fallbackLng,
+  isRtlLanguage,
 } from '@gitroom/react/translation/i18n.config';
 import { HtmlComponent } from '@gitroom/frontend/components/layout/html.component';
 import Script from 'next/script';
@@ -38,7 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ? PlausibleProvider
     : Fragment;
   return (
-    <html>
+    <html lang={language} dir={isRtlLanguage(language) ? 'rtl' : 'ltr'}>
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
