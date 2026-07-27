@@ -31,6 +31,7 @@ import { Autopost } from '@gitroom/frontend/components/autopost/autopost';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
+import AccountComponent from '@gitroom/frontend/components/settings/account.component';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
@@ -83,11 +84,12 @@ export const SettingsPopup: FC<{
     close();
   }, []);
 
-  const [tab, setTab] = useState('global_settings');
+  const [tab, setTab] = useState('account');
 
   const t = useT();
   const list = useMemo(() => {
     const arr = [];
+    arr.push({ tab: 'account', label: t('account', 'Account') });
     arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
     arr.push({ tab: 'appearance', label: t('appearance', 'Appearance') });
     // Populate tabs based on user permissions
@@ -163,6 +165,11 @@ export const SettingsPopup: FC<{
                 !getRef && 'rounded-[4px]'
               )}
             >
+              {tab === 'account' && (
+                <div>
+                  <AccountComponent />
+                </div>
+              )}
               {tab === 'global_settings' && (
                 <div>
                   <GlobalSettings />

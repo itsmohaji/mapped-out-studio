@@ -24,6 +24,7 @@ import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions
 import { ApiTags } from '@nestjs/swagger';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
 import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
+import { ChangePasswordDto } from '@gitroom/nestjs-libraries/dtos/users/change.password.dto';
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { RealIP } from 'nestjs-real-ip';
@@ -193,6 +194,15 @@ export class UsersController {
     @Body() body: UserDetailDto
   ) {
     return this._userService.changePersonal(user.id, body);
+  }
+
+  @Post('/change-password')
+  @ClientAllowed()
+  async changePassword(
+    @GetUserFromRequest() user: User,
+    @Body() body: ChangePasswordDto
+  ) {
+    return this._userService.changePassword(user.id, body);
   }
 
   @Get('/email-notifications')
