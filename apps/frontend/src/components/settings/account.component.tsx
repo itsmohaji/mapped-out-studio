@@ -10,6 +10,7 @@ import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Input } from '@gitroom/react/form/input';
 import { Button } from '@gitroom/react/form/button';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
+import { showMediaBox } from '@gitroom/frontend/components/media/media.component';
 import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 import LanguageToggle from '@gitroom/frontend/components/settings/language.toggle';
 
@@ -42,6 +43,12 @@ const AccountComponent = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // undefined = untouched (keep whatever is stored), null = explicitly removed
+  const [pictureEdit, setPictureEdit] = useState<
+    { id: string; path: string } | null | undefined
+  >(undefined);
+  const picture =
+    pictureEdit === undefined ? personal?.picture ?? null : pictureEdit;
 
   const profileForm = useForm({
     values: { fullname: personal?.name || user?.name || '' },
@@ -61,14 +68,14 @@ const AccountComponent = () => {
     async (values: { fullname: string }) => {
       setSavingProfile(true);
       try {
-        // Round-trip the existing picture so saving the name never disconnects the avatar.
+        // Round-trip the picture so saving the name never disconnects the avatar.
         const res = await fetch('/user/personal', {
           method: 'POST',
           body: JSON.stringify({
             fullname: values.fullname,
             bio: personal?.bio ?? undefined,
-            picture: personal?.picture
-              ? { id: personal.picture.id, path: personal.picture.path }
+            picture: picture
+              ? { id: picture.id, path: picture.path }
               : undefined,
           }),
         });
@@ -77,6 +84,7 @@ const AccountComponent = () => {
           toaster.show(err?.message || t('save_failed', 'Could not save'), 'warning');
           return;
         }
+        setPictureEdit(undefined);
         await mutate();
         // The top-right account menu reads the user from the CLIENT SWR key
         // '/user/self' (LayoutComponent), not from a server render — so
@@ -87,7 +95,7 @@ const AccountComponent = () => {
         setSavingProfile(false);
       }
     },
-    [fetch, personal?.bio, personal?.picture, mutate, toaster, t]
+    [fetch, personal?.bio, picture, mutate, toaster, t]
   );
 
   const savePassword = useCallback(
@@ -141,10 +149,10 @@ const AccountComponent = () => {
       <div className="glass-surface rounded-[12px] p-[20px] flex flex-col gap-[16px]">
         <div className="flex items-center gap-[16px]">
           <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-forth flex items-center justify-center text-[24px] font-[600] text-white shrink-0">
-            {personal?.picture?.path ? (
+            {picture?.path ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={mediaDirectory.set(personal.picture.path)}
+                src={mediaDirectory.set(picture.path)}
                 alt={t('avatar', 'Avatar')}
                 className="w-full h-full object-cover"
               />
@@ -152,12 +160,40 @@ const AccountComponent = () => {
               <span>{initials}</span>
             )}
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-[6px]">
             <div className="text-[15px] font-[600]">
               {personal?.name || user?.name || user?.email}
             </div>
+            <div className="flex items-center gap-[10px]">
+              <button
+                type="button"
+                onClick={() =>
+                  // MediaBox actually calls back with an ARRAY (its setMedia
+                  // signature), despite showMediaBox's single-object type —
+                  // that mismatch is why the old avatar save never stuck.
+                  showMediaBox((v: any) => {
+                    const pick = Array.isArray(v) ? v[0] : v;
+                    if (pick?.id) {
+                      setPictureEdit({ id: pick.id, path: pick.path });
+                    }
+                  })
+                }
+                className="text-[12.5px] font-[600] text-btnPrimary hover:underline"
+              >
+                {t('change_photo', 'Change photo')}
+              </button>
+              {picture && (
+                <button
+                  type="button"
+                  onClick={() => setPictureEdit(null)}
+                  className="text-[12.5px] text-textItemBlur hover:underline"
+                >
+                  {t('remove', 'Remove')}
+                </button>
+              )}
+            </div>
             <div className="text-[12px] text-textItemBlur">
-              {t('profile_photo_hint', 'Profile photo uploading is coming soon')}
+              {t('profile_photo_hint_2', 'Pick or upload an image, then press Save')}
             </div>
           </div>
         </div>

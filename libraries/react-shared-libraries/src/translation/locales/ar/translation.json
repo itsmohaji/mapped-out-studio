@@ -801,5 +801,7 @@
   "select_all": "تحديد الكل",
   "clear_selection": "إلغاء التحديد",
   "delete_selected": "حذف المحدد",
-  "delete_files_confirm": "حذف هذه الملفات نهائيًا؟"
+  "delete_files_confirm": "حذف هذه الملفات نهائيًا؟",
+  "change_photo": "تغيير الصورة",
+  "profile_photo_hint_2": "اختر صورة أو ارفعها، ثم اضغط حفظ"
 }
