@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, ReactNode, useCallback, useMemo } from 'react';
+import React, { FC, ReactNode, useCallback, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Button } from '@gitroom/react/form/button';
@@ -69,6 +69,8 @@ export const TasksComponent = () => {
   const toast = useToaster();
   const user = useUser();
   const api = useTasksApi();
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<StatusKey | null>(null);
 
   const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
   const {
@@ -146,6 +148,32 @@ export const TasksComponent = () => {
     [mutateTasks]
   );
 
+  // Move a task between columns. Optimistic (instant UI) but ALWAYS persisted;
+  // if the API call fails we revalidate so the board can never lie about state.
+  const moveTask = useCallback(
+    async (task: TaskRow, next: StatusKey) => {
+      if (task.status === next) return;
+      const optimistic = (tasks || []).map((row) =>
+        row.id === task.id
+          ? {
+              ...row,
+              status: next,
+              completedAt: next === 'done' ? new Date().toISOString() : null,
+            }
+          : row
+      );
+      mutateTasks(optimistic as TaskRow[], { revalidate: false });
+      try {
+        await api.update(task.id, { status: next });
+      } catch {
+        toast.show(t('task_save_failed', 'Could not save'), 'warning');
+      } finally {
+        mutateTasks();
+      }
+    },
+    [tasks, mutateTasks, toast, t]
+  );
+
   const removeTask = useCallback(
     async (task: TaskRow) => {
       if (
@@ -211,10 +239,33 @@ export const TasksComponent = () => {
             const rows = grouped[status];
             const meta = STATUS_META[status];
             return (
-              <Card key={status} title={meta.label} count={rows.length}>
+              <div
+                key={status}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (overColumn !== status) setOverColumn(status);
+                }}
+                onDragLeave={() => setOverColumn((c) => (c === status ? null : c))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setOverColumn(null);
+                  const id = e.dataTransfer.getData('text/plain') || dragId;
+                  const task = (tasks || []).find((row) => row.id === id);
+                  if (task) moveTask(task, status);
+                  setDragId(null);
+                }}
+                className={`rounded-[16px] transition-all ${
+                  overColumn === status
+                    ? 'ring-2 ring-btnPrimary ring-offset-0'
+                    : ''
+                }`}
+              >
+              <Card title={t(`status_${status}`, meta.label)} count={rows.length}>
                 {rows.length === 0 ? (
                   <div className="px-[16px] py-[24px] text-center text-textItemBlur text-[12.5px]">
-                    {t('nothing_here', 'Nothing here.')}
+                    {overColumn === status
+                      ? t('drop_here', 'Drop here')
+                      : t('nothing_here', 'Nothing here.')}
                   </div>
                 ) : (
                   rows.map((task) => {
@@ -223,7 +274,19 @@ export const TasksComponent = () => {
                     return (
                       <div
                         key={task.id}
-                        className="flex items-start gap-[10px] px-[16px] py-[12px] border-b border-newTableBorder last:border-b-0"
+                        draggable
+                        onDragStart={(e) => {
+                          setDragId(task.id);
+                          e.dataTransfer.setData('text/plain', task.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragEnd={() => {
+                          setDragId(null);
+                          setOverColumn(null);
+                        }}
+                        className={`flex items-start gap-[10px] px-[16px] py-[12px] border-b border-newTableBorder last:border-b-0 cursor-grab active:cursor-grabbing transition-opacity ${
+                          dragId === task.id ? 'opacity-40' : ''
+                        }`}
                       >
                         <button
                           type="button"
@@ -274,6 +337,18 @@ export const TasksComponent = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-[4px] shrink-0">
+                          {status === 'todo' && (
+                            <button
+                              type="button"
+                              onClick={() => moveTask(task, 'doing')}
+                              title={t('start_now', 'Start now')}
+                              className="w-[26px] h-[26px] rounded-[8px] flex items-center justify-center text-textItemBlur hover:text-btnPrimary hover:bg-newBgLineColor/60 transition-colors"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="M5 3.5v17l14-8.5-14-8.5Z" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => editTask(task)}
@@ -302,6 +377,7 @@ export const TasksComponent = () => {
                   })
                 )}
               </Card>
+              </div>
             );
           })}
         </div>

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { ReactNode, useCallback } from 'react';
+import { mutate } from 'swr';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useTaskReminders } from '@gitroom/frontend/components/tasks/use-task-reminders';
 import { Logo } from '@gitroom/frontend/components/new-layout/logo';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 const ModeComponent = dynamic(
@@ -55,6 +57,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const t = useT();
   const fetch = useFetch();
   const modals = useModals();
+  // App-wide watcher: notifies when a task/reminder time arrives.
+  useTaskReminders();
 
   const { backendUrl, billingEnabled, isGeneral } = useVariables();
 
@@ -72,23 +76,35 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     refreshWhenHidden: false,
   });
 
+  // After creating from the top bar, refresh every task view (page, badge,
+  // dashboard card, reminder watcher) and take the user to the board so the
+  // new item is actually visible — otherwise the button feels like a no-op.
+  const afterTaskSaved = useCallback(() => {
+    mutate(
+      (key: any) => typeof key === 'string' && key.startsWith('/tasks'),
+      undefined,
+      { revalidate: true }
+    );
+    router.push('/tasks');
+  }, [router]);
+
   const openAddTask = useCallback(() => {
     modals.openModal({
       title: t('add_task', 'Add Task'),
       withCloseButton: true,
       classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
-      children: <TaskForm onSaved={() => {}} />,
+      children: <TaskForm onSaved={afterTaskSaved} />,
     });
-  }, [modals]);
+  }, [modals, t, afterTaskSaved]);
 
   const openSetReminder = useCallback(() => {
     modals.openModal({
       title: t('set_reminder', 'Set Reminder'),
       withCloseButton: true,
       classNames: { modal: 'bg-newBgColorInner text-newTextColor' },
-      children: <TaskForm compact onSaved={() => {}} />,
+      children: <TaskForm compact onSaved={afterTaskSaved} />,
     });
-  }, [modals]);
+  }, [modals, t, afterTaskSaved]);
 
   const [collapsed, setCollapsed] = useCookie('navCollapsed', '0');
   const isCollapsed = collapsed === '1';
