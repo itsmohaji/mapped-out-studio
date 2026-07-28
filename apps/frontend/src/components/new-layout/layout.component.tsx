@@ -247,7 +247,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                           <AccountMenu />
                         </div>
                       </div>
-                      <div className="flex flex-1 gap-[1px] min-h-0">{children}</div>
+                      {/* Real gap between panels. It was gap-[1px], which read
+                          as a hairline seam between two square-cornered blocks
+                          instead of separate rounded cards. */}
+                      <div className="flex flex-1 gap-[14px] min-h-0">{children}</div>
                     </div>
                   </div>
                 </>

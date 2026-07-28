@@ -171,27 +171,25 @@ export const MenuGroupComponent: FC<
           </div>
         </div>
       )}
-      {!!group.name && (
-        <div
-          className="flex items-center gap-[5px] cursor-pointer"
-          onClick={changeOpenClose}
-        >
-          <div>
-            <OpenClose isOpen={isOpen} />
-          </div>
+      {!!group.name &&
+        // Collapsed, the label used to truncate to "DB…" / "Epoqu…" / "Ma…".
+        // Show a hairline divider instead and keep the name in the tooltip.
+        (collapsed ? (
           <div
-            className="line-clamp-1"
-            {...(collapsed
-              ? {
-                  'data-tooltip-id': 'tooltip',
-                  'data-tooltip-content': group.name,
-                }
-              : {})}
+            className="h-px bg-newTableBorder mx-auto w-[28px] cursor-pointer"
+            onClick={changeOpenClose}
+            data-tooltip-id="tooltip"
+            data-tooltip-content={group.name}
+          />
+        ) : (
+          <div
+            className="flex items-center gap-[6px] cursor-pointer text-[11px] font-[600] uppercase tracking-wider text-textItemBlur hover:text-newTextColor transition-colors"
+            onClick={changeOpenClose}
           >
-            {group.name}
+            <OpenClose isOpen={isOpen} />
+            <div className="line-clamp-1">{group.name}</div>
           </div>
-        </div>
-      )}
+        ))}
       <div
         className={clsx(
           'gap-[12px] flex flex-col relative',
@@ -260,7 +258,8 @@ export const MenuComponent: FC<
           }
         : {})}
       className={clsx(
-        'flex gap-[12px] items-center bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-e-[8px]',
+        'flex gap-[10px] items-center hover:bg-boxHover group/profile transition-all rounded-[10px] p-[6px]',
+        collapsed && 'justify-center',
         integration.refreshNeeded && 'cursor-pointer'
       )}
     >
@@ -327,12 +326,18 @@ export const MenuComponent: FC<
           : {})}
         role="Handle"
         className={clsx(
-          'group-[.sidebar]:hidden flex-1 whitespace-nowrap text-ellipsis overflow-hidden cursor-move',
+          'group-[.sidebar]:hidden flex-1 min-w-0 cursor-move',
           integration.disabled && 'opacity-50'
         )}
       >
-        {integration.name}
+        <div className="text-[13px] font-[600] truncate leading-tight">
+          {integration.name}
+        </div>
+        <div className="text-[11px] text-textItemBlur truncate leading-tight capitalize">
+          {integration.identifier?.replace(/-/g, ' ')}
+        </div>
       </div>
+      <div className="group-[.sidebar]:hidden shrink-0">
       <Menu
         canChangeProfilePicture={integration.changeProfilePicture}
         canChangeNickName={integration.changeNickName}
@@ -346,6 +351,7 @@ export const MenuComponent: FC<
         }
         canDisable={!integration.disabled}
       />
+      </div>
     </div>
   );
 };
@@ -486,7 +492,7 @@ export const LaunchesComponent = () => {
   }, []);
   if (isLoading || reload) {
     return (
-      <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
+      <div className="glass-surface bg-newBgColorInner rounded-[16px] p-[18px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
         <LoadingComponent />
       </div>
     );
@@ -499,13 +505,13 @@ export const LaunchesComponent = () => {
       <CalendarWeekProvider integrations={sortedIntegrations}>
         <div
           className={clsx(
-            'flex relative flex-col',
-            collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
+            'flex relative flex-col shrink-0 transition-all duration-200',
+            collapseMenu === '1' ? 'group sidebar w-[84px]' : 'w-[260px]'
           )}
         >
           <div
             className={clsx(
-              'bg-newBgColorInner p-[20px] flex flex-col gap-[15px] transition-all absolute start-0 top-0 w-full h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor'
+              'glass-surface bg-newBgColorInner rounded-[16px] p-[14px] flex flex-col gap-[15px] transition-all absolute start-0 top-0 w-full h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor'
             )}
           >
             <div className="flex items-center">
@@ -592,9 +598,9 @@ export const LaunchesComponent = () => {
             </div>
           </div>
         </div>
-        <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+        <div className="glass-surface bg-newBgColorInner rounded-[16px] flex-1 flex-col flex p-[18px] gap-[12px] min-w-0">
           <Filters />
-          <div className="flex-1 flex">
+          <div className="flex-1 flex min-w-0">
             <Calendar />
           </div>
         </div>

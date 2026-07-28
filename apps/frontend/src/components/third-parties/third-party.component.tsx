@@ -116,7 +116,7 @@ export const ThirdPartyComponent = () => {
     <>
       <div
         className={clsx(
-          'bg-newBgColorInner p-[20px] flex flex-col gap-[15px] transition-all',
+          'glass-surface bg-newBgColorInner rounded-[16px] p-[14px] flex flex-col gap-[12px] transition-all duration-200 shrink-0 min-h-0 overflow-y-auto',
           collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
         )}
       >
@@ -200,7 +200,7 @@ export const ThirdPartyComponent = () => {
           </div>
         </div>
       </div>
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+      <div className="glass-surface bg-newBgColorInner rounded-[16px] flex-1 flex-col flex p-[18px] gap-[12px] min-w-0 overflow-y-auto">
         <ThirdPartyListComponent reload={mutate} />
       </div>
     </>

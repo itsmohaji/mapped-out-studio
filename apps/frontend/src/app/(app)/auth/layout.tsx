@@ -26,7 +26,7 @@ export default async function AuthLayout({
         <div className="text-center">
           Welcome to
           <br />
-          <span className="text-[42px] text-[#FC69FF]">
+          <span className="text-[42px] text-[#8fbbe4]">
             Mapped Out Social Studio
           </span>
           <div className="text-[18px] text-gray-400 mt-[24px]">

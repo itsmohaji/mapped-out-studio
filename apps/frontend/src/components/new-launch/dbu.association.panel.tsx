@@ -50,13 +50,16 @@ interface OrgChannel {
   identifier?: string;
 }
 
+// Match the rest of the app's inputs (token-driven, so it follows the theme)
+// instead of a bare browser select on a transparent background.
 const selStyle: CSSProperties = {
   width: '100%',
-  background: 'transparent',
-  border: '1px solid rgba(127,127,127,0.35)',
-  borderRadius: 8,
-  padding: '8px 10px',
-  fontSize: 14,
+  background: 'var(--new-bgLineColor)',
+  border: '1px solid var(--new-table-border)',
+  borderRadius: 10,
+  padding: '9px 12px',
+  fontSize: 13.5,
+  fontWeight: 500,
   color: 'inherit',
   outline: 'none',
 };
@@ -211,14 +214,24 @@ export const DbuAssociationPanel: FC<{
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
-        padding: 12,
-        borderRadius: 8,
-        border: '1px solid rgba(127,127,127,0.35)',
+        gap: 10,
+        padding: 14,
+        borderRadius: 14,
+        border: '1px solid var(--new-table-border)',
         marginBottom: 12,
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 600 }}>DBU association</div>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          opacity: 0.6,
+        }}
+      >
+        DBU association
+      </div>
       <select
         style={selStyle}
         value={clientId}

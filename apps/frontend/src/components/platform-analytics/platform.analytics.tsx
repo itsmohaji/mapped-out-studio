@@ -137,7 +137,7 @@ export const PlatformAnalytics = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
+      <div className="glass-surface bg-newBgColorInner rounded-[16px] p-[18px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
         <LoadingComponent />
       </div>
     );
@@ -145,7 +145,7 @@ export const PlatformAnalytics = () => {
 
   if (!sortedIntegrations.length && !isLoading) {
     return (
-      <div className="bg-newBgColorInner p-[20px] flex flex-col gap-[15px] transition-all flex-1 justify-center items-center text-center">
+      <div className="glass-surface bg-newBgColorInner rounded-[16px] p-[18px] flex flex-col gap-[15px] transition-all flex-1 justify-center items-center text-center">
         <div>
           <img src="/peoplemarketplace.svg" />
         </div>
@@ -174,12 +174,14 @@ export const PlatformAnalytics = () => {
     <>
       <div
         className={clsx(
-          'bg-newBgColorInner p-[20px] flex flex-col gap-[15px] transition-all',
-          collapseMenu === '1' ? 'group sidebar w-[100px]' : 'w-[260px]'
+          'glass-surface bg-newBgColorInner rounded-[16px] p-[14px] flex flex-col gap-[12px] transition-all duration-200 shrink-0 min-h-0',
+          collapseMenu === '1' ? 'group sidebar w-[84px]' : 'w-[260px]'
         )}
       >
-        <div className="flex gap-[12px] flex-col">
-          <div className="flex items-center">
+        {/* min-h-0 + overflow-y-auto so a long account list scrolls inside the
+            panel instead of stretching the page. */}
+        <div className="flex gap-[4px] flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar scrollbar-thumb-fifth scrollbar-track-transparent">
+          <div className="flex items-center mb-[6px]">
             <h2 className="group-[.sidebar]:hidden flex-1 text-[20px] font-[500]">
               {t('channels')}
             </h2>
@@ -222,14 +224,18 @@ export const PlatformAnalytics = () => {
                 setCurrent(index);
               }}
               className={clsx(
-                'flex gap-[12px] items-center group/profile justify-center hover:bg-boxHover rounded-e-[8px]',
-                currentIntegration.id !== integration.id &&
-                  'opacity-20 hover:opacity-100 cursor-pointer'
+                // opacity-20 on unselected rows made every other account look
+                // broken. Selection is a tinted row now; avatars stay legible.
+                'flex gap-[10px] items-center group/profile hover:bg-boxHover rounded-[10px] p-[6px] transition-colors',
+                collapseMenu === '1' && 'justify-center',
+                currentIntegration.id === integration.id
+                  ? 'bg-btnPrimary/10'
+                  : 'cursor-pointer'
               )}
             >
               <div
                 className={clsx(
-                  'relative rounded-full flex justify-center items-center gap-[6px]',
+                  'relative rounded-full flex justify-center items-center gap-[6px] shrink-0',
                   integration.disabled && 'opacity-50'
                 )}
               >
@@ -262,17 +268,29 @@ export const PlatformAnalytics = () => {
               </div>
               <div
                 className={clsx(
-                  'flex-1 whitespace-nowrap text-ellipsis overflow-hidden group-[.sidebar]:hidden',
+                  'flex-1 min-w-0 group-[.sidebar]:hidden text-start',
                   integration.disabled && 'opacity-50'
                 )}
               >
-                {integration.name}
+                <div
+                  className={clsx(
+                    'text-[13px] truncate leading-tight',
+                    currentIntegration.id === integration.id
+                      ? 'font-[600] text-newTextColor'
+                      : 'font-[500]'
+                  )}
+                >
+                  {integration.name}
+                </div>
+                <div className="text-[11px] text-textItemBlur truncate leading-tight capitalize">
+                  {integration.identifier?.replace(/-/g, ' ')}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[12px]">
+      <div className="glass-surface bg-newBgColorInner rounded-[16px] flex-1 flex-col flex p-[18px] gap-[12px] min-w-0 overflow-y-auto">
         {!!options.length && (
           <div className="flex-1 flex flex-col gap-[14px]">
             <div className="max-w-[200px]">
