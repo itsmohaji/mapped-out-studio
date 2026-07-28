@@ -11,7 +11,10 @@
 module.exports = {
   testEnvironment: 'node',
   rootDir: '.',
-  roots: ['<rootDir>/libraries/nestjs-libraries/src/security'],
+  roots: [
+    '<rootDir>/libraries/nestjs-libraries/src/security',
+    '<rootDir>/libraries/helpers/src/utils',
+  ],
   testMatch: ['**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': [

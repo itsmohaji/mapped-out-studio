@@ -77,6 +77,22 @@ export const SelectCustomer: FC<{
           <div className="text-[14px] font-[600] px-[12px] mb-[5px]">
             {t('customers', 'Customers')}
           </div>
+          {/* Without this there was no way back to the unfiltered calendar
+              short of editing the URL. */}
+          <div
+            onClick={() => {
+              setCustomer('');
+              onChange('');
+              setOpen(false);
+              setCurrent('global');
+            }}
+            className={clsx(
+              'p-[12px] hover:bg-newBgColor text-[14px] font-[500] h-[32px] flex items-center',
+              !customer && 'text-textItemFocused bg-boxFocused'
+            )}
+          >
+            {t('all_customers', 'All customers')}
+          </div>
           {uniqBy(integrations, (u) => u?.customer?.name)
             .filter((f) => f.customer?.name)
             .map((p) => (
@@ -92,7 +108,11 @@ export const SelectCustomer: FC<{
                   setCurrent('global')
                 }}
                 key={p.customer?.id}
-                className="p-[12px] hover:bg-newBgColor text-[14px] font-[500] h-[32px] flex items-center"
+                className={clsx(
+                  'p-[12px] hover:bg-newBgColor text-[14px] font-[500] h-[32px] flex items-center',
+                  customer === p.customer?.id &&
+                    'text-textItemFocused bg-boxFocused'
+                )}
               >
                 {p.customer?.name}
               </div>

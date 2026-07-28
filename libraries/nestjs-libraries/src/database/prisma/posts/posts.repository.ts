@@ -236,9 +236,13 @@ export class PostsRepository {
             ],
           },
         ],
+        // The customer filter merges INTO this object — a second `integration`
+        // key spread below would have overwritten the deletedAt/organizationId
+        // guards entirely, leaking soft-deleted and cross-org channels.
         integration: {
           deletedAt: null,
           organizationId: orgId,
+          ...(query.customer ? { customerId: query.customer } : {}),
         },
         deletedAt: null,
         parentPostId: null,
@@ -246,17 +250,12 @@ export class PostsRepository {
         ...(allowedIntegrationIds
           ? { integrationId: { in: allowedIntegrationIds } }
           : {}),
-        ...(query.customer
-          ? {
-              integration: {
-                customerId: query.customer,
-              },
-            }
-          : {}),
       },
       select: {
         id: true,
         content: true,
+        image: true,
+        error: true,
         publishDate: true,
         releaseURL: true,
         releaseId: true,
@@ -276,6 +275,7 @@ export class PostsRepository {
             providerIdentifier: true,
             name: true,
             picture: true,
+            customer: { select: { id: true, name: true } },
           },
         },
       },
@@ -370,10 +370,13 @@ export class PostsRepository {
         select: {
           id: true,
           content: true,
+          image: true,
+          error: true,
           publishDate: true,
           releaseURL: true,
           releaseId: true,
           state: true,
+          approvalStatus: true,
           intervalInDays: true,
           group: true,
           creationMethod: true,
@@ -388,6 +391,7 @@ export class PostsRepository {
               providerIdentifier: true,
               name: true,
               picture: true,
+              customer: { select: { id: true, name: true } },
             },
           },
         },

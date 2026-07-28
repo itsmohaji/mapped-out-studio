@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useCallback } from 'react';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
+import { ChannelFilter } from '@gitroom/frontend/components/launches/channel.filter';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import i18next from 'i18next';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
@@ -87,59 +88,31 @@ export const Filters = () => {
     });
   }, [calendar]);
 
-  const setDay = useCallback(() => {
-    // If already in day view and showing today, don't change
-    if (calendar.display === 'day') {
-      const todayRange = getDateRange('day');
-      if (calendar.startDate === todayRange.startDate) {
+  // Switching Day/Week/Month keeps the date you are BROWSING. These used to
+  // call getDateRange() with no reference date, so browsing to March and then
+  // clicking "Week" snapped you back to the current week.
+  const setDisplay = useCallback(
+    (display: 'day' | 'week' | 'month') => () => {
+      const range = getDateRange(display, calendar.startDate);
+      if (
+        calendar.display === display &&
+        calendar.startDate === range.startDate
+      ) {
         return;
       }
-    }
+      calendar.setFilters({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        display,
+        customer: calendar.customer,
+      });
+    },
+    [calendar]
+  );
 
-    const range = getDateRange('day');
-    calendar.setFilters({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      display: 'day',
-      customer: calendar.customer,
-    });
-  }, [calendar]);
-
-  const setWeek = useCallback(() => {
-    // If already in week view and showing current week, don't change
-    if (calendar.display === 'week') {
-      const currentWeekRange = getDateRange('week');
-      if (calendar.startDate === currentWeekRange.startDate) {
-        return;
-      }
-    }
-
-    const range = getDateRange('week');
-    calendar.setFilters({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      display: 'week',
-      customer: calendar.customer,
-    });
-  }, [calendar]);
-
-  const setMonth = useCallback(() => {
-    // If already in month view and showing current month, don't change
-    if (calendar.display === 'month') {
-      const currentMonthRange = getDateRange('month');
-      if (calendar.startDate === currentMonthRange.startDate) {
-        return;
-      }
-    }
-
-    const range = getDateRange('month');
-    calendar.setFilters({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      display: 'month',
-      customer: calendar.customer,
-    });
-  }, [calendar]);
+  const setDay = setDisplay('day');
+  const setWeek = setDisplay('week');
+  const setMonth = setDisplay('month');
 
   const setList = useCallback(() => {
     if (calendar.display === 'list') {
@@ -431,6 +404,7 @@ export const Filters = () => {
         onChange={(customer: string) => setCustomer(customer)}
         integrations={calendar.integrations}
       />
+      <ChannelFilter />
       {!isListView && (
         <div className="flex flex-row p-[4px] border border-newTableBorder rounded-[8px] text-[14px] font-[500]">
           <div

@@ -43,6 +43,11 @@ export const CalendarContext = createContext({
     refreshNeeded?: boolean;
   })[],
   trendings: [] as string[],
+  // Empty = every channel. Filtered client-side: the whole range is fetched.
+  channelIds: [] as string[],
+  setChannelIds: (_ids: string[]) => {
+    /** empty **/
+  },
   posts: [] as Array<
     Post & {
       integration: Integration;
@@ -147,6 +152,17 @@ export const CalendarWeekProvider: FC<{
   const searchParams = useSearchParams();
   const [displaySaved, setDisplaySaved] = useCookie('calendar-display', 'week');
   const display = searchParams.get('display') || displaySaved;
+
+  // Channel filter — persisted like the display so it survives a reload.
+  const [channelsSaved, setChannelsSaved] = useCookie('calendar-channels', '');
+  const channelIds = useMemo(
+    () => channelsSaved.split(',').filter(Boolean),
+    [channelsSaved]
+  );
+  const setChannelIds = useCallback(
+    (ids: string[]) => setChannelsSaved(ids.join(',')),
+    [setChannelsSaved]
+  );
 
   // List view state
   const [listPage, setListPage] = useState(0);
@@ -297,8 +313,19 @@ export const CalendarWeekProvider: FC<{
   const posts = useMemo(() => calendarData?.posts || [], [calendarData?.posts]);
   const comments = useMemo(() => calendarData?.comments || [], [calendarData?.comments]);
 
+  const byChannel = useCallback(
+    (list: any[]) =>
+      !channelIds.length
+        ? list
+        : list.filter((p: any) => channelIds.includes(p?.integration?.id)),
+    [channelIds]
+  );
+
   // List view data
-  const listPosts = useMemo(() => listData?.posts || [], [listData?.posts]);
+  const listPosts = useMemo(
+    () => byChannel(listData?.posts || []),
+    [listData?.posts, byChannel]
+  );
   const listTotal = listData?.total || 0;
   const listTotalPages = Math.ceil(listTotal / 100);
 
@@ -340,9 +367,11 @@ export const CalendarWeekProvider: FC<{
         trendings,
         reloadCalendarView,
         ...filters,
-        posts: calendarIsLoading ? [] : internalData,
+        posts: calendarIsLoading ? [] : byChannel(internalData),
         loading,
         integrations,
+        channelIds,
+        setChannelIds,
         setFilters: setFiltersWrapper,
         changeDate,
         comments,

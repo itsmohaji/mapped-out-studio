@@ -803,5 +803,9 @@
   "delete_selected": "حذف المحدد",
   "delete_files_confirm": "حذف هذه الملفات نهائيًا؟",
   "change_photo": "تغيير الصورة",
-  "profile_photo_hint_2": "اختر صورة أو ارفعها، ثم اضغط حفظ"
+  "profile_photo_hint_2": "اختر صورة أو ارفعها، ثم اضغط حفظ",
+  "all_channels": "كل القنوات",
+  "one_channel": "قناة واحدة",
+  "all_customers": "كل العملاء",
+  "could_not_move_post": "تعذّر نقل المنشور"
 }

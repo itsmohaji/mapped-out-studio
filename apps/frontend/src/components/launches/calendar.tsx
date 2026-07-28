@@ -56,6 +56,7 @@ import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import copy from 'copy-to-clipboard';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
+import { firstMediaPath } from '@gitroom/helpers/utils/post.media';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { Button } from '@gitroom/react/form/button';
 
@@ -554,7 +555,6 @@ export const ListView = () => {
                   post={post}
                   integrations={integrations}
                   deletePost={deletePost(post)}
-                  showTime={true}
                 />
               ))}
             </div>
@@ -602,6 +602,7 @@ export const CalendarColumn: FC<{
   } = useCalendar();
   const modal = useModals();
   const fetch = useFetch();
+  const toaster = useToaster();
 
   // Use shared post actions hook
   const { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease } = usePostActions();
@@ -722,28 +723,50 @@ export const CalendarColumn: FC<{
         action = whatToDo;
       }
 
+      // Month cells are built with endOf('day'), which used to move every
+      // dropped post to 23:59:59 and silently destroy its publish time.
+      // Keep the post's own time-of-day and only change the DAY.
+      const targetDate =
+        display === 'month' && item.date
+          ? getDate
+              .hour(dayjs(item.date).hour())
+              .minute(dayjs(item.date).minute())
+              .second(0)
+          : getDate;
+
       if (!item.interval) {
-        changeDate(item.id, getDate);
+        changeDate(item.id, targetDate);
       }
       const { status } = await fetch(`/posts/${item.id}/date`, {
         method: 'PUT',
         body: JSON.stringify({
-          date: getDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
+          date: targetDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
           action,
         }),
       });
-      if (status !== 500) {
-        if (item.interval || action === 'schedule') {
-          reloadCalendarView();
-          return;
+      // Anything outside 2xx failed — the old check was `status !== 500`, so a
+      // 400/401/403 left the post visually moved while the server rejected it.
+      if (status < 200 || status >= 300) {
+        if (!item.interval && item.date) {
+          changeDate(item.id, dayjs(item.date));
         }
+        toaster.show(
+          t('could_not_move_post', 'Could not move the post'),
+          'warning'
+        );
+        reloadCalendarView();
         return;
+      }
+      if (item.interval || action === 'schedule') {
+        reloadCalendarView();
       }
     },
     collect: (monitor) => ({
       canDrop: isBeforeNow ? false : !!monitor.canDrop() && !!monitor.isOver(),
     }),
-  }), [posts]);
+    // isBeforeNow/getDate/display were captured stale with `[posts]` only — a
+    // cell could accept a drop into an hour that had just elapsed.
+  }), [posts, isBeforeNow, getDate, display]);
 
   const addModal = useCallback(async () => {
     const set: any = !sets.length
@@ -971,6 +994,15 @@ export const CalendarColumn: FC<{
     </div>
   );
 });
+// Left stripe on every post card so scheduled / published / draft / failed are
+// distinguishable at a glance instead of only on hover.
+const STATE_COLOR: Record<string, string> = {
+  QUEUE: 'var(--new-btn-primary)',
+  PUBLISHED: '#2f9e63',
+  DRAFT: '#8b93a5',
+  ERROR: '#e14b4b',
+};
+
 const CalendarItem: FC<{
   date: dayjs.Dayjs;
   isBeforeNow: boolean;
@@ -983,7 +1015,6 @@ const CalendarItem: FC<{
   integrations: Integrations[];
   state: State;
   display: 'day' | 'week' | 'month';
-  showTime?: boolean;
   post: Post & {
     integration: Integration;
     tags: {
@@ -1003,7 +1034,6 @@ const CalendarItem: FC<{
     state,
     display,
     deletePost,
-    showTime,
     missingRelease,
   } = props;
   const { disableXAnalytics } = useVariables();
@@ -1033,6 +1063,10 @@ const CalendarItem: FC<{
           } as Record<string, { bg: string; label: string; full: string }>
         )[approval]
       : null;
+  const thumb = useMemo(() => firstMediaPath(post as any), [post]);
+  const customerName = (post as any).integration?.customer?.name as
+    | string
+    | undefined;
   const preview = useCallback(() => {
     window.open(`/p/` + post.id + '?share=true', '_blank');
   }, [post]);
@@ -1173,37 +1207,59 @@ const CalendarItem: FC<{
       <div
         onClick={editPost}
         className={clsx(
-          'gap-[5px] w-full flex h-full flex-1 rounded-br-[10px] rounded-bl-[10px] p-[8px] text-[14px] bg-newColColor',
-          'relative',
+          'gap-[7px] w-full flex h-full flex-1 rounded-br-[10px] rounded-bl-[10px] p-[8px] text-[14px] bg-newColColor',
+          'relative border-s-[3px] overflow-hidden',
           isBeforeNow && '!grayscale'
         )}
+        style={{ borderInlineStartColor: STATE_COLOR[state] || STATE_COLOR.QUEUE }}
       >
-        <div className={clsx('relative min-w-[20px]')}>
+        <div className={clsx('relative min-w-[20px]', thumb && 'min-w-[34px]')}>
+          {thumb ? (
+            <>
+              <SafeImage
+                className="w-[34px] h-[34px] rounded-[8px] object-cover bg-fifth"
+                src={thumb}
+                alt=""
+              />
+              <img
+                className="w-[14px] h-[14px] rounded-[5px] absolute z-10 -bottom-[3px] -start-[3px] border border-fifth"
+                src={post.integration.picture! || '/no-picture.jpg'}
+              />
+            </>
+          ) : (
+            <img
+              className="w-[20px] h-[20px] rounded-[8px]"
+              src={post.integration.picture! || '/no-picture.jpg'}
+            />
+          )}
           <img
-            className="w-[20px] h-[20px] rounded-[8px]"
-            src={post.integration.picture! || '/no-picture.jpg'}
-          />
-          <img
-            className="w-[12px] h-[12px] rounded-[8px] absolute z-10 top-[10px] end-0 border border-fifth"
+            className={clsx(
+              'w-[12px] h-[12px] rounded-[8px] absolute z-10 end-0 border border-fifth',
+              thumb ? '-top-[3px]' : 'top-[10px]'
+            )}
             src={`/icons/platforms/${post.integration?.providerIdentifier}.png`}
           />
         </div>
-        <div className="w-full flex-1 flex flex-col min-h-[40px]">
-          <div className="text-start">
+        <div className="w-full flex-1 flex flex-col min-h-[40px] min-w-0 justify-between">
+          <div className="w-full text-ellipsis break-words line-clamp-1 text-start">
             {state === 'DRAFT' ? t('draft', 'Draft') + ': ' : ''}
+            {stripHtmlValidation('none', post.content, false, true, false) ||
+              t('no_content', 'no content')}
           </div>
-            <div className="w-full relative">
-              <div className="absolute top-0 start-0 w-full text-ellipsis break-words line-clamp-1 text-start">
-                {stripHtmlValidation('none', post.content, false, true, false) ||
-                  t('no_content', 'no content')}
-              </div>
-            </div>
+          <div className="flex items-center gap-[6px] text-textColor/50 text-[11px] leading-none truncate">
+            <span className="whitespace-nowrap tabular-nums">
+              {newDayjs(post.publishDate)
+                .local()
+                .format(isUSCitizen() ? 'hh:mm A' : 'HH:mm')}
+            </span>
+            {customerName && (
+              <>
+                <span className="opacity-60">·</span>
+                <span className="truncate">{customerName}</span>
+              </>
+            )}
+          </div>
         </div>
-        {showTime && (
-          <div className="text-textColor/50 text-[12px] whitespace-nowrap flex items-center">
-            {newDayjs(post.publishDate).local().format(isUSCitizen() ? 'hh:mm A' : 'HH:mm')}
-          </div>
-        )}
       </div>
     </div>
   );
