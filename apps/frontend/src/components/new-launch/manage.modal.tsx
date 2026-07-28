@@ -565,11 +565,22 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   id="social-content"
                   className="gap-[32px] flex flex-col pe-[8px] pt-[20px] ps-[20px] absolute top-0 left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
                 >
-                  <div className="flex w-full">
-                    <div className="flex flex-1">
-                      <PicksSocialsComponent toolTip={true} />
-                    </div>
-                    <div>
+                  {/* Channels used to be a bare row of avatars with no label
+                      and no count — it read as decoration, not a control. */}
+                  <div className="flex flex-col gap-[10px] w-full">
+                    <div className="flex items-center gap-[10px]">
+                      <div className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
+                        {t('publish_to', 'Publish to')}
+                      </div>
+                      <div className="text-[11px] font-[600] text-btnPrimary">
+                        {selectedIntegrations.length
+                          ? `${selectedIntegrations.length} ${t(
+                              'selected',
+                              'selected'
+                            )}`
+                          : t('none_selected', 'none selected')}
+                      </div>
+                      <div className="flex-1" />
                       {!dummy && (
                         <SelectCustomer
                           onChange={changeCustomer}
@@ -577,6 +588,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         />
                       )}
                     </div>
+                    <PicksSocialsComponent toolTip={true} />
                   </div>
                   {!dummy && (
                     <DbuAssociationPanel
@@ -710,7 +722,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   selectedIntegrations.length === 0 || loading || locked
                 }
                 onClick={schedule('draft')}
-                className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] text-[15px] font-[600]"
+                className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple hover:brightness-110 active:scale-[0.98] transition-all justify-center items-center flex rounded-[12px] text-[14px] font-[600]"
               >
                 {loading && (
                   <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
@@ -724,7 +736,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             )}
             {addEditSets && (
               <button
-                className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#6ba3da] ps-[20px] pe-[16px]"
+                className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[12px] bg-btnPrimary hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_8px_22px_-10px_rgba(107,163,218,0.65)] ps-[20px] pe-[16px]"
                 disabled={
                   selectedIntegrations.length === 0 || loading || locked
                 }
@@ -740,7 +752,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     selectedIntegrations.length === 0 || loading || locked
                   }
                   onClick={schedule('schedule')}
-                  className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#6ba3da] ps-[20px] pe-[16px]"
+                  className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[12px] bg-btnPrimary hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_8px_22px_-10px_rgba(107,163,218,0.65)] ps-[20px] pe-[16px]"
                 >
                   {loading && (
                     <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
@@ -776,9 +788,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     disabled={
                       selectedIntegrations.length === 0 || loading || locked
                     }
-                    className="rounded-[8px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
+                    className="rounded-[12px] z-[300] disabled:cursor-not-allowed disabled:opacity-80 hidden group-hover:flex absolute bottom-[100%] -left-[12px] p-[12px] w-[206px] bg-newBgColorInner"
                   >
-                    <div className="text-white rounded-[8px] bg-btnPrimary h-[44px] w-full flex justify-center items-center post-now">
+                    <div className="text-white rounded-[12px] bg-btnPrimary h-[44px] w-full flex justify-center items-center post-now">
                       {t('post_now', 'Post Now')}
                     </div>
                   </button>
@@ -793,7 +805,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   'submit_for_approval_hint',
                   'Send to the DBU client portal for approval before scheduling'
                 )}
-                className="text-white relative min-w-[190px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#1F9D55] ps-[20px] pe-[16px]"
+                className="text-white relative min-w-[190px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[12px] bg-[#1F9D55] hover:brightness-110 active:scale-[0.98] transition-all ps-[20px] pe-[16px]"
               >
                 {loading && (
                   <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">

@@ -419,9 +419,13 @@ export const EditorWrapper: FC<{
         <div
           key={g.id}
           className={clsx(
-            'relative flex flex-col gap-[20px] flex-1 bg-newSettings',
-            index === 0 && 'rounded-t-[12px]',
-            (index === items.length - 1 || !comments) && 'rounded-b-[12px]',
+            // One clean card per post in the thread, hairline-joined. NO
+            // overflow-hidden here: the char-limit and emoji popovers open
+            // upward out of the toolbar and would get clipped.
+            'relative flex flex-col gap-[20px] flex-1 bg-newSettings border border-newTableBorder',
+            index === 0 && 'rounded-t-[14px]',
+            index > 0 && 'border-t-0',
+            (index === items.length - 1 || !comments) && 'rounded-b-[14px]',
             !canEdit && !isCreateSet && 'blur-s',
             ((!canEdit && index > 0) || (!comments && index > 0)) && 'hidden'
           )}
@@ -713,7 +717,7 @@ export const Editor: FC<{
             >
               {t('drop_files_here_to_upload', 'Drop your files here to upload')}
             </div>
-            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[6px] relative z-[99]">
+            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[13px] relative z-[99]">
               <OnlyEditor
                 value={props.value}
                 editorType={editorType}
@@ -755,7 +759,7 @@ export const Editor: FC<{
                 editorRef?.current?.editor?.commands?.focus('end');
               }}
             />
-            <div className="flex bg-newBgColorInner rounded-b-[6px] cursor-default">
+            <div className="flex bg-newBgColorInner rounded-b-[13px] cursor-default">
               {setImages && (
                 <MultiMediaComponent
                   mediaNotAvailable={num > 0 && comments === 'no-media'}
@@ -810,7 +814,7 @@ export const Editor: FC<{
                       <div
                         data-tooltip-id="tooltip"
                         data-tooltip-content={t('insert_emoji', 'Insert Emoji')}
-                        className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
+                        className="select-none cursor-pointer rounded-[8px] w-[32px] h-[32px] bg-newColColor hover:brightness-110 transition-all active:scale-95 flex justify-center items-center"
                         onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
                       >
                         <EmojiIcon />

@@ -13,7 +13,7 @@ export const HeadingComponent: FC<{
   };
 
   return (
-    <div className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center group relative">
+    <div className="select-none cursor-pointer rounded-[8px] w-[32px] h-[32px] bg-newColColor hover:brightness-110 transition-all active:scale-95 flex justify-center items-center group relative">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="16"

@@ -223,11 +223,23 @@ export const ShowAllProviders = forwardRef((props, ref) => {
           }}
         >
           {global?.[0]?.content?.length === 0 ? (
-            <div>
-              {t(
-                'start_writing_your_post',
-                'Start writing your post for a preview'
-              )}
+            <div className="border border-dashed border-newTableBorder rounded-[14px] py-[48px] px-[20px] flex flex-col items-center gap-[10px] text-center">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="text-textItemBlur">
+                <rect x="3" y="4" width="18" height="16" rx="3" />
+                <path d="M7 9h7M7 13h10M7 17h5" />
+              </svg>
+              <div className="text-[13.5px] font-[600]">
+                {t(
+                  'start_writing_your_post',
+                  'Start writing your post for a preview'
+                )}
+              </div>
+              <div className="text-[12px] text-textItemBlur max-w-[280px]">
+                {t(
+                  'preview_hint',
+                  'Each channel you pick gets its own preview here, exactly as it will publish.'
+                )}
+              </div>
             </div>
           ) : (
             <div className="border border-borderPreview rounded-[12px] shadow-previewShadow">

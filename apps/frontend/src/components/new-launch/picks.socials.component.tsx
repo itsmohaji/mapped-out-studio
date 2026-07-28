@@ -31,8 +31,9 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
   return (
     <div className={clsx('flex', locked && 'opacity-50 pointer-events-none')}>
       <div className="flex flex-1">
-        <div className="innerComponent flex-1 flex">
-          <div className="flex flex-wrap gap-[12px] flex-1">
+        {/* `innerComponent` was a dead class — no CSS rule anywhere. */}
+        <div className="flex-1 flex">
+          <div className="flex flex-wrap gap-[10px] flex-1">
             {integrations
               .filter((f) => {
                 if (exising.integration) {
@@ -57,29 +58,33 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
                       addOrRemoveSelectedIntegration(integration, {});
                     }}
                     className={clsx(
-                      'cursor-pointer border-[2px] relative rounded-full flex justify-center items-center bg-fifth filter transition-all duration-500',
+                      'cursor-pointer border-[2px] relative rounded-full flex justify-center items-center bg-fifth filter transition-all duration-300',
                       selectedIntegrations.findIndex(
                         (p) => p.integration.id === integration.id
                       ) === -1
-                        ? 'grayscale border-transparent'
-                        : 'border-[#6ba3da]'
+                        ? // Readable when off, obviously off. Full grayscale
+                          // read as "broken account" rather than "not picked".
+                          'grayscale-[0.85] opacity-55 border-transparent hover:opacity-100 hover:grayscale-0'
+                        : 'border-btnPrimary shadow-[0_0_0_4px_var(--accent-dim)]'
                     )}
                   >
                     <ImageWithFallback
                       fallbackSrc="/no-picture.jpg"
                       src={integration.picture || '/no-picture.jpg'}
-                      className={clsx(
-                        'rounded-full transition-all min-w-[42px] border-[1.5px] min-h-[42px]',
-                        selectedIntegrations.findIndex(
-                          (p) => p.integration.id === integration.id
-                        ) === -1
-                          ? 'border-transparent'
-                          : 'border-[#000]'
-                      )}
+                      className="rounded-full transition-all min-w-[42px] min-h-[42px]"
                       alt={integration.identifier}
                       width={42}
                       height={42}
                     />
+                    {selectedIntegrations.findIndex(
+                      (p) => p.integration.id === integration.id
+                    ) !== -1 && (
+                      <div className="absolute -top-[3px] -start-[3px] w-[16px] h-[16px] rounded-full bg-btnPrimary flex items-center justify-center z-20 border-2 border-newBgColorInner">
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </div>
+                    )}
                     {integration.identifier === 'youtube' ? (
                       <img
                         src="/icons/platforms/youtube.svg"

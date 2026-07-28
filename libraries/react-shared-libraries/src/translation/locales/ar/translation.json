@@ -807,5 +807,9 @@
   "all_channels": "كل القنوات",
   "one_channel": "قناة واحدة",
   "all_customers": "كل العملاء",
-  "could_not_move_post": "تعذّر نقل المنشور"
+  "could_not_move_post": "تعذّر نقل المنشور",
+  "publish_to": "النشر إلى",
+  "selected": "محدد",
+  "none_selected": "لم يتم التحديد",
+  "preview_hint": "كل قناة تختارها تحصل على معاينة خاصة بها هنا، تمامًا كما ستُنشر."
 }

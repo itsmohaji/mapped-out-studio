@@ -168,28 +168,37 @@ export const InformationComponent: FC<{
     return validLimit ?? limits[0];
   }, [isGlobal, selectedIntegrations, chars, isInternal, totalChars]);
 
+  // "Nothing written yet" is not the same failure as "you broke a limit".
+  const isEmpty = !isPicture && !totalChars;
+
   return (
     <div
       className={clsx(
-        'group rounded-[6px] gap-[4px] h-[30px] px-[6px] flex justify-center items-center relative',
-        isValid ? 'border border-newColColor' : 'bg-[#FF3F3F]'
+        'group rounded-[8px] gap-[5px] h-[32px] px-[8px] flex justify-center items-center relative transition-colors',
+        isValid
+          ? 'border border-newColColor'
+          : isEmpty
+          ? // Shouting red at someone before they have typed a character is
+            // noise. Red is reserved for a real violation.
+            'border border-newColColor text-textItemBlur'
+          : 'bg-[#FF3F3F]'
       )}
     >
-      {isValid ? <Valid /> : <Invalid />}
+      {isValid || isEmpty ? <Valid /> : <Invalid />}
 
       {!isGlobal && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && !isEmpty && 'text-white')}>
           {totalChars}/{totalAllowedChars}
         </div>
       )}
       {isGlobal && globalDisplayLimit !== null && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && !isEmpty && 'text-white')}>
           {totalChars}/{globalDisplayLimit}
         </div>
       )}
       {((isGlobal && selectedIntegrations.length) || !isValid) && (
         <svg
-          className={clsx('group-hover:rotate-180', !isValid && 'text-white')}
+          className={clsx('group-hover:rotate-180', !isValid && !isEmpty && 'text-white')}
           xmlns="http://www.w3.org/2000/svg"
           width="16"
           height="16"
@@ -206,13 +215,15 @@ export const InformationComponent: FC<{
         <div
           className={clsx(
             'z-[300] hidden rounded-[12px] bg-newBgColorInner group-hover:flex absolute end-0 bottom-[100%] mb-[5px] p-[12px] flex-col',
-            isValid ? 'border border-newColColor' : 'border border-[#FF3F3F]'
+            isValid || isEmpty
+              ? 'border border-newColColor'
+              : 'border border-[#FF3F3F]'
           )}
         >
-          {!isPicture && !totalChars && (
+          {isEmpty && (
             <div
               className={clsx(
-                'text-sm text-[#FF3F3F] whitespace-nowrap',
+                'text-sm text-textItemBlur whitespace-nowrap',
                 isGlobal && selectedIntegrations.length && 'mb-[12px]'
               )}
             >
