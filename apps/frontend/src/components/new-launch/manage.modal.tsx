@@ -597,9 +597,15 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         </div>
         <div className="flex-1 flex min-h-0">
           <div className="flex flex-col flex-1 min-w-0 border-e border-newBorder">
-            <div className="flex-1 flex flex-col gap-[16px]">
+            {/* Writing and channel Settings sit SIDE BY SIDE once expanded.
+                They used to swap — opening Settings hid the editor entirely, so
+                you could never see the text you were configuring settings for. */}
+            <div className="flex-1 flex flex-col xl:flex-row gap-[12px] min-h-0">
               <div
-                className={clsx('flex-1 relative', showSettings && 'hidden')}
+                className={clsx(
+                  'flex-1 relative min-w-0',
+                  showSettings && 'xl:w-[63%] xl:flex-none'
+                )}
               >
                 <div
                   id="social-content"
@@ -638,7 +644,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       integrations={integrations as any}
                     />
                   )}
-                  {!dummy && (
+                  {/* A campaign only makes sense once you know WHO this post is
+                      for — so it appears after a DBU client or a channel is
+                      picked, not on an empty composer. */}
+                  {!dummy && (isDbuPost || selectedIntegrations.length > 0) && (
                     <CampaignSelect
                       value={campaignId}
                       onChange={setCampaignId}
@@ -672,12 +681,15 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <div
                 id="wrapper-settings"
                 className={clsx(
-                  'pb-[20px] px-[20px] select-none',
-                  showSettings && 'flex-1 flex pt-[20px]',
+                  'pb-[20px] px-[20px] select-none flex flex-col',
+                  // Expanded: its own ~35% column beside the editor on wide
+                  // screens, stacked underneath on narrow ones.
+                  showSettings &&
+                    'flex-1 pt-[20px] xl:w-[35%] xl:shrink-0 xl:min-w-[300px] xl:ps-0 min-h-0',
                   current === 'global' && 'hidden'
                 )}
               >
-                <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings">
+                <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings min-h-0">
                   {/* A full-width solid-blue bar shouted louder than the
                       primary action. It's a disclosure row, so it reads as one. */}
                   <div
