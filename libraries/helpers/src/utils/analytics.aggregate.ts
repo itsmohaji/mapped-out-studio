@@ -46,6 +46,14 @@ const matchers = {
   followers: /follow|subscriber|fan/i,
 };
 
+/**
+ * Exported so anywhere that renders a list of metrics can exclude followers and
+ * show the level instead. Summing a follower series produces a number that never
+ * existed, so the two places must not drift on what counts as one.
+ */
+export const isFollowerMetric = (label?: string | null) =>
+  matchers.followers.test((label || '').trim());
+
 const find = (data: MetricItem[] | null, re: RegExp) =>
   (data || []).find((m) => m.available !== false && re.test((m.label || '').trim()));
 

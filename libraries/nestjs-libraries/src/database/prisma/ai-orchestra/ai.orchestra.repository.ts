@@ -22,6 +22,15 @@ export interface CapabilityWrite {
   sortOrder?: number;
 }
 
+export interface BriefWrite {
+  audience?: string | null;
+  tone?: string | null;
+  dos?: string | null;
+  donts?: string | null;
+  products?: string | null;
+  notes?: string | null;
+}
+
 @Injectable()
 export class AiOrchestraRepository {
   constructor(
@@ -29,7 +38,8 @@ export class AiOrchestraRepository {
     private _version: PrismaRepository<'aiSkillVersion'>,
     private _capability: PrismaRepository<'aiCapability'>,
     private _run: PrismaRepository<'aiRun'>,
-    private _entitlement: PrismaRepository<'aiEntitlement'>
+    private _entitlement: PrismaRepository<'aiEntitlement'>,
+    private _brief: PrismaRepository<'aiBrandBrief'>
   ) {}
 
   skills() {
@@ -178,6 +188,40 @@ export class AiOrchestraRepository {
       where: { orgId },
       orderBy: { createdAt: 'desc' },
       take,
+    });
+  }
+
+  briefs(orgId: string) {
+    return this._brief.model.aiBrandBrief.findMany({
+      where: { orgId, deletedAt: null },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  /**
+   * Admin write for the brand brief. Find-then-write rather than upsert:
+   * Postgres treats NULL customerIds as distinct, so a unique index on
+   * (orgId, customerId) would not actually constrain the org-wide row.
+   *
+   * Lives here, with the other admin configuration, so that the context
+   * repository on the run path stays provably read-only.
+   */
+  async saveBrief(
+    orgId: string,
+    customerId: string | null,
+    data: BriefWrite
+  ) {
+    const existing = await this._brief.model.aiBrandBrief.findFirst({
+      where: { orgId, customerId, deletedAt: null },
+    });
+    if (existing) {
+      return this._brief.model.aiBrandBrief.update({
+        where: { id: existing.id },
+        data,
+      });
+    }
+    return this._brief.model.aiBrandBrief.create({
+      data: { orgId, customerId, ...data },
     });
   }
 }

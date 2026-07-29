@@ -49,9 +49,14 @@ and every column added to an existing table is nullable.
 
 ## Provider abstraction
 
-`AiProvider` is a two-method interface (`generateText`, `generateImage`). OpenAI
+`AiProvider` is a **one-method** interface today (`generateText`). OpenAI
 implements it. Nano Banana is registered but reports itself unavailable until a key
 exists — it is visible and honest rather than hidden.
+
+Image generation is **not** part of this interface yet, so the `generate_images`
+capability stays disabled. `OpenaiService.generateImage` and
+`FalService.generateImageFromText` already exist elsewhere in the codebase and are
+what a future `generateImage` would wrap.
 
 Adding a provider means adding one file and one registry entry. No orchestration
 code changes.
@@ -68,11 +73,52 @@ tests, because they decide whether someone is allowed to spend money:
 - cost is computed from the provider's own token counts; when a provider reports
   no usage we record `null`, never a guess
 
+## Phase 2 — grounded skills
+
+A skill used to see only what the operator typed, which would have made
+"Analyze Account" a language model inventing numbers. Phase 2 put real data
+underneath the skills first, then wrote the instructions.
+
+**The context layer.** `AiContextService` assembles a `ClientContext` — connected
+channels, live platform analytics, the account's own published posts, and the
+brand brief if one exists. `helpers/utils/ai.context.ts` renders it into the DATA
+block and is where the honesty rules live: a channel that reported nothing is
+"not reporting" and never a zero, followers are the latest level and never a sum,
+and a percentage change appears only when the platform supplied one. It reuses
+`analytics.aggregate`, so a figure the AI quotes matches the dashboard by
+construction.
+
+**The boundary was extended, not relaxed.** Reading must not become a route to
+writing, so: the context repository contains no create/update/delete/upsert at
+all; it never selects `token`, `refreshToken` or `customInstanceDetails`; every
+query is org-scoped; and it borrows exactly one method from `IntegrationService`
+(`checkAnalytics`, the codebase's only route to live platform numbers). All four
+are asserted in `ai.orchestra.boundary.spec.ts`. Brand-brief *writes* live in
+`AiOrchestraRepository` with the other admin config precisely so the run path
+stays provably read-only.
+
+**Refusal beats a guess.** Analyze Account and Performance Recommendations refuse
+when no channel is reporting. The refusal is logged and consumes no credit.
+Writing capabilities degrade instead — they still work, and say what they had.
+
+**Every skill now sees the data.** The pipeline used to replace its input with the
+previous skill's text, so the Final Reviewer checked a draft against nothing. The
+DATA block is now prepended to every step, with the carried draft appended.
+
+**Enabled:** Analyze Account · Generate Content Ideas · Write Captions ·
+Performance Recommendations. `ENABLED_CAPABILITIES` in `helpers/utils/ai.skills.ts`
+is the single source of truth, and a test asserts every skill it names has a real
+instruction — so a capability can never go live pointing at a stub.
+
 ## What is deliberately not built yet
 
-- The seven internal skills ship as **registry rows with a stub instruction**.
-  Real prompt engineering per skill is the next phase.
-- Image generation is wired through the abstraction but Nano Banana has no
-  provider implementation, so it reports unavailable.
+- **Four capabilities remain disabled**: Monthly Plan, Campaign Strategy, Target
+  Audience, Recommend Budget. Their skills have real instructions; each still
+  needs its own output shape and empty state.
+- **Image generation.** See the provider note above.
+- **Plan → entitlement automation.** Credits still come from an explicit
+  `AiEntitlement` row or the 200/20 default, not from the subscription tier.
+- **DBU portal handoff.** A draft is copied by hand today; it does not yet flow
+  into the portal approval path.
 - Cost-per-model rates are a table in the pure module; they are approximate and
   labelled as such in the UI.

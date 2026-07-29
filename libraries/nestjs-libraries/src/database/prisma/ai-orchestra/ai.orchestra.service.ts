@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   AiOrchestraRepository,
+  BriefWrite,
   CapabilityWrite,
   SkillWrite,
 } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.orchestra.repository';
@@ -15,6 +16,18 @@ import {
   skillPipeline,
   toClientCapability,
 } from '@gitroom/helpers/utils/ai.orchestra';
+import {
+  ENABLED_CAPABILITIES,
+  SKILL_INSTRUCTIONS,
+  isStub,
+} from '@gitroom/helpers/utils/ai.skills';
+import {
+  coverageOf,
+  hasEnoughData,
+  renderContext,
+} from '@gitroom/helpers/utils/ai.context';
+import { AiContextService } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.context.service';
+import { Organization } from '@prisma/client';
 
 // Seeded once so an admin has something to configure rather than a blank console.
 // Skills ship with a STUB instruction on purpose — real prompt engineering per
@@ -45,7 +58,10 @@ const DEFAULT_ENTITLEMENT = { monthlyCredits: 200, monthlyImages: 20 };
 
 @Injectable()
 export class AiOrchestraService implements OnModuleInit {
-  constructor(private _repo: AiOrchestraRepository) {}
+  constructor(
+    private _repo: AiOrchestraRepository,
+    private _context: AiContextService
+  ) {}
 
   async onModuleInit() {
     // Idempotent: upserts by key, so a redeploy never duplicates or overwrites
@@ -67,9 +83,46 @@ export class AiOrchestraService implements OnModuleInit {
         // Seeded DISABLED — an admin turns each one on deliberately.
         await this._repo.upsertCapability(c.key, { ...c, enabled: false });
       }
+      await this.installRealInstructions();
     } catch {
       // Boot must never fail because of seeding. The tables arrive with
       // `prisma db push` on the same boot; a first-run race just retries next time.
+    }
+  }
+
+  /**
+   * Replaces the foundation's stub instructions with the real ones, then turns
+   * on the capabilities those skills now support.
+   *
+   * Two deliberate guards:
+   *
+   * - A new instruction is added ONLY when the current latest version is still a
+   *   stub. Versions are immutable and an admin's own edit is never overwritten.
+   * - `enabled` is set ONLY on the boot that performed the upgrade. After that
+   *   this never touches the flag again, so an admin who switches a capability
+   *   off keeps it off across every subsequent redeploy.
+   */
+  private async installRealInstructions() {
+    let upgradedAny = false;
+
+    for (const { key, instruction } of SKILL_INSTRUCTIONS) {
+      const skill = await this._repo.skillByKey(key);
+      if (!skill) continue;
+      const latest = skill.versions?.[0];
+      if (latest && !isStub(latest.instruction)) continue;
+      await this._repo.addSkillVersion(skill.id, instruction, 'phase2');
+      upgradedAny = true;
+    }
+
+    if (!upgradedAny) return;
+
+    for (const [key, pipeline] of Object.entries(ENABLED_CAPABILITIES)) {
+      const capability = await this._repo.capabilityByKey(key);
+      if (!capability) continue;
+      await this._repo.upsertCapability(key, {
+        skillKeys: pipeline.join(','),
+        enabled: true,
+      });
     }
   }
 
@@ -112,6 +165,25 @@ export class AiOrchestraService implements OnModuleInit {
 
   usage(orgId: string) {
     return this._repo.usageThisMonth(orgId);
+  }
+
+  /** Clients the operator can target a run at. Names only. */
+  customers(orgId: string) {
+    return this._context.customers(orgId);
+  }
+
+  briefs(orgId: string) {
+    return this._repo.briefs(orgId);
+  }
+
+  async saveBrief(orgId: string, customerId: string | null, data: BriefWrite) {
+    // A brief for a client of another workspace would be inert (reads are
+    // org-scoped) but it should not be storable at all.
+    if (customerId) {
+      const resolved = await this._context.resolveCustomer(orgId, customerId);
+      if (!resolved.ok) return null;
+    }
+    return this._repo.saveBrief(orgId, customerId || null, data);
   }
 
   runs(orgId: string) {
@@ -163,13 +235,16 @@ export class AiOrchestraService implements OnModuleInit {
    * DBU portal approval path takes it from there.
    */
   async run(params: {
-    orgId: string;
+    org: Organization;
     orgPlan: string;
     userId?: string;
     capabilityKey: string;
     input: string;
+    customerId?: string | null;
+    timeframeDays?: number | null;
   }) {
-    const { orgId, orgPlan, userId, capabilityKey, input } = params;
+    const { org, orgPlan, userId, capabilityKey, input } = params;
+    const orgId = org.id;
     const started = Date.now();
 
     const capability = await this._repo.capabilityByKey(capabilityKey);
@@ -203,8 +278,52 @@ export class AiOrchestraService implements OnModuleInit {
       return { ok: false as const, message: decision.message };
     }
 
+    // Resolve the client BEFORE building anything. An id that is not this
+    // organisation's is refused outright rather than quietly falling back to the
+    // whole workspace, which would be a cross-tenant leak dressed up as a
+    // default.
+    const resolved = await this._context.resolveCustomer(
+      orgId,
+      params.customerId
+    );
+    if (!resolved.ok) {
+      await this._repo.logRun({
+        orgId,
+        userId,
+        capabilityKey,
+        status: 'refused',
+        refusedReason: 'unknown_customer',
+      });
+      return { ok: false as const, message: 'That client could not be found.' };
+    }
+
+    const context = await this._context.build({
+      org,
+      customerId: resolved.customer?.id ?? null,
+      customerName: resolved.customer?.name ?? null,
+      timeframeDays: params.timeframeDays,
+    });
+
+    // A capability that makes claims about performance needs something to base
+    // them on. Refused here rather than letting the model fill the gap with
+    // something plausible — and a refusal consumes no credit.
+    const coverage = coverageOf(context);
+    const enough = hasEnoughData(capabilityKey, coverage);
+    if (!enough.ok) {
+      await this._repo.logRun({
+        orgId,
+        userId,
+        capabilityKey,
+        status: 'refused',
+        refusedReason: 'insufficient_data',
+      });
+      return { ok: false as const, message: enough.message };
+    }
+
+    const contextBlock = renderContext(context);
+
     const pipeline = skillPipeline(capability as any);
-    let carried = input;
+    let carried = '';
     let lastSkill: string | null = null;
     let lastVersion: number | null = null;
     let lastModel: string | null = null;
@@ -234,10 +353,20 @@ export class AiOrchestraService implements OnModuleInit {
       }
 
       try {
+        // Every skill sees the DATA block, not just the first one. Previously
+        // the loop replaced the input with the previous skill's text, so the
+        // Final Reviewer was checking a draft against nothing — it could not
+        // see the figures it was supposed to be verifying, nor the brand brief
+        // whose rules it was supposed to enforce.
         const res = await skillProvider.generateText({
           model: skill.model,
           instruction: version.instruction,
-          input: carried,
+          input: [
+            contextBlock,
+            '',
+            `REQUEST FROM THE OPERATOR:\n${input || '(none given)'}`,
+            carried ? `\nDRAFT SO FAR (from a colleague):\n${carried}` : '',
+          ].join('\n'),
         });
         carried = res.text || carried;
         promptTokens += res.promptTokens || 0;
@@ -280,7 +409,9 @@ export class AiOrchestraService implements OnModuleInit {
       durationMs: Date.now() - started,
     });
 
-    // Content only. Never a post, never a schedule.
-    return { ok: true as const, output: carried };
+    // Content only. Never a post id, never a schedule, never an integration.
+    // `coverage` travels with it so the operator can see what the answer was
+    // based on before they read the answer.
+    return { ok: true as const, output: carried, coverage };
   }
 }

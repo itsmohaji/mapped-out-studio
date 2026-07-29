@@ -48,27 +48,44 @@ const Meter: FC<{ label: string; used: number; left: number }> = ({
   );
 };
 
+interface Coverage {
+  channelsConnected: number;
+  channelsReporting: number;
+  postsSampled: number;
+  timeframeDays: number;
+  hasBrief: boolean;
+}
+
 const CapabilityRunner: FC<{
   capability: Capability;
+  customerId: string;
+  timeframeDays: number;
   onDone: () => void;
-}> = ({ capability, onDone }) => {
+}> = ({ capability, customerId, timeframeDays, onDone }) => {
   const t = useT();
   const fetch = useFetch();
   const toast = useToaster();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
+  const [coverage, setCoverage] = useState<Coverage | null>(null);
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(async () => {
     if (!input.trim() || busy) return;
     setBusy(true);
     setOutput('');
+    setCoverage(null);
     try {
       const res = await (
         await fetch('/ai-orchestra/run', {
           method: 'POST',
-          body: JSON.stringify({ capabilityKey: capability.key, input }),
+          body: JSON.stringify({
+            capabilityKey: capability.key,
+            input,
+            customerId: customerId || undefined,
+            timeframeDays,
+          }),
         })
       ).json();
       if (!res?.ok) {
@@ -76,11 +93,12 @@ const CapabilityRunner: FC<{
         return;
       }
       setOutput(res.output || '');
+      setCoverage(res.coverage || null);
       onDone();
     } finally {
       setBusy(false);
     }
-  }, [input, busy, capability.key, onDone, t]);
+  }, [input, busy, capability.key, customerId, timeframeDays, onDone, t]);
 
   return (
     <div
@@ -139,6 +157,21 @@ const CapabilityRunner: FC<{
               <div className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
                 {t('draft_output', 'Draft — for your review')}
               </div>
+              {/* What the answer was based on, shown BEFORE the answer, so a
+                  thin sample is visible rather than buried. */}
+              {coverage && (
+                <div className="text-[11px] text-textItemBlur border-s-2 border-newTableBorder ps-[8px]">
+                  {t('based_on', 'Based on')}{' '}
+                  {coverage.channelsReporting}/{coverage.channelsConnected}{' '}
+                  {t('channels_reporting', 'channels reporting')} ·{' '}
+                  {coverage.postsSampled}{' '}
+                  {t('posts_sampled', 'posts')} ·{' '}
+                  {t('last_n_days', 'last')} {coverage.timeframeDays}{' '}
+                  {t('days', 'days')}
+                  {!coverage.hasBrief &&
+                    ` · ${t('no_brand_brief', 'no brand brief on file')}`}
+                </div>
+              )}
               <div className="bg-newBgLineColor border border-newTableBorder rounded-[10px] p-[12px] text-[13px] whitespace-pre-wrap max-h-[320px] overflow-y-auto">
                 {output}
               </div>
@@ -367,6 +400,122 @@ const AdminConsole: FC = () => {
           </div>
         )}
       </div>
+
+      <BrandBriefsPanel />
+    </div>
+  );
+};
+
+const BRIEF_FIELDS: Array<{ key: string; label: string; ph: string }> = [
+  { key: 'audience', label: 'Audience', ph: 'Who this client is talking to' },
+  { key: 'tone', label: 'Tone of voice', ph: 'Warm and direct; never jokey' },
+  { key: 'dos', label: 'Always', ph: 'Lead with the guest experience' },
+  { key: 'donts', label: 'Never', ph: 'Never discount; never use emojis' },
+  { key: 'products', label: 'Products / services', ph: 'What they actually sell' },
+  { key: 'notes', label: 'Notes', ph: 'Anything else worth knowing' },
+];
+
+/**
+ * Optional per-client guidance. Everything here is asserted by a human, so it is
+ * kept clearly separate from the observed data the skills read — and a client
+ * with no brief still works, it just gets generic guidance.
+ */
+const BrandBriefsPanel: FC = () => {
+  const t = useT();
+  const fetch = useFetch();
+  const toast = useToaster();
+  const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
+  const { data, mutate } = useSWR('/ai-orchestra/admin/brand-briefs', load, {
+    revalidateOnFocus: false,
+  });
+
+  const [customerId, setCustomerId] = useState('');
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  // Load the brief for whichever client is selected. `customerId === ''` is the
+  // organisation-wide default, stored with a null customerId.
+  const selectBrief = useCallback(
+    (id: string) => {
+      setCustomerId(id);
+      const found = (data?.briefs || []).find(
+        (b: any) => (b.customerId || '') === id
+      );
+      setForm(
+        BRIEF_FIELDS.reduce(
+          (acc, f) => ({ ...acc, [f.key]: found?.[f.key] || '' }),
+          {}
+        )
+      );
+    },
+    [data]
+  );
+
+  const save = useCallback(async () => {
+    setBusy(true);
+    try {
+      await fetch('/ai-orchestra/admin/brand-brief', {
+        method: 'POST',
+        body: JSON.stringify({ customerId: customerId || null, ...form }),
+      });
+      toast.show(t('saved', 'Saved'), 'success');
+      mutate();
+    } finally {
+      setBusy(false);
+    }
+  }, [customerId, form, mutate, t]);
+
+  return (
+    <div className="glass-surface rounded-[16px] p-[16px] flex flex-col gap-[12px]">
+      <div>
+        <div className="text-[13px] font-[600]">
+          {t('brand_briefs', 'Brand briefs')}
+        </div>
+        <div className="text-[11.5px] text-textItemBlur mt-[2px]">
+          {t(
+            'brand_briefs_help',
+            'Optional. Without one, drafts still work from the account’s real data — they just keep the guidance generic instead of inventing a house style.'
+          )}
+        </div>
+      </div>
+
+      <select
+        value={customerId}
+        onChange={(e) => selectBrief(e.target.value)}
+        className="bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary max-w-[340px]"
+      >
+        <option value="">
+          {t('workspace_default_brief', 'Workspace default brief')}
+        </option>
+        {(data?.clients || []).map((c: any) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
+        {BRIEF_FIELDS.map((f) => (
+          <div key={f.key} className="flex flex-col gap-[4px]">
+            <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
+              {t(`brief_${f.key}`, f.label)}
+            </label>
+            <textarea
+              rows={2}
+              value={form[f.key] || ''}
+              placeholder={f.ph}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, [f.key]: e.target.value }))
+              }
+              className="w-full bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary resize-none"
+            />
+          </div>
+        ))}
+      </div>
+
+      <Button onClick={save} loading={busy} className="self-start">
+        {t('save_brief', 'Save brief')}
+      </Button>
     </div>
   );
 };
@@ -383,6 +532,18 @@ export const AiOrchestraComponent: FC = () => {
     capabilities: Capability[];
     credits: Credits;
   }>('/ai-orchestra/capabilities', load, { revalidateOnFocus: false });
+
+  const { data: clients } = useSWR<Array<{ id: string; name: string }>>(
+    '/ai-orchestra/clients',
+    load,
+    { revalidateOnFocus: false }
+  );
+
+  // Which client and how far back a run should look at. Both are inputs to the
+  // data the skills are given, so they belong beside the capabilities rather
+  // than inside each one.
+  const [customerId, setCustomerId] = useState('');
+  const [timeframeDays, setTimeframeDays] = useState(30);
 
   return (
     <div className="flex-1 flex flex-col gap-[16px] p-[20px]">
@@ -437,6 +598,50 @@ export const AiOrchestraComponent: FC = () => {
             />
           </div>
 
+          <div className="glass-surface rounded-[16px] p-[14px] flex flex-wrap items-end gap-[14px]">
+            <div className="flex flex-col gap-[5px] min-w-[190px] flex-1">
+              <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
+                {t('client', 'Client')}
+              </label>
+              <select
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                className="bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary"
+              >
+                <option value="">
+                  {t('all_channels', 'All channels in this workspace')}
+                </option>
+                {(clients || []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-[5px] min-w-[150px]">
+              <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
+                {t('timeframe', 'Timeframe')}
+              </label>
+              <select
+                value={timeframeDays}
+                onChange={(e) => setTimeframeDays(Number(e.target.value))}
+                className="bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary"
+              >
+                {[7, 30, 90].map((d) => (
+                  <option key={d} value={d}>
+                    {t('last_n_days', 'last')} {d} {t('days', 'days')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="text-[11.5px] text-textItemBlur flex-1 min-w-[200px]">
+              {t(
+                'ai_context_help',
+                'Drafts are written from this account’s real analytics and its own published posts over this period. Nothing outside it is used.'
+              )}
+            </div>
+          </div>
+
           {!data?.capabilities?.length ? (
             <div className="glass-surface rounded-[16px] px-[18px] py-[46px] text-center">
               <div className="text-[14px] font-[600]">
@@ -455,6 +660,8 @@ export const AiOrchestraComponent: FC = () => {
                 <CapabilityRunner
                   key={c.key}
                   capability={c}
+                  customerId={customerId}
+                  timeframeDays={timeframeDays}
                   onDone={mutate}
                 />
               ))}

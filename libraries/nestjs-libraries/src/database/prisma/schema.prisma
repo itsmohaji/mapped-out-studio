@@ -47,6 +47,7 @@ model Organization {
   campaigns           Campaign[]
   aiRuns              AiRun[]
   aiEntitlement       AiEntitlement?
+  aiBrandBriefs       AiBrandBrief[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -1207,4 +1208,32 @@ model SystemSetting {
   key       String   @unique
   value     String?
   updatedAt DateTime @updatedAt
+}
+
+/**
+ * Optional per-client brand guidance. Absent is a normal state: a capability
+ * still runs without one, it just says its guidance is generic rather than
+ * inventing a house style.
+ *
+ * customerId null = the organisation-wide default brief. No @@unique on
+ * (orgId, customerId): Postgres treats NULLs as distinct, so a unique index
+ * would not actually constrain the org-wide row. Uniqueness is enforced in the
+ * repository instead, which is honest about what the database guarantees.
+ */
+model AiBrandBrief {
+  id           String       @id @default(uuid())
+  orgId        String
+  customerId   String?
+  audience     String?
+  tone         String?
+  dos          String?
+  donts        String?
+  products     String?
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId, customerId, deletedAt])
 }
