@@ -1108,7 +1108,7 @@ const CalendarItem: FC<{
       )}
       {approvalBadge && (
         <div
-          className="absolute -top-[7px] right-[4px] z-20 px-[6px] h-[16px] rounded-full flex items-center justify-center text-white text-[9px] font-bold cursor-default shadow-md"
+          className="absolute -top-[7px] end-[4px] z-20 px-[6px] h-[16px] rounded-full flex items-center justify-center text-white text-[9px] font-bold cursor-default shadow-md"
           style={{ backgroundColor: approvalBadge.bg }}
           data-tooltip-id="tooltip"
           data-tooltip-content={approvalBadge.full}
@@ -1126,7 +1126,7 @@ const CalendarItem: FC<{
       )}
       <div
         className={clsx(
-          'text-white text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-tr-[10px] rounded-tl-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
+          'text-white text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-t-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
         )}
         style={{
           backgroundColor: post?.tags?.[0]?.tag?.color,
@@ -1207,7 +1207,7 @@ const CalendarItem: FC<{
       <div
         onClick={editPost}
         className={clsx(
-          'gap-[7px] w-full flex h-full flex-1 rounded-br-[10px] rounded-bl-[10px] p-[8px] text-[14px] bg-newColColor',
+          'gap-[7px] w-full flex h-full flex-1 rounded-b-[10px] p-[8px] text-[14px] bg-newColColor',
           'relative border-s-[3px] overflow-hidden',
           isBeforeNow && '!grayscale'
         )}

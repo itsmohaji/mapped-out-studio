@@ -70,7 +70,7 @@ export const Input: FC<
         <input
           className={clsx(
             'h-full bg-transparent outline-none flex-1 text-[14px] text-textColor',
-            icon ? 'pl-[8px] pe-[16px]' : 'px-[16px]'
+            icon ? 'ps-[8px] pe-[16px]' : 'px-[16px]'
           )}
           {...(disableForm ? {} : form.register(props.name))}
           {...rest}

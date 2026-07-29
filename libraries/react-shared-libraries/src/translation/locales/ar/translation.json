@@ -890,5 +890,7 @@
   "no_team_members_help": "ادعُ شخصًا للمساعدة في إدارة مساحة العمل.",
   "open_tasks": "مهام مفتوحة",
   "this_is_you": "هذا أنت",
-  "cannot_manage_member": "لا يمكنك إدارة هذا العضو"
+  "cannot_manage_member": "لا يمكنك إدارة هذا العضو",
+  "label_email_or_username": "البريد الإلكتروني أو اسم المستخدم",
+  "email_or_username": "البريد الإلكتروني أو اسم المستخدم"
 }

@@ -217,10 +217,10 @@ const ThirdPartyMediaLibraryPicker: FC<{
               src={`/icons/third-party/${p.identifier}.png`}
             />
           </div>
-          <div className="whitespace-pre-wrap text-left text-lg">
+          <div className="whitespace-pre-wrap text-start text-lg">
             {p.title}: {p.name}
           </div>
-          <div className="whitespace-pre-wrap text-left">{p.description}</div>
+          <div className="whitespace-pre-wrap text-start">{p.description}</div>
         </div>
       ))}
     </div>

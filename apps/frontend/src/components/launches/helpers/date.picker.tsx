@@ -35,7 +35,7 @@ export const DatePicker: FC<{
   );
   return (
     <div
-      className="px-[16px] border border-newTextColor/10 rounded-[8px] justify-center flex gap-[8px] items-center relative h-[44px] text-[15px] font-[600] ml-[7px] select-none flex-1"
+      className="px-[16px] border border-newTextColor/10 rounded-[8px] justify-center flex gap-[8px] items-center relative h-[44px] text-[15px] font-[600] ms-[7px] select-none flex-1"
       onClick={changeShow}
       ref={ref}
     >

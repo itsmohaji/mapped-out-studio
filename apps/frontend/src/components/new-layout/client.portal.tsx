@@ -93,7 +93,7 @@ const Comments = ({ postId }: { postId: string }) => {
             {c.user?.name || c.user?.email || t('user', 'User')}:
           </span>{' '}
           <span className="opacity-90">{c.content}</span>
-          <span className="opacity-40 text-[11px] ml-[6px]">
+          <span className="opacity-40 text-[11px] ms-[6px]">
             {dayjs(c.createdAt).format('MMM D, HH:mm')}
           </span>
         </div>
@@ -224,7 +224,7 @@ const PostCard = ({
         </button>
         <button
           onClick={() => setShowComments((s) => !s)}
-          className="h-[38px] px-[16px] rounded-[8px] bg-newColColor text-[13px] ml-auto"
+          className="h-[38px] px-[16px] rounded-[8px] bg-newColColor text-[13px] ms-auto"
         >
           {showComments
             ? t('hide_comments', 'Hide comments')

@@ -142,7 +142,7 @@ export const CustomSelect: FC<{
         <div
           className={clsx(
             label && !removeError && '-mt-[23px]',
-            'z-[100] absolute w-full top-[100%] start-0 flex items-center rounded-bl-[4px] rounded-br-[4px] flex-col bg-fifth gap-[1px] border-l border-r border-b border-fifth overflow-hidden'
+            'z-[100] absolute w-full top-[100%] start-0 flex items-center rounded-b-[4px] flex-col bg-fifth gap-[1px] border-s border-e border-b border-fifth overflow-hidden'
           )}
         >
           {options.map((option) => (

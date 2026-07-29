@@ -100,7 +100,7 @@ const PerSocialTable: FC<{ title: string; block: StatsBlock }> = ({
   <div className="border border-newTableBorder rounded-[8px] overflow-hidden">
     <div className="grid grid-cols-[1fr_120px] gap-[12px] px-[12px] py-[10px] bg-newBgColorInner text-[12px] uppercase opacity-70 border-b border-newTableBorder">
       <div>{title}</div>
-      <div className="text-right">Count</div>
+      <div className="text-end">Count</div>
     </div>
     {block.perSocial.length === 0 ? (
       <div className="px-[12px] py-[10px] text-[13px] opacity-70">
@@ -113,7 +113,7 @@ const PerSocialTable: FC<{ title: string; block: StatsBlock }> = ({
           className="grid grid-cols-[1fr_120px] gap-[12px] px-[12px] py-[10px] text-[13px] border-b border-newTableBorder last:border-b-0"
         >
           <div className="capitalize">{row.provider}</div>
-          <div className="text-right">{row.count.toLocaleString()}</div>
+          <div className="text-end">{row.count.toLocaleString()}</div>
         </div>
       ))
     )}

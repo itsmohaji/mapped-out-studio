@@ -196,7 +196,7 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
           <div className="flex flex-col gap-[8px]">
             <div className="text-[13px] font-[600] text-textColor">
               {t('select_local_integration', 'Select Local Integration')}
-              <span className="text-[12px] font-[400] text-textColor/60 ml-[8px]">
+              <span className="text-[12px] font-[400] text-textColor/60 ms-[8px]">
                 ({parsed._debug.providerIdentifier})
               </span>
             </div>
@@ -231,7 +231,7 @@ export const ImportDebugPostModal: FC<{ close: () => void }> = ({ close }) => {
                     </div>
                     <img
                       src={`/icons/platforms/${integration.identifier}.png`}
-                      className="w-[14px] h-[14px] rounded-[4px] ml-auto"
+                      className="w-[14px] h-[14px] rounded-[4px] ms-auto"
                       alt={integration.identifier}
                     />
                   </div>

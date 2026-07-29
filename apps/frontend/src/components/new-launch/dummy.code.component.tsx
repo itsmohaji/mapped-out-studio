@@ -13,7 +13,7 @@ export const DummyCodeComponent: FC<{ code: any }> = ({ code }) => {
     <div className="rounded-[4px] border border-customColor6 bg-sixth px-[16px] pb-[16px] relative w-full">
       <TopTitle title={`Output`}>
         <Button
-          className="mr-[50px]"
+          className="me-[50px]"
           onClick={() => {
             copy(JSON.stringify(code, null, 2));
             toaster.show('Code copied to clipboard', 'success');

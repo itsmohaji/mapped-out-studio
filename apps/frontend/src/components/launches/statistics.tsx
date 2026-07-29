@@ -157,13 +157,13 @@ export const StatisticsModal: FC<{
               </div>
             ) : (
               <div className="grid grid-cols-3">
-                <div className="bg-forth p-[4px] rounded-tl-lg">
+                <div className="bg-forth p-[4px] rounded-ss-lg">
                   {t('short_link', 'Short Link')}
                 </div>
                 <div className="bg-forth p-[4px]">
                   {t('original_link', 'Original Link')}
                 </div>
-                <div className="bg-forth p-[4px] rounded-tr-lg">
+                <div className="bg-forth p-[4px] rounded-se-lg">
                   {t('clicks', 'Clicks')}
                 </div>
                 {statisticsData?.clicks?.map((p: any) => (

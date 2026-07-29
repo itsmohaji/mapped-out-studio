@@ -139,8 +139,8 @@ export const ThirdPartyListComponent: FC<{ reload: () => void }> = (props) => {
               src={`/icons/third-party/${p.identifier}.png`}
             />
           </div>
-          <div className="whitespace-pre-wrap text-left text-lg">{p.title}</div>
-          <div className="whitespace-pre-wrap text-left">{p.description}</div>
+          <div className="whitespace-pre-wrap text-start text-lg">{p.title}</div>
+          <div className="whitespace-pre-wrap text-start">{p.description}</div>
           <div className="w-full flex">
             <Button className="w-full">Add</Button>
           </div>

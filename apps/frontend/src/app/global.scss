@@ -120,7 +120,7 @@ body * {
 }
 .table1 thead th,
 .table1 tbody td {
-  text-align: left;
+  text-align: start;
   padding: 14px 24px;
 }
 
@@ -157,7 +157,7 @@ body * {
 .react-tags {
   @apply border border-newTableBorder placeholder-textColor;
   position: relative;
-  padding-left: 16px;
+  padding-inline-start: 16px;
   font-size: 14px;
   background-color: var(--new-bgColorInner);
   height: 42px;
@@ -168,7 +168,7 @@ body * {
   cursor: text;
   display: flex;
   align-items: center;
-  margin-right: 0 !important;
+  margin-inline-end: 0 !important;
 }
 
 .react-tags input {
@@ -247,7 +247,7 @@ body * {
     90% 0,
     50% 40%
   );
-  margin-left: 0.5rem;
+  margin-inline-start: 0.5rem;
   font-size: 0.875rem;
   @apply bg-customColor53;
 }
@@ -319,7 +319,7 @@ body * {
 
 .react-tags__listbox-option[aria-selected='true']::after {
   content: '✓';
-  margin-left: 0.5rem;
+  margin-inline-start: 0.5rem;
 }
 
 .react-tags__listbox-option[aria-selected='true']:not(.is-active)::after {
@@ -504,24 +504,24 @@ div div .set-font-family {
 
 .tags-top > div {
   flex: 1;
-  margin-right: 20px;
+  margin-inline-end: 20px;
   border: 0 !important;
   background: transparent !important;
-  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
 }
 
 .tags-top .react-tags__combobox {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 .tags-top .react-tags__combobox {
   height: 42px;
   display: flex;
   background-color: var(--new-bgColorInner);
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-inline-start: 10px;
+  padding-inline-end: 10px;
   min-width: 150px;
-  text-align: left;
+  text-align: start;
   border-width: 1px;
   border-radius: 8px;
   border-color: var(--new-table-border);
@@ -549,8 +549,8 @@ div div .set-font-family {
 .tags-top .react-tags__list-item > div {
   display: flex;
   align-items: center;
-  padding-left: 5px;
-  padding-right: 5px;
+  padding-inline-start: 5px;
+  padding-inline-end: 5px;
 }
 
 /* MediumTags (YouTube / Medium providers) — let the field grow and wrap
@@ -562,7 +562,7 @@ div div .set-font-family {
   align-items: flex-start;
   padding-top: 6px;
   padding-bottom: 6px;
-  padding-right: 16px;
+  padding-inline-end: 16px;
 }
 
 .medium-tags .react-tags__list {
@@ -657,7 +657,7 @@ html[dir='rtl'] [dir='ltr'] {
 .ProseMirror ul,
 .preview ul {
   list-style: disc;
-  padding-left: 20px;
+  padding-inline-start: 20px;
 }
 
 .preview ul,
@@ -729,7 +729,7 @@ html[dir='rtl'] [dir='ltr'] {
     align-items: center;
     background-color: transparent;
     display: flex;
-    text-align: left;
+    text-align: start;
     width: 100%;
     padding: 10px;
 

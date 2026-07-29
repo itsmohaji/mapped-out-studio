@@ -137,7 +137,7 @@ export const AnnouncementBanner: FC = () => {
     >
       {latest.title}
       {announcements.length > 1 && (
-        <span className="ml-[8px] opacity-70">
+        <span className="ms-[8px] opacity-70">
           (+{announcements.length - 1} {t('more', 'more')})
         </span>
       )}

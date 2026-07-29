@@ -121,7 +121,7 @@ const ChargesModal: FC<{ close: () => void }> = ({ close }) => {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left border-b border-newTableBorder">
+              <tr className="text-start border-b border-newTableBorder">
                 <th className="p-[8px] w-[40px]" />
                 <th className="p-[8px]">{t('date', 'Date')}</th>
                 <th className="p-[8px]">{t('amount', 'Amount')}</th>

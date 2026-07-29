@@ -333,7 +333,7 @@ export const AdminErrorsComponent: FC = () => {
             <div>Platform</div>
             <div>User / Org</div>
             <div>Message</div>
-            <div className="text-right">Actions</div>
+            <div className="text-end">Actions</div>
           </div>
           {data.items.map((row) => {
             const isUnknown = (row.message || '').includes('Unknown Error');

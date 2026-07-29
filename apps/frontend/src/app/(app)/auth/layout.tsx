@@ -23,7 +23,7 @@ export default async function AuthLayout({
         </div>
       </div>
       <div className="text-[36px] flex-1 pt-[88px] hidden lg:flex flex-col items-center">
-        <div className="text-center">
+        <div className="text-center" dir="auto">
           Welcome to
           <br />
           <span className="text-[42px] text-[#8fbbe4]">
