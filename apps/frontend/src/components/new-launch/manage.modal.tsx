@@ -47,6 +47,7 @@ import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
+import useCookie from 'react-use-cookie';
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
@@ -59,6 +60,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const [dbuAssoc, setDbuAssoc] = useState<DbuValue | null>(null);
   const modal = useModals();
   const [showSettings, setShowSettings] = useState(false);
+  // Remembered per user — writing full-width is a preference, not a one-off.
+  const [previewOpen, setPreviewOpen] = useCookie('composer-preview', '1');
   const { data: shortlinkPreferenceData } = useShortlinkPreference();
 
   const { addEditSets, mutate, customClose, dummy } = props;
@@ -546,17 +549,49 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   );
 
   return (
-    <div className="w-full h-full flex-1 p-[40px] flex relative">
+    <div className="w-full h-full flex-1 p-[24px] flex relative">
       <div className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col overflow-hidden shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
-        <div className="flex-1 flex">
-          <div className="flex flex-col flex-1 border-e border-newBorder">
-            <div className="bg-newBgColor h-[64px] border-b border-newBorder flex items-center gap-[12px] px-[22px] text-[17px] font-[600] tracking-tight">
-              {t('create_post_title', 'Create Post')}
-              <CreationMethodBadge
-                creationMethod={existingData?.posts?.[0]?.creationMethod}
-                size="sm"
-              />
-            </div>
+        {/* ONE header across the whole card. It used to be two separate 64px
+            bars with a seam down the middle, and Close lived in the preview
+            half — which meant collapsing the preview would hide it. */}
+        <div className="bg-newBgColor h-[60px] border-b border-newBorder flex items-center gap-[12px] px-[22px] shrink-0">
+          <div className="text-[17px] font-[600] tracking-tight">
+            {t('create_post_title', 'Create Post')}
+          </div>
+          <CreationMethodBadge
+            creationMethod={existingData?.posts?.[0]?.creationMethod}
+            size="sm"
+          />
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(previewOpen === '1' ? '0' : '1')}
+            className="flex items-center gap-[7px] h-[34px] px-[12px] rounded-[10px] text-[12.5px] font-[600] bg-newColColor hover:brightness-110 transition-all active:scale-[0.97]"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              {previewOpen === '1' ? (
+                <>
+                  <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </>
+              ) : (
+                <>
+                  <path d="M3 3l18 18M10.6 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.3 7.5A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 4-.8" />
+                </>
+              )}
+            </svg>
+            {t('preview', 'Preview')}
+          </button>
+          <button
+            type="button"
+            onClick={askClose}
+            className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center hover:bg-boxHover transition-colors"
+          >
+            <CloseIcon className="text-[#A3A3A3]" />
+          </button>
+        </div>
+        <div className="flex-1 flex min-h-0">
+          <div className="flex flex-col flex-1 min-w-0 border-e border-newBorder">
             <div className="flex-1 flex flex-col gap-[16px]">
               <div
                 className={clsx('flex-1 relative', showSettings && 'hidden')}
@@ -669,12 +704,20 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </div>
             </div>
           </div>
-          <div className="w-[580px] flex flex-col">
-            <div className="bg-newBgColor h-[64px] border-b border-newBorder flex items-center px-[22px] text-[17px] font-[600] tracking-tight">
-              <div className="flex-1">{t('post_preview', 'Post Preview')}</div>
-              <div className="cursor-pointer">
-                <CloseIcon onClick={askClose} className="text-[#A3A3A3]" />
-              </div>
+          {/* CSS-only collapse — never conditional rendering. Every provider
+              portals its settings into #social-settings in the LEFT column and
+              is validated on submit through its ref, so unmounting this column
+              would break both settings and publishing. */}
+          <div
+            className={clsx(
+              'flex flex-col shrink-0 transition-all duration-300 overflow-hidden',
+              previewOpen === '1'
+                ? 'w-[46%] min-w-[360px] max-w-[600px]'
+                : 'w-0 opacity-0 pointer-events-none'
+            )}
+          >
+            <div className="px-[20px] pt-[16px] text-[11px] font-[600] uppercase tracking-wider text-textItemBlur shrink-0">
+              {t('post_preview', 'Post Preview')}
             </div>
             <div className="flex-1 relative">
               <Scrollable
@@ -686,8 +729,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             </div>
           </div>
         </div>
-        <div className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
-          <div className="flex-1 flex ps-[20px] gap-[8px]">
+        <div className="select-none h-[80px] py-[18px] border-t border-newBorder bg-newBgColor flex items-center shrink-0">
+          <div className="flex-1 flex ps-[20px] gap-[8px] min-w-0">
             {!dummy && (
               <TagsComponent
                 name="tags"
@@ -703,7 +746,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <RepeatComponent repeat={repeater} onChange={setRepeater} />
             )}
           </div>
-          <div className="pe-[20px] flex items-center justify-end gap-[8px]">
+          <div className="pe-[20px] flex items-center justify-end gap-[10px] shrink-0">
             {existingData?.integration && (
               <button
                 onClick={deletePost}
@@ -716,6 +759,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </button>
             )}
             <DatePicker onChange={setDate} date={date} />
+            {/* Divider: meta/scheduling on the left of it, actions on the right.
+                Before, six unrelated controls sat in one undifferentiated row. */}
+            <div className="w-px h-[26px] bg-newBorder mx-[2px]" />
             {!addEditSets && (
               <button
                 disabled={

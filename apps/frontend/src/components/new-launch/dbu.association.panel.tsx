@@ -232,55 +232,67 @@ export const DbuAssociationPanel: FC<{
       >
         DBU association
       </div>
-      <select
-        style={selStyle}
-        value={clientId}
-        onChange={(e) => {
-          setClientId(e.target.value);
-          setProjectId('');
-          setMilestoneId('');
-          setLinkChannelId('');
-          setLinkError('');
+      {/* Client → project → cycle side by side. Stacked, these three pushed
+          the writing area a third of the way down the composer. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${
+            projectId ? 3 : clientId ? 2 : 1
+          }, minmax(0, 1fr))`,
+          gap: 8,
         }}
       >
-        <option value="">Select DBU client…</option>
-        {clients.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      {!!clientId && (
         <select
           style={selStyle}
-          value={projectId}
+          value={clientId}
           onChange={(e) => {
-            setProjectId(e.target.value);
+            setClientId(e.target.value);
+            setProjectId('');
             setMilestoneId('');
+            setLinkChannelId('');
+            setLinkError('');
           }}
         >
-          <option value="">Select active project…</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+          <option value="">Select DBU client…</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
             </option>
           ))}
         </select>
-      )}
-      {!!projectId && (
-        <select
-          style={selStyle}
-          value={milestoneId}
-          onChange={(e) => setMilestoneId(e.target.value)}
-        >
-          <option value="">Select month / cycle…</option>
-          {cycles.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.title}
-            </option>
-          ))}
-        </select>
-      )}
+        {!!clientId && (
+          <select
+            style={selStyle}
+            value={projectId}
+            onChange={(e) => {
+              setProjectId(e.target.value);
+              setMilestoneId('');
+            }}
+          >
+            <option value="">Select active project…</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {!!projectId && (
+          <select
+            style={selStyle}
+            value={milestoneId}
+            onChange={(e) => setMilestoneId(e.target.value)}
+          >
+            <option value="">Select month / cycle…</option>
+            {cycles.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
       {needsLink && (
         <div
           style={{
