@@ -44,6 +44,7 @@ model Organization {
   oauthApp            OAuthApp[]
   oauthAuthorizations OAuthAuthorization[]
   tasks               Task[]
+  campaigns           Campaign[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -118,6 +119,7 @@ model User {
   postApprovals         PostApproval[]
   tasksAssigned         Task[]               @relation("TaskAssignee")
   tasksCreated          Task[]               @relation("TaskCreatedBy")
+  campaignsCreated      Campaign[]           @relation("CampaignCreatedBy")
 
   @@unique([email, providerName])
   @@index([lastReadNotifications])
@@ -353,6 +355,7 @@ model Customer {
   integrations Integration[]
   assignments  UserAssignment[]
   tasks        Task[]
+  campaigns    Campaign[]
 
   @@unique([orgId, name, deletedAt])
 }
@@ -381,6 +384,31 @@ model Task {
 
   @@index([orgId, status, deletedAt])
   @@index([orgId, assigneeId, deletedAt])
+}
+
+model Campaign {
+  id           String       @id @default(uuid())
+  orgId        String
+  name         String
+  description  String?
+  // App-governed, deliberately NOT a DB enum: this project has been bitten
+  // repeatedly by enumerated CHECKs that predated a new value.
+  status       String       @default("planning")
+  color        String?
+  goal         String?
+  startDate    DateTime?
+  endDate      DateTime?
+  customerId   String?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  organization Organization @relation(fields: [orgId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  createdBy    User?        @relation("CampaignCreatedBy", fields: [createdById], references: [id])
+  posts        Post[]
+
+  @@index([orgId, status, deletedAt])
 }
 
 model Integration {
@@ -516,9 +544,12 @@ model Post {
   childrenPost               Post[]                    @relation("parentPostId")
   submittedForOrder          Orders?                   @relation(fields: [submittedForOrderId], references: [id])
   submittedForOrganization   Organization?             @relation("submittedForOrg", fields: [submittedForOrganizationId], references: [id])
+  campaignId                 String?
+  campaign                   Campaign?                 @relation(fields: [campaignId], references: [id])
   tags                       TagsPosts[]
 
   @@index([group])
+  @@index([campaignId])
   @@index([deletedAt])
   @@index([publishDate])
   @@index([state])

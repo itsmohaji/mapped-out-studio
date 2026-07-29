@@ -47,6 +47,8 @@ import { AdminStatsRepository } from '@gitroom/nestjs-libraries/database/prisma/
 import { AdminStatsService } from '@gitroom/nestjs-libraries/database/prisma/admin-stats/admin-stats.service';
 import { TasksService } from '@gitroom/nestjs-libraries/database/prisma/tasks/tasks.service';
 import { TasksRepository } from '@gitroom/nestjs-libraries/database/prisma/tasks/tasks.repository';
+import { CampaignsService } from '@gitroom/nestjs-libraries/database/prisma/campaigns/campaigns.service';
+import { CampaignsRepository } from '@gitroom/nestjs-libraries/database/prisma/campaigns/campaigns.repository';
 
 @Global()
 @Module({
@@ -103,6 +105,8 @@ import { TasksRepository } from '@gitroom/nestjs-libraries/database/prisma/tasks
     AdminStatsService,
     TasksService,
     TasksRepository,
+    CampaignsService,
+    CampaignsRepository,
   ],
   get exports() {
     return this.providers;

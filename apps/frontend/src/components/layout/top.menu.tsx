@@ -167,6 +167,27 @@ export const useMenuItem = () => {
       path: '/tasks',
     },
     {
+      name: t('campaigns', 'Campaigns'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M4 14V9m0 5 11.2 4.2c.5.2 1-.2 1-.7V5.5c0-.5-.5-.9-1-.7L4 9m0 5H3.5A1.5 1.5 0 0 1 2 12.5v-2A1.5 1.5 0 0 1 3.5 9H4m3 6v3.5a1.5 1.5 0 0 0 3 0V16M19 9.5v5"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/campaigns',
+    },
+    {
       section: t('nav_group_library', 'Library'),
       name: t('post_library', 'Post Library'),
       icon: (
