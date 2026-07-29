@@ -597,16 +597,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         </div>
         <div className="flex-1 flex min-h-0">
           <div className="flex flex-col flex-1 min-w-0 border-e border-newBorder">
-            {/* Writing and channel Settings sit SIDE BY SIDE once expanded.
-                They used to swap — opening Settings hid the editor entirely, so
-                you could never see the text you were configuring settings for. */}
-            <div className="flex-1 flex flex-col xl:flex-row gap-[12px] min-h-0">
-              <div
-                className={clsx(
-                  'flex-1 relative min-w-0',
-                  showSettings && 'xl:w-[63%] xl:flex-none'
-                )}
-              >
+            <div className="flex-1 flex flex-col gap-[16px] min-h-0">
+              <div className="flex-1 relative min-w-0">
                 <div
                   id="social-content"
                   className="gap-[32px] flex flex-col pe-[8px] pt-[20px] ps-[20px] absolute top-0 left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
@@ -663,70 +655,79 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       )}
                     </div>
                   )}
-                  <div className="flex flex-1 gap-[6px] flex-col">
-                    <div>{!existingData.integration && <SelectCurrent />}</div>
-                    <div className="flex-1 flex">
-                      {!hide && <EditorWrapper totalPosts={1} value="" />}
-                    </div>
-                    <div
-                      id="social-empty"
-                      className={clsx(
-                        'pb-[16px]'
-                        // current !== 'global' && 'hidden'
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div
-                id="wrapper-settings"
-                className={clsx(
-                  'pb-[20px] px-[20px] select-none flex flex-col',
-                  // Expanded: its own ~35% column beside the editor on wide
-                  // screens, stacked underneath on narrow ones.
-                  showSettings &&
-                    'flex-1 pt-[20px] xl:w-[35%] xl:shrink-0 xl:min-w-[300px] xl:ps-0 min-h-0',
-                  current === 'global' && 'hidden'
-                )}
-              >
-                <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings min-h-0">
-                  {/* A full-width solid-blue bar shouted louder than the
-                      primary action. It's a disclosure row, so it reads as one. */}
-                  <div
-                    onClick={() => setShowSettings(!showSettings)}
-                    className={clsx(
-                      'rounded-[12px] flex items-center gap-[8px] cursor-pointer px-[14px] py-[11px] border transition-colors',
-                      showSettings
-                        ? '!rounded-b-none bg-btnPrimary/10 border-btnPrimary/40'
-                        : 'bg-newBgLineColor border-newTableBorder hover:border-btnPrimary/40'
-                    )}
-                  >
-                    <div className="flex-1 text-[13px] font-[600] text-newTextColor">
-                      {currentIntegrationText}
-                    </div>
-                    <ChevronDownIcon
-                      rotated={showSettings}
-                      className="text-textItemBlur"
-                    />
-                  </div>
-                  <div
-                    className={clsx(
-                      !showSettings ? 'hidden' : 'flex-1',
-                      'text-[14px] text-textColor font-[500] relative'
-                    )}
-                  >
-                    <div className="absolute left-0 top-0 w-full h-full flex flex-col overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
+                  {/* Writing on the left, channel Settings on the right, on
+                      the SAME row. Settings used to sit beside the whole
+                      column (channels, DBU, campaign and all), which left a
+                      tall empty rail next to the header fields. */}
+                  <div className="flex flex-col xl:flex-row gap-[12px] items-stretch flex-1">
+                    <div className="flex flex-1 gap-[6px] flex-col min-w-0 xl:w-[60%]">
+                      <div>{!existingData.integration && <SelectCurrent />}</div>
+                      <div className="flex-1 flex">
+                        {!hide && <EditorWrapper totalPosts={1} value="" />}
+                      </div>
                       <div
-                        id="social-settings"
-                        className="flex flex-col gap-[20px] bg-newBgColor"
+                        id="social-empty"
+                        className={clsx(
+                          'pb-[16px]'
+                          // current !== 'global' && 'hidden'
+                        )}
                       />
                     </div>
+                    <div
+                      id="wrapper-settings"
+                      className={clsx(
+                        'select-none flex flex-col pb-[16px]',
+                        // Collapsed it is just the disclosure bar; expanded it
+                        // takes the right 40% beside the writing area, and
+                        // stacks underneath on narrow screens.
+                        showSettings
+                          ? 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px]'
+                          : 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px] self-start',
+                        current === 'global' && 'hidden'
+                      )}
+                    >
+                    <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings min-h-0">
+                      {/* A full-width solid-blue bar shouted louder than the
+                          primary action. It's a disclosure row, so it reads as one. */}
+                      <div
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={clsx(
+                          'rounded-[12px] flex items-center gap-[8px] cursor-pointer px-[14px] py-[11px] border transition-colors',
+                          showSettings
+                            ? '!rounded-b-none bg-btnPrimary/10 border-btnPrimary/40'
+                            : 'bg-newBgLineColor border-newTableBorder hover:border-btnPrimary/40'
+                        )}
+                      >
+                        <div className="flex-1 text-[13px] font-[600] text-newTextColor">
+                          {currentIntegrationText}
+                        </div>
+                        <ChevronDownIcon
+                          rotated={showSettings}
+                          className="text-textItemBlur"
+                        />
+                      </div>
+                      <div
+                        className={clsx(
+                          !showSettings ? 'hidden' : 'flex-1',
+                          'text-[14px] text-textColor font-[500] relative'
+                        )}
+                      >
+                        <div className="absolute left-0 top-0 w-full h-full flex flex-col overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
+                          <div
+                            id="social-settings"
+                            className="flex flex-col gap-[20px] bg-newBgColor"
+                          />
+                        </div>
+                      </div>
+                      <style>
+                        {`#social-settings [data-id="${current}"] {display: block !important;}`}
+                      </style>
+                    </div>
                   </div>
-                  <style>
-                    {`#social-settings [data-id="${current}"] {display: block !important;}`}
-                  </style>
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
           {/* CSS-only collapse — never conditional rendering. Every provider
