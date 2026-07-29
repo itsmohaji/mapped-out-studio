@@ -26,7 +26,12 @@ import { expandPostsList, expandPosts } from '@gitroom/helpers/utils/posts.list.
 extend(isoWeek);
 extend(weekOfYear);
 
-export type ListStateFilter = 'all' | 'scheduled' | 'draft' | 'published';
+export type ListStateFilter =
+  | 'all'
+  | 'scheduled'
+  | 'draft'
+  | 'published'
+  | 'error';
 
 export const CalendarContext = createContext({
   startDate: newDayjs().startOf('isoWeek').format('YYYY-MM-DD'),
@@ -89,6 +94,9 @@ export const CalendarContext = createContext({
   setListState: (state: ListStateFilter) => {
     /** empty **/
   },
+  // One shared clock for the whole calendar. Week view renders 168 cells and
+  // each used to run its OWN 2-minute timer just to notice the hour had passed.
+  nowTick: 0,
 });
 
 export interface Integrations {
@@ -163,6 +171,13 @@ export const CalendarWeekProvider: FC<{
     (ids: string[]) => setChannelsSaved(ids.join(',')),
     [setChannelsSaved]
   );
+
+  // ONE timer for the whole calendar, instead of one per cell.
+  const [nowTick, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick((n) => n + 1), 120000);
+    return () => clearInterval(id);
+  }, []);
 
   // List view state
   const [listPage, setListPage] = useState(0);
@@ -384,6 +399,7 @@ export const CalendarWeekProvider: FC<{
         setListPage,
         listState,
         setListState,
+        nowTick,
       }}
     >
       {children}

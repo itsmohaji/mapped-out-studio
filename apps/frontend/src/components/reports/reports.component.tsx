@@ -12,6 +12,7 @@ import { Button } from '@gitroom/react/form/button';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { ChartSocial } from '@gitroom/frontend/components/analytics/chart-social';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
+import { bestSlots, confidence } from '@gitroom/helpers/utils/best.times';
 import {
   Aggregate,
   ChannelBlock,
@@ -39,6 +40,16 @@ const ANALYTICS_PLATFORMS = [
 
 const DATE_OPTIONS = [7, 30, 90];
 const fmt = (n: number) => new Intl.NumberFormat().format(Math.round(n));
+
+const DAY_NAMES = (t: any) => [
+  t('sunday', 'Sunday'),
+  t('monday', 'Monday'),
+  t('tuesday', 'Tuesday'),
+  t('wednesday', 'Wednesday'),
+  t('thursday', 'Thursday'),
+  t('friday', 'Friday'),
+  t('saturday', 'Saturday'),
+];
 
 const Panel: FC<{
   title: string;
@@ -232,6 +243,11 @@ export const ReportsComponent: FC = () => {
 
   const published = publishedData?.posts || [];
   const heat = useMemo(() => postingHeatmap(published), [published]);
+
+  // Best times come from the SAME per-post insights as the top-performing list,
+  // so a recommendation is always traceable to posts you can actually see.
+  const best = useMemo(() => bestSlots(topPosts || []), [topPosts]);
+  const conf = useMemo(() => confidence(topPosts || []), [topPosts]);
 
   const reach = useMemo(() => aggregateMetric(blocks || [], 'reach'), [blocks]);
   const engagement = useMemo(() => aggregateEngagement(blocks || []), [blocks]);
@@ -460,6 +476,48 @@ export const ReportsComponent: FC = () => {
                     </div>
                   </div>
                 </a>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          title={t('best_times', 'Best times to post')}
+          sub={t('best_times_sub', 'From your own posts, not a generic table')}
+        >
+          {!best.length ? (
+            <div className="px-[16px] py-[26px] text-[12.5px] text-textItemBlur">
+              {conf.scored === 0
+                ? t(
+                    'best_times_none',
+                    'Not enough data yet. This appears once your channels report engagement on published posts.'
+                  )
+                : `${t(
+                    'best_times_thin',
+                    'Not enough posts in any single time slot yet — measured'
+                  )} ${conf.scored} ${t('posts_lower', 'posts')}.`}
+            </div>
+          ) : (
+            <div className="divide-y divide-newTableBorder">
+              {best.map((s) => (
+                <div
+                  key={`${s.day}-${s.hour}`}
+                  className="px-[16px] py-[10px] flex items-center gap-[10px]"
+                >
+                  <div className="text-[13px] font-[600] flex-1">
+                    {DAY_NAMES(t)[s.day]}{' '}
+                    {String(s.hour).padStart(2, '0')}:00
+                  </div>
+                  <div className="text-end">
+                    <div className="text-[13px] font-[600] tabular-nums">
+                      {fmt(s.averageScore)}
+                    </div>
+                    <div className="text-[10px] text-textItemBlur">
+                      {t('avg_from', 'avg from')} {s.samples}{' '}
+                      {t('posts_lower', 'posts')}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}

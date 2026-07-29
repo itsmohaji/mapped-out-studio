@@ -245,6 +245,8 @@ export const Filters = () => {
     { value: 'scheduled', label: t('scheduled', 'Scheduled') },
     { value: 'draft', label: t('draft', 'Draft') },
     { value: 'published', label: t('published', 'Published') },
+    // A failed post is the whole reason to open a list view.
+    { value: 'error', label: t('failed', 'Failed') },
   ];
 
   const previousPage = useCallback(() => {

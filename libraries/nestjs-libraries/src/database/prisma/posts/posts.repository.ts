@@ -10,6 +10,7 @@ import {
 import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
 import { GetPostsListDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.list.dto';
 import { emitDbuContentUpsert } from '@gitroom/nestjs-libraries/database/prisma/posts/dbu.emit';
+import { recurringOccurrences } from '@gitroom/helpers/utils/recurring.posts';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -229,9 +230,12 @@ export class PostsRepository {
                 },
               },
               {
-                intervalInDays: {
-                  not: null,
-                },
+                // A recurring post can only appear in this window if it STARTED
+                // on or before the window ends. Without the date bound this
+                // returned every recurring post in the org on every calendar
+                // load, whatever week was on screen.
+                intervalInDays: { not: null },
+                publishDate: { lte: endDate },
               },
             ],
           },
@@ -286,19 +290,20 @@ export class PostsRepository {
         return [...all, post];
       }
 
-      const addMorePosts = [];
-      let startingDate = dayjs.utc(post.publishDate);
-      while (dayjs.utc(endDate).isSameOrAfter(startingDate)) {
-        if (dayjs(startingDate).isSameOrAfter(dayjs.utc(post.publishDate))) {
-          addMorePosts.push({
-            ...post,
-            publishDate: startingDate.toDate(),
-            actualDate: post.publishDate,
-          });
-        }
-
-        startingDate = startingDate.add(post.intervalInDays, 'days');
-      }
+      // Only the occurrences inside the requested window. This used to step
+      // from the post's original date one interval at a time and emit EVERY
+      // occurrence up to the window end — a two-year-old daily post produced
+      // ~700 rows to draw one week, all of them sent to the browser.
+      const addMorePosts = recurringOccurrences(
+        post.publishDate,
+        post.intervalInDays,
+        startDate,
+        endDate
+      ).map((o) => ({
+        ...post,
+        publishDate: o.date,
+        actualDate: o.actualDate,
+      }));
 
       return [...all, ...addMorePosts];
     }, [] as any[]);
@@ -319,14 +324,18 @@ export class PostsRepository {
         ? { state: State.DRAFT }
         : stateFilter === 'published'
         ? { state: State.PUBLISHED }
+        : stateFilter === 'error'
+        ? { state: State.ERROR }
         : {
             state: {
               in: [State.QUEUE, State.DRAFT, State.PUBLISHED, State.ERROR],
             },
           };
 
+    // Newest first for everything except a pure upcoming view. The list is how
+    // you find what just happened, so recent activity belongs at the top.
     const orderDirection: 'asc' | 'desc' =
-      stateFilter === 'published' ? 'desc' : 'asc';
+      stateFilter === 'scheduled' ? 'asc' : 'desc';
 
     const where = {
       AND: [
@@ -339,11 +348,13 @@ export class PostsRepository {
         },
       ],
       ...stateAndDate,
-      // Published posts were already posted (publishDate in the past), so fetch
-      // all of them; everything else stays upcoming. Ordering handles the rest.
-      ...(stateFilter === 'published'
-        ? {}
-        : { publishDate: { gte: dayjs.utc().toDate() } }),
+      // Only the "scheduled" view is upcoming-only. Every other view used to
+      // carry `publishDate >= now`, which meant a post that FAILED yesterday was
+      // invisible in the list — findable only by navigating the calendar back to
+      // the day it should have gone out.
+      ...(stateFilter === 'scheduled'
+        ? { publishDate: { gte: dayjs.utc().toDate() } }
+        : {}),
       deletedAt: null as Date | null,
       parentPostId: null as string | null,
       intervalInDays: null as number | null,

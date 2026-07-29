@@ -45,7 +45,6 @@ import { groupBy, random, sortBy } from 'lodash';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { extend } from 'dayjs';
 import { isUSCitizen } from './helpers/isuscitizen.utils';
-import { useInterval } from '@mantine/hooks';
 import { StatisticsModal } from '@gitroom/frontend/components/launches/statistics';
 import { MissingReleaseModal } from '@gitroom/frontend/components/launches/missing-release.modal';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -497,6 +496,8 @@ export const ListView = () => {
       ? t('no_draft_posts', 'No draft posts')
       : listState === 'published'
       ? t('no_published_posts', 'No published posts')
+      : listState === 'error'
+      ? t('no_failed_posts', 'No failed posts — nothing needs your attention')
       : t('no_posts', 'No posts');
 
   // Use shared post actions hook
@@ -588,7 +589,6 @@ export const CalendarColumn: FC<{
   const t = useT();
 
   const { getDate, randomHour } = props;
-  const [num, setNum] = useState(0);
   const user = useUser();
   const {
     integrations,
@@ -599,6 +599,7 @@ export const CalendarColumn: FC<{
     sets,
     signature,
     loading,
+    nowTick,
   } = useCalendar();
   const modal = useModals();
   const fetch = useFetch();
@@ -634,29 +635,14 @@ export const CalendarColumn: FC<{
     return postList.slice(0, 3);
   }, [postList, showAll]);
 
+  // Recomputed off the calendar's single shared tick. This used to be a
+  // per-cell useInterval, i.e. 168 timers in week view all doing the same job.
   const isBeforeNow = useMemo(() => {
     const originalUtc = getDate.startOf('hour');
     return originalUtc
       .startOf('hour')
       .isBefore(newDayjs().startOf('hour').utc());
-  }, [getDate, num]);
-
-  const { start, stop } = useInterval(
-    useCallback(() => {
-      if (isBeforeNow) {
-        return;
-      }
-      setNum(num + 1);
-    }, [isBeforeNow]),
-    random(120000, 150000)
-  );
-
-  useEffect(() => {
-    start();
-    return () => {
-      stop();
-    };
-  }, []);
+  }, [getDate, nowTick]);
   const [{ canDrop }, drop] = useDrop(() => ({
     accept: 'post',
     drop: async (item: any) => {
