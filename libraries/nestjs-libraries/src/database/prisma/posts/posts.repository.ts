@@ -676,7 +676,8 @@ export class PostsRepository {
       milestoneId?: string;
       contentCycle?: string;
       contentType?: string;
-    }
+    },
+    campaignId?: string | null
   ) {
     const posts: Post[] = [];
     const uuid = uuidv4();
@@ -718,6 +719,16 @@ export class PostsRepository {
               dbuMilestoneId: dbu.milestoneId ?? null,
               dbuContentCycle: dbu.contentCycle ?? null,
             }
+          : {}),
+        // Campaign link. This object uses Prisma's CHECKED (relation) input —
+        // integration/organization are `connect`ed — so a raw `campaignId`
+        // scalar is not assignable here; it has to be a relation op too.
+        // `undefined` leaves the link untouched; an empty string from the
+        // composer means "no campaign" and clears it on update.
+        ...(campaignId
+          ? { campaign: { connect: { id: campaignId } } }
+          : campaignId !== undefined && type === 'update'
+          ? { campaign: { disconnect: true } }
           : {}),
         ...(type === 'create' ? { creationMethod } : {}),
         ...(state === 'update'

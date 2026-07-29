@@ -921,7 +921,8 @@ export class PostsService {
         body.tags,
         creationMethod,
         body.inter,
-        body.dbu
+        body.dbu,
+        body.campaignId
       );
 
       if (!posts?.length) {

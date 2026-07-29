@@ -868,5 +868,9 @@
   "end_date": "تاريخ النهاية",
   "no_client": "بدون عميل",
   "colour": "اللون",
-  "notes": "ملاحظات"
+  "notes": "ملاحظات",
+  "campaign": "الحملة",
+  "no_campaign": "بدون حملة",
+  "all_channels_tab": "اكتب مرة واحدة لكل القنوات",
+  "remove_channel": "إزالة هذه القناة"
 }

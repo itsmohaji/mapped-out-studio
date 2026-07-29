@@ -48,6 +48,7 @@ import { useShortlinkPreference } from '@gitroom/frontend/components/settings/sh
 import dayjs from 'dayjs';
 import { Button } from '@gitroom/react/form/button';
 import useCookie from 'react-use-cookie';
+import { CampaignSelect } from '@gitroom/frontend/components/new-launch/campaign.select';
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
@@ -58,6 +59,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const toaster = useToaster();
   // DBU System association (client/project/cycle) selected in the composer.
   const [dbuAssoc, setDbuAssoc] = useState<DbuValue | null>(null);
+  // Campaign this post joins. Independent of the DBU association.
+  const [campaignId, setCampaignId] = useState('');
   const modal = useModals();
   const [showSettings, setShowSettings] = useState(false);
   // Remembered per user — writing full-width is a preference, not a one-off.
@@ -161,7 +164,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       return (
         <div className="flex items-center gap-[10px]">
           <div className="relative">
-            <SettingsIcon size={15} className="text-white" />
+            <SettingsIcon size={15} className="text-btnPrimary" />
           </div>
           <div>Settings</div>
         </div>
@@ -180,7 +183,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           />
           <SettingsIcon
             size={15}
-            className="text-white absolute -end-[5px] -bottom-[5px]"
+            className="text-btnPrimary absolute -end-[5px] -bottom-[5px]"
           />
         </div>
         <div>
@@ -488,6 +491,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               ...(submitForApproval ? { submitForApproval: true } : {}),
             }
           : {}),
+        ...(campaignId ? { campaignId } : {}),
       };
 
       if (dummy) {
@@ -542,6 +546,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       dummy,
       shortlinkPreferenceData,
       dbuAssoc,
+      campaignId,
       contentType,
       integrations,
       selectedIntegrations,
@@ -633,6 +638,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       integrations={integrations as any}
                     />
                   )}
+                  {!dummy && (
+                    <CampaignSelect
+                      value={campaignId}
+                      onChange={setCampaignId}
+                    />
+                  )}
                   {!dummy && isDbuPost && multiAccountProviders.length > 0 && (
                     <div className="text-[12px] text-[#e5a13a] -mt-[6px] mb-[4px] px-[2px]">
                       {t('multi_account_pick', 'This client has more than one')}{' '}
@@ -667,22 +678,24 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 )}
               >
                 <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings">
+                  {/* A full-width solid-blue bar shouted louder than the
+                      primary action. It's a disclosure row, so it reads as one. */}
                   <div
                     onClick={() => setShowSettings(!showSettings)}
                     className={clsx(
-                      'bg-[#6ba3da] rounded-[12px] flex items-center gap-[8px] cursor-pointer p-[12px]',
-                      showSettings ? '!rounded-b-none' : ''
+                      'rounded-[12px] flex items-center gap-[8px] cursor-pointer px-[14px] py-[11px] border transition-colors',
+                      showSettings
+                        ? '!rounded-b-none bg-btnPrimary/10 border-btnPrimary/40'
+                        : 'bg-newBgLineColor border-newTableBorder hover:border-btnPrimary/40'
                     )}
                   >
-                    <div className="flex-1 text-[14px] font-[600] text-white">
+                    <div className="flex-1 text-[13px] font-[600] text-newTextColor">
                       {currentIntegrationText}
                     </div>
-                    <div>
-                      <ChevronDownIcon
-                        rotated={showSettings}
-                        className="text-white"
-                      />
-                    </div>
+                    <ChevronDownIcon
+                      rotated={showSettings}
+                      className="text-textItemBlur"
+                    />
                   </div>
                   <div
                     className={clsx(

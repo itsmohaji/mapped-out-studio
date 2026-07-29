@@ -64,8 +64,9 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
                       ) === -1
                         ? // Readable when off, obviously off. Full grayscale
                           // read as "broken account" rather than "not picked".
-                          'grayscale-[0.85] opacity-55 border-transparent hover:opacity-100 hover:grayscale-0'
-                        : 'border-btnPrimary shadow-[0_0_0_4px_var(--accent-dim)]'
+                          'grayscale-[0.85] opacity-50 border-transparent hover:opacity-100 hover:grayscale-0'
+                        : // Ring + lift, so "picked" is unmistakable at a glance.
+                          'border-btnPrimary scale-[1.06] shadow-[0_0_0_3px_var(--new-bgColorInner),0_0_0_5px_var(--new-btn-primary)]'
                     )}
                   >
                     <ImageWithFallback

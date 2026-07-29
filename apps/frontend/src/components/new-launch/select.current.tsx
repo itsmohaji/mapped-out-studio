@@ -51,6 +51,7 @@ export function useHasScroll(ref: RefObject<HTMLElement | null>): boolean {
 }
 
 export const SelectCurrent: FC = () => {
+  const t = useT();
   const modals = useDecisionModal();
   const {
     selectedIntegrations,
@@ -108,15 +109,16 @@ export const SelectCurrent: FC = () => {
               setCurrent('global');
             }}
             className={clsx(
-              'cursor-pointer flex gap-[8px] rounded-[8px] w-[40px] h-[40px] justify-center items-center bg-newBgLineColor',
+              'cursor-pointer flex gap-[7px] rounded-[10px] h-[40px] px-[12px] justify-center items-center border transition-all shrink-0 text-[12px] font-[600]',
               current !== 'global'
-                ? 'text-[#A3A3A3]'
-                : 'border border-[#8fbbe4] text-[#8fbbe4]'
+                ? 'bg-newBgLineColor border-transparent text-textItemBlur hover:text-newTextColor'
+                : 'bg-btnPrimary/10 border-btnPrimary text-btnPrimary'
             )}
+            data-tooltip-id="tooltip"
+            data-tooltip-content={t('all_channels_tab', 'Write once for every channel')}
           >
-            <div>
-              <GlobalIcon />
-            </div>
+            <GlobalIcon />
+            <span>{t('all', 'All')}</span>
           </div>
           {selectedIntegrations.map(({ integration }) => (
             <div
@@ -126,17 +128,21 @@ export const SelectCurrent: FC = () => {
               }}
               key={integration.id}
               className={clsx(
-                'border cursor-pointer relative flex gap-[8px] w-[40px] h-[40px] rounded-[8px] items-center bg-newBgLineColor justify-center',
+                'border cursor-pointer relative flex gap-[8px] w-[40px] h-[40px] rounded-[10px] items-center justify-center transition-all shrink-0 group/tab',
                 current === integration.id
-                  ? 'border-[#8fbbe4] text-[#8fbbe4]'
-                  : 'border-transparent'
+                  ? 'bg-btnPrimary/10 border-btnPrimary'
+                  : 'bg-newBgLineColor border-transparent hover:border-newTableBorder'
               )}
             >
               <div
                 onClick={removeSocial(integration)}
-                className="absolute justify-center items-center flex w-[8px] h-[8px] -top-[1px] -start-[3px] bg-red-500 rounded-full text-white text-[8px]"
+                data-tooltip-id="tooltip"
+                data-tooltip-content={t('remove_channel', 'Remove this channel')}
+                className="absolute z-20 justify-center items-center flex w-[15px] h-[15px] -top-[5px] -end-[5px] bg-newBgColorInner border border-newTableBorder hover:bg-[#e2685f] hover:border-[#e2685f] hover:text-white text-textItemBlur rounded-full text-[9px] opacity-0 group-hover/tab:opacity-100 transition-all"
               >
-                X
+                <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
               </div>
               <IsGlobal id={integration.id} />
               <div

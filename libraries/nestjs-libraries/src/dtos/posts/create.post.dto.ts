@@ -161,6 +161,12 @@ export class CreatePostDto {
   @Type(() => DbuAssociation)
   dbu?: DbuAssociation;
 
+  // Campaign this post belongs to. Independent of the DBU association — a post
+  // can be in a campaign with or without a DBU client.
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
   // Approval-Required workflow: create the post as a DRAFT awaiting client approval
   // (approvalStatus=WAITING_APPROVAL). The chosen `date` is stored as the intended
   // publish date and the post auto-schedules when the client approves in the DBU portal.

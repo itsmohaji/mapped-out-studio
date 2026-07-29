@@ -458,11 +458,19 @@ const CampaignDetail: FC<{
         )}
 
         {!posts.length ? (
-          <div className="px-[16px] py-[28px] text-[13px] text-textItemBlur">
-            {t(
-              'campaign_empty',
-              'No posts yet. Add existing posts, or set this campaign on a post from the calendar.'
-            )}
+          <div className="px-[16px] py-[28px] flex flex-col items-start gap-[8px]">
+            <div className="text-[13px] text-textItemBlur">
+              {t(
+                'campaign_empty',
+                'No posts yet. Either add posts you already have, or write new ones in the calendar and pick this campaign in the composer.'
+              )}
+            </div>
+            <a
+              href="/launches"
+              className="text-[12.5px] text-btnPrimary hover:underline"
+            >
+              {t('open_calendar', 'Open calendar')} →
+            </a>
           </div>
         ) : (
           <div className="divide-y divide-newTableBorder">
