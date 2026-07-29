@@ -9,6 +9,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { TaskRow } from '@gitroom/frontend/components/tasks/task.api';
+import { AudiencePerformance } from '@gitroom/frontend/components/dashboard/audience.performance';
 
 interface Customer {
   id: string;
@@ -385,6 +386,11 @@ export const DashboardComponent: FC = () => {
           onClick={() => router.push('/accounts')}
         />
       </div>
+
+      {/* Real platform analytics. Renders nothing at all when no connected
+          channel exposes an analytics API — better an absent section than
+          tiles full of zeros. */}
+      <AudiencePerformance />
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[16px] items-start">
