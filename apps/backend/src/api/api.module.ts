@@ -41,6 +41,7 @@ import { ClientController } from '@gitroom/backend/api/routes/client.controller'
 import { DbuOptionsController } from '@gitroom/backend/api/routes/dbu.options.controller';
 import { TasksController } from '@gitroom/backend/api/routes/tasks.controller';
 import { CampaignsController } from '@gitroom/backend/api/routes/campaigns.controller';
+import { AiOrchestraController } from '@gitroom/backend/api/routes/ai-orchestra.controller';
 import { AuthProviderManager } from '@gitroom/backend/services/auth/providers/providers.manager';
 import { GithubProvider } from '@gitroom/backend/services/auth/providers/github.provider';
 import { GoogleProvider } from '@gitroom/backend/services/auth/providers/google.provider';
@@ -72,6 +73,7 @@ const authenticatedController = [
   DbuOptionsController,
   TasksController,
   CampaignsController,
+  AiOrchestraController,
 ];
 @Module({
   imports: [UploadModule],

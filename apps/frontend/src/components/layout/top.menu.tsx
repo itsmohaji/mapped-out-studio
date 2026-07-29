@@ -146,6 +146,28 @@ export const useMenuItem = () => {
       path: '/analytics',
     },
     {
+      section: t('nav_group_intelligence', 'Intelligence'),
+      name: t('ai_assistant', 'AI Assistant'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="m12 3 1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3ZM18.5 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/ai-assistant',
+    },
+    {
       name: t('reports', 'Reports'),
       icon: (
         <svg

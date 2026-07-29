@@ -45,6 +45,8 @@ model Organization {
   oauthAuthorizations OAuthAuthorization[]
   tasks               Task[]
   campaigns           Campaign[]
+  aiRuns              AiRun[]
+  aiEntitlement       AiEntitlement?
 
   @@index([apiKey])
   @@index([streakSince])
@@ -384,6 +386,86 @@ model Task {
 
   @@index([orgId, status, deletedAt])
   @@index([orgId, assigneeId, deletedAt])
+}
+
+model AiSkill {
+  id           String            @id @default(uuid())
+  key          String            @unique
+  name         String
+  role         String
+  description  String?
+  provider     String            @default("openai")
+  model        String            @default("gpt-4o-mini")
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  versions     AiSkillVersion[]
+}
+
+// Immutable. A run records the exact version it used, so any output can be
+// explained months later even after the skill has moved on.
+model AiSkillVersion {
+  id           String   @id @default(uuid())
+  skillId      String
+  version      Int
+  instruction  String
+  notes        String?
+  createdAt    DateTime @default(now())
+  skill        AiSkill  @relation(fields: [skillId], references: [id])
+
+  @@unique([skillId, version])
+}
+
+model AiCapability {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  name         String
+  description  String?
+  // Ordered skill keys, comma-separated. Plain text on purpose: the pipeline is
+  // configuration an admin edits, not a schema migration.
+  skillKeys    String   @default("")
+  kind         String   @default("text")
+  minPlan      String   @default("FREE")
+  enabled      Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Audit log AND meter. Refusals are recorded too — "why did nothing happen"
+// has to be answerable.
+model AiRun {
+  id             String       @id @default(uuid())
+  orgId          String
+  userId         String?
+  capabilityKey  String
+  skillKey       String?
+  skillVersion   Int?
+  provider       String?
+  model          String?
+  status         String       @default("ok")
+  refusedReason  String?
+  promptTokens   Int?
+  outputTokens   Int?
+  costMicros     Int?
+  imageCount     Int          @default(0)
+  durationMs     Int?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId, createdAt])
+  @@index([orgId, capabilityKey])
+}
+
+model AiEntitlement {
+  id             String       @id @default(uuid())
+  orgId          String       @unique
+  monthlyCredits Int          @default(0)
+  monthlyImages  Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [orgId], references: [id])
 }
 
 model Campaign {
