@@ -686,7 +686,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         current === 'global' && 'hidden'
                       )}
                     >
-                    <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings min-h-0">
+                    <div className="flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings">
                       {/* A full-width solid-blue bar shouted louder than the
                           primary action. It's a disclosure row, so it reads as one. */}
                       <div
@@ -706,18 +706,23 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                           className="text-textItemBlur"
                         />
                       </div>
+                      {/* Normal flow, NOT absolute. This used to be
+                          `absolute inset-0 h-full` inside a flex-1 parent,
+                          which only had height because Settings was a COLUMN in
+                          a row. Stacked below the writing area the parent has no
+                          height of its own, so h-full resolved to 0 and the
+                          panel rendered invisibly — the "Settings is empty" bug.
+                          It now grows with its content and scrolls past 50vh. */}
                       <div
                         className={clsx(
-                          !showSettings ? 'hidden' : 'flex-1',
-                          'text-[14px] text-textColor font-[500] relative'
+                          !showSettings && 'hidden',
+                          'text-[14px] text-textColor font-[500] max-h-[50vh] overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor'
                         )}
                       >
-                        <div className="absolute left-0 top-0 w-full h-full flex flex-col overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
-                          <div
-                            id="social-settings"
-                            className="flex flex-col gap-[20px] bg-newBgColor"
-                          />
-                        </div>
+                        <div
+                          id="social-settings"
+                          className="flex flex-col gap-[20px] bg-newBgColor"
+                        />
                       </div>
                       <style>
                         {`#social-settings [data-id="${current}"] {display: block !important;}`}
