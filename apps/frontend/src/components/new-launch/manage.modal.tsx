@@ -655,14 +655,20 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       )}
                     </div>
                   )}
-                  {/* Writing on the left, channel Settings on the right, on
-                      the SAME row. Settings used to sit beside the whole
-                      column (channels, DBU, campaign and all), which left a
-                      tall empty rail next to the header fields. */}
-                  <div className="flex flex-col xl:flex-row gap-[12px] items-stretch flex-1">
-                    <div className="flex flex-1 gap-[6px] flex-col min-w-0 xl:w-[60%]">
+                  {/* Channel Settings sit BELOW the writing area, full width.
+                      This is only safe because the providers now resolve the
+                      #social-settings portal target in an effect — resolving it
+                      during render meant that moving this container later in
+                      the tree silently portalled every settings panel into a
+                      detached div and left it permanently empty. */}
+                  <div className="flex flex-col gap-[12px]">
+                    {/* Deliberately NOT flex-1: the writing area sizes to its
+                        own content and caps itself (see editor.tsx). Stretching
+                        it to the modal height made an empty composer open as one
+                        huge box with Settings pushed off the screen. */}
+                    <div className="flex gap-[6px] flex-col min-w-0">
                       <div>{!existingData.integration && <SelectCurrent />}</div>
-                      <div className="flex-1 flex">
+                      <div className="flex">
                         {!hide && <EditorWrapper totalPosts={1} value="" />}
                       </div>
                       <div
@@ -676,13 +682,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     <div
                       id="wrapper-settings"
                       className={clsx(
-                        'select-none flex flex-col pb-[16px]',
-                        // Collapsed it is just the disclosure bar; expanded it
-                        // takes the right 40% beside the writing area, and
-                        // stacks underneath on narrow screens.
-                        showSettings
-                          ? 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px]'
-                          : 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px] self-start',
+                        'select-none flex flex-col pb-[16px] w-full shrink-0',
                         current === 'global' && 'hidden'
                       )}
                     >

@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useState,
 } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { IsOptional } from 'class-validator';
@@ -103,6 +104,37 @@ export const withProvider = function <T extends object>(params: {
         ),
       }))
     );
+
+    /**
+     * Where the settings panel is injected.
+     *
+     * This used to be a bare
+     *   document.querySelector('#social-settings') || document.createElement('div')
+     * evaluated DURING render. If the container had not been committed to the
+     * DOM yet, the settings were portalled into a THROWAWAY div — no error, no
+     * console warning, just a permanently empty Settings panel. That is what
+     * broke the moment the panel was moved below the writing area, because the
+     * container then came later in the render order.
+     *
+     * Resolving it in an effect guarantees the DOM is committed first, and
+     * keeping it in state re-renders the portal once it is found — so the panel
+     * works no matter where in the layout the container lives.
+     */
+    const [settingsTarget, setSettingsTarget] = useState<Element | null>(null);
+    useEffect(() => {
+      let raf = 0;
+      const find = () => {
+        const el = document.querySelector('#social-settings');
+        if (el) {
+          setSettingsTarget(el);
+          return;
+        }
+        // The composer mounts in stages; keep looking until it appears.
+        raf = requestAnimationFrame(find);
+      };
+      find();
+      return () => cancelAnimationFrame(raf);
+    }, []);
 
     useEffect(() => {
       if (!setTotalChars) {
@@ -286,7 +318,8 @@ export const withProvider = function <T extends object>(params: {
                   }
                 />
               ))}
-            {(SettingsComponent || !!data?.internalPlugs?.length) &&
+            {settingsTarget &&
+              (SettingsComponent || !!data?.internalPlugs?.length) &&
               createPortal(
                 <div data-id={props.id} className={isGlobal ? 'bg-newSettings pb-[12px] px-[12px]' : 'hidden bg-newSettings px-[12px] pb-[12px]'}>
                   {isGlobal && (
@@ -318,15 +351,14 @@ export const withProvider = function <T extends object>(params: {
                     <InternalChannels plugs={data?.internalPlugs} />
                   )}
                 </div>,
-                document.querySelector('#social-settings') ||
-                  document.createElement('div')
+                settingsTarget
               )}
-            {current &&
+            {settingsTarget &&
+              current &&
               !SettingsComponent &&
               createPortal(
                 <style>{`#wrapper-settings {display: none !important;} #social-empty {display: block !important;}`}</style>,
-                document.querySelector('#social-settings') ||
-                  document.createElement('div')
+                settingsTarget
               )}
           </div>
         </FormProvider>
