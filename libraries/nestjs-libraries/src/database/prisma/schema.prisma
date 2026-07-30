@@ -909,35 +909,22 @@ model Mentions {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model mastra_ai_spans {
-  traceId      String
-  spanId       String
-  parentSpanId String?
-  name         String
-  scope        Json?
-  spanType     String
-  attributes   Json?
-  metadata     Json?
-  links        Json?
-  input        Json?
-  output       Json?
-  error        Json?
-  startedAt    DateTime  @db.Timestamp(6)
-  endedAt      DateTime? @db.Timestamp(6)
-  createdAt    DateTime  @db.Timestamp(6)
-  updatedAt    DateTime? @db.Timestamp(6)
-  isEvent      Boolean
-  startedAtZ   DateTime? @default(now()) @db.Timestamptz(6)
-  endedAtZ     DateTime? @default(now()) @db.Timestamptz(6)
-  createdAtZ   DateTime? @default(now()) @db.Timestamptz(6)
-  updatedAtZ   DateTime? @default(now()) @db.Timestamptz(6)
 
-  @@index([name], map: "public_mastra_ai_spans_name_idx")
-  @@index([parentSpanId, startedAt(sort: Desc)], map: "public_mastra_ai_spans_parentspanid_startedat_idx")
-  @@index([spanType, startedAt(sort: Desc)], map: "public_mastra_ai_spans_spantype_startedat_idx")
-  @@index([traceId, startedAt(sort: Desc)], map: "public_mastra_ai_spans_traceid_startedat_idx")
-  @@ignore
-}
+// mastra_ai_spans is DELIBERATELY NOT modelled here.
+//
+// It is Mastra's own AI-tracing table, and Mastra runs its own migrations
+// against it at startup. This container also runs `prisma db push
+// --accept-data-loss` on every boot, so having it in this schema meant Prisma
+// and Mastra both owned the same table. Prisma would leave it in a shape
+// Mastra's migration then refused, Mastra threw
+// MASTRA_STORAGE_PG_ALTER_TABLE_FAILED, and the backend exited code 1 on every
+// boot — routes mapped, nothing ever bound to :3000, every /api call 502 while
+// pm2 reported the process "online". That cost a multi-hour outage on
+// 2026-07-30.
+//
+// It was @@ignore'd and referenced nowhere in application code, so nothing is
+// lost by letting Mastra own it outright. If db push drops it, Mastra simply
+// recreates it correctly on next boot.
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model mastra_evals {

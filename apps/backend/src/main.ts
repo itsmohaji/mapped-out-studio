@@ -20,6 +20,34 @@ import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exceptio
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
 
+/**
+ * An optional subsystem must never be able to kill the API.
+ *
+ * On 2026-07-30 Mastra's storage layer failed an ALTER TABLE on its own tracing
+ * table at startup. The error surfaced as a process-level unhandled failure, the
+ * backend exited code 1, pm2 restarted it into the same wall ~35 times, and
+ * every /api call returned 502 for hours while the frontend kept serving
+ * happily. A telemetry table took the whole product down.
+ *
+ * Logging and staying up is the right trade for an HTTP API: a degraded AI
+ * feature is not a reason to stop serving posts. These handlers are deliberately
+ * loud so a real bug still shows up in the logs rather than being swallowed.
+ */
+process.on('unhandledRejection', (reason: any) => {
+  Logger.error(
+    `Unhandled promise rejection (API kept alive): ${reason?.message || reason}`,
+    reason?.stack,
+    'Bootstrap'
+  );
+});
+process.on('uncaughtException', (err: any) => {
+  Logger.error(
+    `Uncaught exception (API kept alive): ${err?.message || err}`,
+    err?.stack,
+    'Bootstrap'
+  );
+});
+
 async function start() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
