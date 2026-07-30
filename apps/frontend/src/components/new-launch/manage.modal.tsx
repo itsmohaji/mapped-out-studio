@@ -655,12 +655,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       )}
                     </div>
                   )}
-                  {/* Writing on the left, channel Settings on the right, on
-                      the SAME row. Settings used to sit beside the whole
-                      column (channels, DBU, campaign and all), which left a
-                      tall empty rail next to the header fields. */}
-                  <div className="flex flex-col xl:flex-row gap-[12px] items-stretch flex-1">
-                    <div className="flex flex-1 gap-[6px] flex-col min-w-0 xl:w-[60%]">
+                  {/* Settings sit BELOW the writing area, full width — where
+                      they were originally. Putting them beside it narrowed the
+                      thing you spend all your time in to write a post. The
+                      writing area now caps its own height and scrolls (see
+                      editor.tsx), so a long post no longer pushes these off
+                      the screen. */}
+                  <div className="flex flex-col gap-[12px] flex-1">
+                    <div className="flex flex-1 gap-[6px] flex-col min-w-0">
                       <div>{!existingData.integration && <SelectCurrent />}</div>
                       <div className="flex-1 flex">
                         {!hide && <EditorWrapper totalPosts={1} value="" />}
@@ -676,13 +678,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     <div
                       id="wrapper-settings"
                       className={clsx(
-                        'select-none flex flex-col pb-[16px]',
-                        // Collapsed it is just the disclosure bar; expanded it
-                        // takes the right 40% beside the writing area, and
-                        // stacks underneath on narrow screens.
-                        showSettings
-                          ? 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px]'
-                          : 'xl:w-[40%] xl:shrink-0 xl:min-w-[300px] self-start',
+                        'select-none flex flex-col pb-[16px] w-full shrink-0',
+                        // Collapsed it is just the disclosure bar, so it must
+                        // not stretch to fill the column.
+                        !showSettings && 'self-start w-full',
                         current === 'global' && 'hidden'
                       )}
                     >

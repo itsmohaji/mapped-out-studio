@@ -18,6 +18,45 @@ import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import { isRealPublishId } from '@gitroom/helpers/utils/publish.result';
+
+/**
+ * Instagram publishes in two steps: create a media container, then publish it.
+ * Both steps can fail in ways that do not raise an HTTP error, and treating
+ * either as success marks a post PUBLISHED that never went out.
+ *
+ * Container status is one of IN_PROGRESS, FINISHED, ERROR, EXPIRED, PUBLISHED.
+ * Only the first is a reason to keep waiting; only FINISHED/PUBLISHED are a
+ * reason to continue.
+ */
+function assertContainerReady(status?: string) {
+  const s = String(status || '').toUpperCase();
+  if (s === 'FINISHED' || s === 'PUBLISHED') return;
+  if (s === 'ERROR') {
+    throw new Error(
+      'Instagram could not process the media (container status ERROR). The video or image was rejected — check length, aspect ratio and format.'
+    );
+  }
+  if (s === 'EXPIRED') {
+    throw new Error(
+      'Instagram expired the upload before it was published (container status EXPIRED).'
+    );
+  }
+  throw new Error(
+    `Instagram did not confirm the media was ready to publish (container status ${
+      status || 'missing'
+    }).`
+  );
+}
+
+/** The publish call answered, but did it actually give us a post? */
+function assertPublished(mediaId: unknown) {
+  if (!isRealPublishId(mediaId)) {
+    throw new Error(
+      'Instagram accepted the publish request but returned no post id, so nothing was published.'
+    );
+  }
+}
 
 @Rules(
   "Instagram should have at least one attachment, if it's a story, it can have only one picture"
@@ -698,6 +737,10 @@ export class InstagramProvider
           await timer(30000);
           status = status_code;
         }
+        // Instagram also returns ERROR and EXPIRED here. Looping only while
+        // IN_PROGRESS meant both fell straight through and we published a
+        // container that had failed processing.
+        assertContainerReady(status);
         console.log('in progress3', id);
 
         return photoId;
@@ -717,6 +760,7 @@ export class InstagramProvider
             }
           )
         ).json();
+        assertPublished(mediaId);
         lastMediaId = mediaId;
 
         const { permalink } = await (
@@ -746,6 +790,8 @@ export class InstagramProvider
           }
         )
       ).json();
+
+      assertPublished(mediaId);
 
       const { permalink } = await (
         await this.fetch(
@@ -793,6 +839,8 @@ export class InstagramProvider
         await timer(30000);
         status = status_code;
       }
+      // See above: ERROR and EXPIRED must not be treated as "finished".
+      assertContainerReady(status);
 
       const { id: mediaId, ...all4 } = await (
         await this.fetch(
@@ -802,6 +850,8 @@ export class InstagramProvider
           }
         )
       ).json();
+
+      assertPublished(mediaId);
 
       const { permalink } = await (
         await this.fetch(
