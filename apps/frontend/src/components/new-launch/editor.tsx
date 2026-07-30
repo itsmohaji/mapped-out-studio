@@ -699,16 +699,16 @@ export const Editor: FC<{
   }
 
   return (
-    <div className="flex flex-col gap-[20px] flex-1">
+    <div className="flex flex-col gap-[20px] w-full">
       <div
         className={clsx(
-          'relative flex-1 px-[12px] pt-[12px] pb-[12px] flex flex-col',
+          'relative w-full px-[12px] pt-[12px] pb-[12px] flex flex-col',
           num > 0 && '!rounded-bs-[0]'
         )}
         id={id}
       >
-        <div className="relative cursor-text flex flex-1 flex-col">
-          <div {...getRootProps()} className="flex flex-1 flex-col">
+        <div className="relative cursor-text flex flex-col">
+          <div {...getRootProps()} className="flex flex-col">
             <div
               className={clsx(
                 'absolute left-0 top-0 w-full h-full bg-black/70 z-[300] transition-all items-center justify-center flex text-white text-sm',
@@ -723,7 +723,7 @@ export const Editor: FC<{
                 TEXT container only — the toolbar below is outside it, so the
                 emoji and character-limit popovers that open upward are not
                 clipped. */}
-            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[13px] relative z-[99] max-h-[40vh] overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
+            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[13px] relative z-[99] min-h-[132px] max-h-[40vh] overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
               <OnlyEditor
                 value={props.value}
                 editorType={editorType}
@@ -733,7 +733,10 @@ export const Editor: FC<{
               />
             </div>
             <div
-              className="bg-newBgColorInner flex-1"
+              // Click-to-focus strip under the text. It used to be flex-1, so
+              // it swallowed every spare pixel of the modal and made an empty
+              // composer a full-height box.
+              className="bg-newBgColorInner min-h-[24px]"
               onClick={() => {
                 if (editorRef?.current?.editor?.isFocused) {
                   return;

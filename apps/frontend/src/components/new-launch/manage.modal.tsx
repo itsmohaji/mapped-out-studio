@@ -661,10 +661,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       writing area now caps its own height and scrolls (see
                       editor.tsx), so a long post no longer pushes these off
                       the screen. */}
-                  <div className="flex flex-col gap-[12px] flex-1">
-                    <div className="flex flex-1 gap-[6px] flex-col min-w-0">
+                  <div className="flex flex-col gap-[12px]">
+                    {/* Deliberately NOT flex-1. The writing area sizes to its
+                        own content and caps itself (see editor.tsx). Stretching
+                        it to the modal height is what made an empty composer
+                        open as one huge box with Settings pushed off-screen. */}
+                    <div className="flex gap-[6px] flex-col min-w-0">
                       <div>{!existingData.integration && <SelectCurrent />}</div>
-                      <div className="flex-1 flex">
+                      <div className="flex">
                         {!hide && <EditorWrapper totalPosts={1} value="" />}
                       </div>
                       <div
