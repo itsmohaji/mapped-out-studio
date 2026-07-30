@@ -486,7 +486,12 @@ export const LaunchesComponent = () => {
         '*'
       );
     }
-    if (window.opener) {
+    // ONLY the OAuth popup may close itself. `window.opener` is also set on any
+    // ordinary tab opened from a link (target="_blank", or from another app),
+    // so closing on that alone made the CALENDAR page blank itself in a normal
+    // tab — and only the calendar, because this effect lives on this page. The
+    // popup flow always returns with ?msg= or ?added=, so gate on that.
+    if (window.opener && (search.get('msg') || search.get('added'))) {
       window.close();
     }
   }, []);
