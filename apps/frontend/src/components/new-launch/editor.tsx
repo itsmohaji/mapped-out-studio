@@ -717,13 +717,7 @@ export const Editor: FC<{
             >
               {t('drop_files_here_to_upload', 'Drop your files here to upload')}
             </div>
-            {/* The writing area grows with the text, but only so far: past
-                this it scrolls inside itself instead of pushing the toolbar,
-                the settings and the footer down the page. The cap is on the
-                TEXT container only — the toolbar below is outside it, so the
-                emoji and character-limit popovers that open upward are not
-                clipped. */}
-            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[13px] relative z-[99] max-h-[40vh] overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
+            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[13px] relative z-[99]">
               <OnlyEditor
                 value={props.value}
                 editorType={editorType}

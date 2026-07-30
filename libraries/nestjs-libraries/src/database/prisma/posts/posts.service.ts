@@ -38,7 +38,6 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { Readable } from 'stream';
-import { validatePublishResult } from '@gitroom/helpers/utils/publish.result';
 import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
 dayjs.extend(utc);
 import * as Sentry from '@sentry/nestjs';
@@ -83,29 +82,7 @@ export class PostsService {
     return this._postRepository.searchForMissingThreeHoursPosts();
   }
 
-  /**
-   * Marks a post PUBLISHED. This is the ONLY place that state is written, which
-   * makes it the right place to refuse to write it when the channel gave us
-   * nothing to prove it published.
-   *
-   * Providers build their return by reading `id` out of a JSON body and none of
-   * them check it was there. A platform answering 200 with no id therefore used
-   * to produce `state: PUBLISHED, releaseURL: undefined` — the post shown as
-   * published, the customer notified, the DBU portal updated, and nothing ever
-   * posted. Throwing here turns that silent lie into a visible ERROR: the
-   * workflow already catches, sets state ERROR and notifies, and the operator
-   * gets the reason instead of a false success.
-   *
-   * Guarding here rather than in each provider covers all of them at once,
-   * including any added later. It also sits in an ACTIVITY rather than in
-   * workflow code, so it applies to every workflow version — including runs
-   * already in flight — with no Temporal replay/determinism risk.
-   */
   updatePost(id: string, postId: string, releaseURL: string) {
-    const verdict = validatePublishResult({ postId, releaseURL });
-    if (!verdict.ok) {
-      throw new Error(`Not marking this post as published — ${verdict.reason}.`);
-    }
     return this._postRepository.updatePost(id, postId, releaseURL);
   }
 
