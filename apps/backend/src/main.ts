@@ -48,7 +48,20 @@ async function start() {
     },
   });
 
-  await startMcp(app);
+  // MCP/Mastra is an OPTIONAL subsystem, but it was awaited here with no
+  // timeout — between NestFactory.create() and app.listen(). When it hung, the
+  // process stayed alive with every route mapped and NOTHING listening on 3000:
+  // nginx returned 502 for every /api call while pm2 reported backend "online".
+  // The API must never fail to serve because an AI feature could not start.
+  await Promise.race([
+    startMcp(app).catch((e) => Logger.error('MCP failed to start', e)),
+    new Promise((resolve) =>
+      setTimeout(() => {
+        Logger.warn('MCP did not start within 20s — continuing without it');
+        resolve(null);
+      }, 20000)
+    ),
+  ]);
 
   app.useGlobalPipes(
     new ValidationPipe({
