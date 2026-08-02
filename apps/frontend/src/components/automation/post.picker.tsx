@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { Glass, PLATFORM_ICON, Skeleton, EmptyState } from './automation.ui';
 
@@ -17,6 +18,13 @@ interface PostRow {
   state?: string;
   integration?: { id: string; name: string; providerIdentifier: string; picture?: string | null };
 }
+
+const STATE_LABEL: Record<string, string> = {
+  PUBLISHED: 'Published',
+  QUEUE: 'Scheduled',
+  DRAFT: 'Draft',
+  ERROR: 'Failed',
+};
 
 const firstImage = (image?: string | null): string | null => {
   if (!image) return null;
@@ -47,7 +55,9 @@ const Choice: FC<{
     type="button"
     onClick={onClick}
     className={clsx(
-      'flex-1 min-w-[220px] text-left p-[16px] rounded-[14px] border transition-all duration-150 flex gap-[12px] items-start',
+      // min-w-0 with a basis, not a hard min-width: a 220px floor forced this
+      // wider than a 320px phone once padding and the sibling were counted.
+      'flex-1 basis-[220px] min-w-0 text-left p-[16px] rounded-[14px] border transition-all duration-150 flex gap-[12px] items-start',
       selected
         ? 'border-btnPrimary/50 bg-btnPrimary/10'
         : 'border-white/[0.08] hover:border-white/[0.2]'
@@ -78,19 +88,30 @@ export const PostPicker: FC<{
 }> = ({ scope, selectedPostIds, integrationId, onScope, onToggle }) => {
   const fetchApi = useFetch();
 
-  // Only fetched once the user actually asks for specific posts — no reason to
-  // pull the whole post list for the common "all posts" case.
-  const { data, isLoading } = useSWR<{ posts?: PostRow[] } | PostRow[]>(
-    scope === 'specific' ? '/posts/list' : null,
-    async (url: string) => (await fetchApi(url)).json()
+  /**
+   * Only fetched once the user actually asks for specific posts.
+   *
+   * The response is MINIFIED (`{p:[{i,c,d,n:{i,pi}}]}`) to keep the payload
+   * small, so it must go through the shared expander — reading `.posts` off the
+   * raw body silently yields undefined and an empty picker, which reads exactly
+   * like "this account has never posted".
+   *
+   * limit defaults to 20 server-side; a real account needs more than that to
+   * find the post it wants.
+   */
+  const { data, isLoading } = useSWR(
+    scope === 'specific' ? '/posts/list?limit=100&state=all' : null,
+    async (url: string) => expandPostsList(await (await fetchApi(url)).json())
   );
 
-  const posts = useMemo(() => {
-    const rows: PostRow[] = Array.isArray(data) ? data : data?.posts ?? [];
-    return rows
-      .filter((p) => !integrationId || p.integration?.id === integrationId)
-      .slice(0, 60);
-  }, [data, integrationId]);
+  const allPosts: PostRow[] = useMemo(() => data?.posts ?? [], [data]);
+
+  // Scheduled posts are pickable too: the binding resolves to the platform's
+  // own id when the post actually goes out.
+  const posts = useMemo(
+    () => allPosts.filter((p) => !integrationId || p.integration?.id === integrationId),
+    [allPosts, integrationId]
+  );
 
   return (
     <Glass className="p-[20px] flex flex-col gap-[16px]">
@@ -121,18 +142,28 @@ export const PostPicker: FC<{
       {scope === 'specific' && (
         <div className="flex flex-col gap-[12px] pt-[6px]">
           {isLoading && (
-            <div className="grid gap-[12px] grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
+            <div className="grid gap-[10px] sm:gap-[12px] grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,145px),1fr))]">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-[180px]" />
               ))}
             </div>
           )}
 
-          {!isLoading && !posts.length && (
+          {/* Two different problems, two different answers. "Nothing anywhere"
+              and "nothing for THIS account" need different next actions. */}
+          {!isLoading && !posts.length && !!allPosts.length && (
+            <EmptyState
+              icon="🔍"
+              title="No posts for this account"
+              body={`There are ${allPosts.length} posts in the workspace, but none belong to this channel. Pick a different account, or use “All posts” instead.`}
+            />
+          )}
+
+          {!isLoading && !allPosts.length && (
             <EmptyState
               icon="📭"
-              title="No published posts yet"
-              body="Once this account has published something, it will show up here to attach an automation to."
+              title="No posts in Mapped Out yet"
+              body="This list shows posts created here. Anything published straight from the Instagram app will not appear — use “All posts” to cover those too."
             />
           )}
 
@@ -143,7 +174,7 @@ export const PostPicker: FC<{
                   ? `${selectedPostIds.length} selected`
                   : 'Tap a post to attach this automation to it'}
               </div>
-              <div className="grid gap-[12px] grid-cols-[repeat(auto-fill,minmax(150px,1fr))] max-h-[420px] overflow-y-auto pr-[4px]">
+              <div className="grid gap-[10px] sm:gap-[12px] grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,145px),1fr))] max-h-[420px] overflow-y-auto pr-[4px]">
                 {posts.map((p) => {
                   const selected = selectedPostIds.includes(p.id);
                   const img = firstImage(p.image);
@@ -188,8 +219,15 @@ export const PostPicker: FC<{
                         <div className="text-[11.5px] leading-[1.4] line-clamp-2 min-h-[32px]">
                           {caption || <span className="text-textItemBlur">No caption</span>}
                         </div>
-                        <div className="text-[10.5px] text-textItemBlur mt-[5px]">
-                          {p.publishDate ? dayjs(p.publishDate).format('D MMM YYYY') : '—'}
+                        <div className="text-[10.5px] text-textItemBlur mt-[5px] flex items-center gap-[5px]">
+                          <span>
+                            {p.publishDate ? dayjs(p.publishDate).format('D MMM YYYY') : '—'}
+                          </span>
+                          {p.state && p.state !== 'PUBLISHED' && (
+                            <span className="px-[5px] py-[1px] rounded-[4px] bg-white/[0.07] shrink-0">
+                              {STATE_LABEL[p.state] ?? p.state}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>

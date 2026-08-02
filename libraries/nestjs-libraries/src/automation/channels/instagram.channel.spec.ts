@@ -6,6 +6,7 @@
 import { createHmac } from 'crypto';
 import {
   parseInstagramWebhook,
+  resolveVerifyToken,
   verifyChallenge,
   verifyInstagramSignature,
 } from './instagram.channel';
@@ -50,6 +51,40 @@ describe('verifyInstagramSignature', () => {
 
   it('rejects a signature of the wrong length', () => {
     expect(verifyInstagramSignature(body, 'sha256=ab', SECRET)).toBe(false);
+  });
+});
+
+describe('resolveVerifyToken', () => {
+  it('prefers an explicit env token', () => {
+    expect(
+      resolveVerifyToken({
+        INSTAGRAM_WEBHOOK_VERIFY_TOKEN: 'chosen-by-hand',
+        INSTAGRAM_APP_SECRET: 'app-secret',
+      } as any)
+    ).toBe('chosen-by-hand');
+  });
+
+  it('derives a stable token from the app secret when none is set', () => {
+    const a = resolveVerifyToken({ INSTAGRAM_APP_SECRET: 'app-secret' } as any);
+    const b = resolveVerifyToken({ INSTAGRAM_APP_SECRET: 'app-secret' } as any);
+    expect(a).toBe(b);
+    expect(a).toMatch(/^mo_ig_[0-9a-f]{40}$/);
+  });
+
+  it('gives different secrets different tokens', () => {
+    expect(resolveVerifyToken({ INSTAGRAM_APP_SECRET: 'one' } as any)).not.toBe(
+      resolveVerifyToken({ INSTAGRAM_APP_SECRET: 'two' } as any)
+    );
+  });
+
+  it('never leaks the app secret into the token', () => {
+    const secret = 'super-secret-value';
+    const token = resolveVerifyToken({ INSTAGRAM_APP_SECRET: secret } as any)!;
+    expect(token).not.toContain(secret);
+  });
+
+  it('is null when nothing is configured, so the handshake fails closed', () => {
+    expect(resolveVerifyToken({} as any)).toBeNull();
   });
 });
 

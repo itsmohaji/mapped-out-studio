@@ -374,6 +374,7 @@ export class AutomationService {
       boundExternalPostIds: bindings
         .filter((b: any) => b.workflowId === w.id && b.externalPostId)
         .map((b: any) => b.externalPostId as string),
+      boundPostCount: bindings.filter((b: any) => b.workflowId === w.id).length,
     }));
 
     // A workflow scoped to a client only ever sees that client's channels.

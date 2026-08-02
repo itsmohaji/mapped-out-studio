@@ -136,6 +136,15 @@ export interface WorkflowSummary {
   status: string;
   /** Platform post ids this workflow is bound to. Empty = every post. */
   boundExternalPostIds?: string[];
+  /**
+   * How many post bindings exist at all, resolved or not.
+   *
+   * A binding is created at compose time with only our own Post.id; the
+   * platform's media id arrives when the post publishes. Without this count the
+   * two states are indistinguishable, and a workflow scoped to one post would
+   * fire on EVERY post until its binding resolved.
+   */
+  boundPostCount?: number;
 }
 
 /** What the engine decided to do next. */

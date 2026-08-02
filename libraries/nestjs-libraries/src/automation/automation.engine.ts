@@ -58,10 +58,16 @@ export function matchWorkflows(
     if (w.channel !== event.channel) return false;
     if (!triggers.includes(w.trigger)) return false;
 
-    // A workflow bound to specific posts must only fire on those posts. An
-    // empty binding list means "every post", which is the ManyChat default.
+    // A workflow bound to specific posts must only fire on those posts. No
+    // bindings at all means "every post", which is the ManyChat default.
+    //
+    // Fail CLOSED when bindings exist but none has resolved to a platform id
+    // yet: "I could not tell which post this is" must never be treated as
+    // "therefore every post". That would DM everyone who comments anywhere.
     const bound = w.boundExternalPostIds ?? [];
-    if (bound.length) {
+    const boundCount = w.boundPostCount ?? bound.length;
+    if (boundCount > 0) {
+      if (!bound.length) return false;
       if (!event.externalPostId || !bound.includes(event.externalPostId)) return false;
     }
 

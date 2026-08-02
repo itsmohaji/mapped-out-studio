@@ -13,6 +13,7 @@ import {
   Skeleton,
   timeAgo,
 } from './automation.ui';
+import { WebhookSetup } from './webhook.setup';
 
 export interface AutomationAccount {
   integrationId: string;
@@ -147,8 +148,10 @@ export const AccountsView: FC<{
         subtitle="Pick an account to set up replies, collect leads and route conversations — automatically."
       />
 
+      <WebhookSetup />
+
       {loading && (
-        <div className="grid gap-[16px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+        <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))]">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-[190px]" />
           ))}
@@ -166,7 +169,7 @@ export const AccountsView: FC<{
       )}
 
       {!!supported.length && (
-        <div className="grid gap-[16px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+        <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))]">
           {supported.map((a) => (
             <AccountCard
               key={a.integrationId}
@@ -183,7 +186,7 @@ export const AccountsView: FC<{
           <div className="text-[12.5px] text-textItemBlur">
             These platforms do not offer the APIs automation needs. Not a Mapped Out limitation.
           </div>
-          <div className="grid gap-[16px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+          <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))]">
             {rest.map((a) => (
               <AccountCard
                 key={a.integrationId}

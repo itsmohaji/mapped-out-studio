@@ -223,7 +223,7 @@ export const BuilderView: FC<{
         </div>
       )}
 
-      <div className="grid gap-[20px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
+      <div className="grid gap-[16px] lg:gap-[20px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] items-start">
         <div className="flex flex-col gap-[16px] min-w-0">
           <PostPicker
             scope={scope}
@@ -289,7 +289,7 @@ export const BuilderView: FC<{
                       <div className="text-[10.5px] uppercase tracking-[0.06em] text-textItemBlur font-[600] mb-[8px]">
                         {group}
                       </div>
-                      <div className="grid gap-[7px] grid-cols-[repeat(auto-fill,minmax(158px,1fr))]">
+                      <div className="grid gap-[7px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,152px),1fr))]">
                         {grouped[group].map((kind) => {
                           const m = STEP_META[kind];
                           return (
@@ -317,7 +317,7 @@ export const BuilderView: FC<{
             </div>
           </div>
 
-          <Glass className="grid grid-cols-[repeat(auto-fit,minmax(112px,1fr))] divide-x divide-white/[0.06] overflow-hidden">
+          <Glass className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-white/[0.06] overflow-hidden">
             <StatTile label="Triggered" value={stats?.triggered ?? 0} />
             <StatTile label="Conversations" value={stats?.conversations ?? 0} />
             <StatTile label="Replied" value={stats?.replied ?? 0} accent="#47b985" />

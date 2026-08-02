@@ -14,6 +14,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { AutomationService } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.service';
 import {
   parseInstagramWebhook,
+  resolveVerifyToken,
   verifyChallenge,
   verifyInstagramSignature,
 } from '@gitroom/nestjs-libraries/automation/channels/instagram.channel';
@@ -35,10 +36,29 @@ export class AutomationWebhookController {
 
   constructor(private _automation: AutomationService) {}
 
+  /**
+   * Readiness probe. Booleans only — never the token or the secret.
+   *
+   * Unauthenticated on purpose: the whole point is to confirm from outside that
+   * the callback is wired before anyone clicks "Verify and Save" in Meta, and
+   * an authenticated check cannot answer that question for the person setting
+   * it up. It reveals only whether two env vars are non-empty.
+   */
+  @Get('/instagram/status')
+  instagramStatus() {
+    return {
+      endpoint: 'ready',
+      verifyTokenConfigured: !!resolveVerifyToken(),
+      signatureSecretConfigured: !!process.env.INSTAGRAM_APP_SECRET,
+      // Derived means no separate secret had to be set anywhere.
+      verifyTokenSource: process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ? 'env' : 'derived',
+    };
+  }
+
   /** Meta's one-time subscription handshake. */
   @Get('/instagram')
   instagramChallenge(@Query() query: Record<string, any>) {
-    const challenge = verifyChallenge(query, process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN);
+    const challenge = verifyChallenge(query, resolveVerifyToken());
     if (challenge === null) {
       // A bare string 'forbidden' rather than an exception: Meta shows the body
       // verbatim in the dashboard, and this is a setup problem worth reading.

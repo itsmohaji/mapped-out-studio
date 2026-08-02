@@ -131,7 +131,7 @@ export const ConversationPreview: FC<{
   }, [steps, keywords]);
 
   return (
-    <Glass className="p-[16px] sticky top-[16px]">
+    <Glass className="p-[16px] xl:sticky xl:top-[16px]">
       <div className="text-[12.5px] font-[600] mb-[12px] flex items-center gap-[7px]">
         <span className="w-[6px] h-[6px] rounded-full bg-[#47b985] animate-pulse" />
         Live preview

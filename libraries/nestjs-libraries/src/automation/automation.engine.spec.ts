@@ -332,6 +332,21 @@ describe('matchWorkflows', () => {
     expect(matchWorkflows(commentEvent({ externalPostId: 'anything' }), [base], rest)).toHaveLength(1);
   });
 
+  it('does NOT fire on every post while a binding is still unresolved', () => {
+    // A binding created at compose time has our Post.id but not yet the
+    // platform's media id. Treating that as "no restriction" would DM everyone
+    // who comments on anything — the opposite of what the user asked for.
+    const pending = { ...base, boundExternalPostIds: [], boundPostCount: 1 };
+    expect(matchWorkflows(commentEvent({ externalPostId: 'media-1' }), [pending], rest)).toHaveLength(0);
+    expect(matchWorkflows(commentEvent({ externalPostId: 'other' }), [pending], rest)).toHaveLength(0);
+  });
+
+  it('fires once that binding resolves to the platform id', () => {
+    const resolved = { ...base, boundExternalPostIds: ['media-1'], boundPostCount: 1 };
+    expect(matchWorkflows(commentEvent({ externalPostId: 'media-1' }), [resolved], rest)).toHaveLength(1);
+    expect(matchWorkflows(commentEvent({ externalPostId: 'other' }), [resolved], rest)).toHaveLength(0);
+  });
+
   it('maps event kinds to the triggers they can satisfy', () => {
     expect(triggerForEvent(commentEvent())).toContain('comment');
     expect(triggerForEvent(commentEvent({ kind: 'message' }))).toContain('direct_message');

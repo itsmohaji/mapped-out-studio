@@ -18,6 +18,7 @@ import {
   StatusPill,
   timeAgo,
 } from './automation.ui';
+import { WebhookSetup } from './webhook.setup';
 
 type View =
   | { name: 'accounts' }
@@ -64,6 +65,8 @@ const AccountHome: FC<{
         backLabel="All accounts"
         right={<Button onClick={onNew}>New automation</Button>}
       />
+
+      <WebhookSetup />
 
       {loading && (
         <div className="flex flex-col gap-[10px]">
@@ -190,7 +193,10 @@ export const AutomationComponent: FC = () => {
   );
 
   return (
-    <div className="p-[22px] max-w-[1500px] mx-auto">
+    // Full width on purpose. The module is a working surface — capping it at
+    // 1500px left a wall of empty space on a desktop while the cards stayed
+    // small. Padding steps up with the viewport instead.
+    <div className="w-full min-w-0 px-[12px] py-[16px] sm:px-[18px] lg:px-[26px] lg:py-[24px]">
       {resolved.name === 'accounts' && (
         <AccountsView
           accounts={accounts}

@@ -113,7 +113,7 @@ export const KeywordBuilder: FC<{
 
       <div className="flex flex-col gap-[9px]">
         <div className="text-[12.5px] font-[500]">How should it match?</div>
-        <div className="grid gap-[7px] grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
+        <div className="grid gap-[7px] grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,135px),1fr))]">
           {MODES.map((m) => (
             <button
               key={m.key}

@@ -127,13 +127,13 @@ export const TemplatesView: FC<{
       </div>
 
       {loading ? (
-        <div className="grid gap-[16px] grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,255px),1fr))]">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-[220px]" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-[16px] grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,255px),1fr))]">
           {shown.map((t) => (
             <TemplateCard key={t.key} template={t} onPick={() => onPick(t)} />
           ))}

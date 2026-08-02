@@ -51,14 +51,47 @@ export function verifyInstagramSignature(
   }
 }
 
+/**
+ * The token Meta must echo back during the subscription handshake.
+ *
+ * An explicit INSTAGRAM_WEBHOOK_VERIFY_TOKEN always wins. Without one it is
+ * DERIVED from the app secret, which means the webhook is fully configured the
+ * moment Instagram OAuth is — no second secret to generate, paste, forget, or
+ * leak, and no way for the two halves to drift out of sync.
+ *
+ * Derivation is a one-way HMAC over a fixed label, so holding the verify token
+ * (which gets pasted into a browser form) reveals nothing about the app secret
+ * that signs real payloads.
+ */
+export function resolveVerifyToken(env: NodeJS.ProcessEnv = process.env): string | null {
+  const explicit = env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
+  if (explicit) return explicit;
+
+  const secret = env.INSTAGRAM_APP_SECRET;
+  if (!secret) return null;
+
+  return (
+    'mo_ig_' +
+    createHmac('sha256', secret).update('instagram-webhook-verify:v1').digest('hex').slice(0, 40)
+  );
+}
+
 /** Meta's GET handshake when you register the callback URL. */
 export function verifyChallenge(
   query: Record<string, any>,
-  expectedToken: string | undefined
+  expectedToken: string | undefined | null
 ): string | null {
   if (!expectedToken) return null;
   if (query?.['hub.mode'] !== 'subscribe') return null;
-  if (query?.['hub.verify_token'] !== expectedToken) return null;
+
+  const provided = query?.['hub.verify_token'];
+  if (typeof provided !== 'string') return null;
+
+  // Constant-time compare — this is a secret comparison on a public endpoint.
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(expectedToken, 'utf8');
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
   const challenge = query?.['hub.challenge'];
   return typeof challenge === 'string' ? challenge : null;
 }

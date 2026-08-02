@@ -15,6 +15,7 @@ import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.reque
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { AutomationService } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.service';
 import { allCapabilities } from '@gitroom/nestjs-libraries/automation/automation.capabilities';
+import { resolveVerifyToken } from '@gitroom/nestjs-libraries/automation/channels/instagram.channel';
 
 @ApiTags('Automation')
 @Controller('/automation')
@@ -30,6 +31,27 @@ export class AutomationController {
   @Get('/capabilities')
   capabilities() {
     return allCapabilities();
+  }
+
+  /**
+   * Everything needed to register the webhook in the Meta App dashboard.
+   *
+   * Authenticated: the verify token is a secret, even though it is a weak one.
+   * Returned rather than documented so the values can never drift from what the
+   * server will actually accept.
+   */
+  @Get('/webhook-setup')
+  webhookSetup() {
+    const base = (process.env.MAIN_URL || process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+    return {
+      callbackUrl: `${base}/api/hooks/instagram`,
+      verifyToken: resolveVerifyToken(),
+      verifyTokenSource: process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ? 'env' : 'derived',
+      signatureSecretConfigured: !!process.env.INSTAGRAM_APP_SECRET,
+      // `messages` only starts delivering once Advanced Access is granted;
+      // subscribing early is harmless and saves a second trip to the dashboard.
+      subscribeFields: ['comments', 'messages'],
+    };
   }
 
   /** Connected accounts with automation counts — the landing page. */
