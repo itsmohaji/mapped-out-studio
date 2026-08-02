@@ -48,6 +48,9 @@ model Organization {
   aiRuns              AiRun[]
   aiEntitlement       AiEntitlement?
   aiBrandBriefs       AiBrandBrief[]
+  automationWorkflows AutomationWorkflow[]
+  automationContacts  AutomationContact[]
+  automationEvents    AutomationEvent[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -145,16 +148,16 @@ model UsedCodes {
 }
 
 model UserOrganization {
-  id                 String       @id @default(uuid())
+  id                 String           @id @default(uuid())
   userId             String
   organizationId     String
-  disabled           Boolean      @default(false)
-  role               Role         @default(USER)
-  canConnectChannels Boolean      @default(false)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  organization       Organization @relation(fields: [organizationId], references: [id])
-  user               User         @relation(fields: [userId], references: [id])
+  disabled           Boolean          @default(false)
+  role               Role             @default(USER)
+  canConnectChannels Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  organization       Organization     @relation(fields: [organizationId], references: [id])
+  user               User             @relation(fields: [userId], references: [id])
   assignments        UserAssignment[]
 
   @@unique([userId, organizationId])
@@ -346,19 +349,21 @@ model Subscription {
 }
 
 model Customer {
-  id           String           @id @default(uuid())
-  name         String
-  orgId        String
-  dbuClientId   String?
-  dbuClientName String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  deletedAt    DateTime?
-  organization Organization     @relation(fields: [orgId], references: [id])
-  integrations Integration[]
-  assignments  UserAssignment[]
-  tasks        Task[]
-  campaigns    Campaign[]
+  id                  String               @id @default(uuid())
+  name                String
+  orgId               String
+  dbuClientId         String?
+  dbuClientName       String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  organization        Organization         @relation(fields: [orgId], references: [id])
+  integrations        Integration[]
+  assignments         UserAssignment[]
+  tasks               Task[]
+  campaigns           Campaign[]
+  automationWorkflows AutomationWorkflow[]
+  automationContacts  AutomationContact[]
 
   @@unique([orgId, name, deletedAt])
 }
@@ -390,69 +395,69 @@ model Task {
 }
 
 model AiSkill {
-  id           String            @id @default(uuid())
-  key          String            @unique
-  name         String
-  role         String
-  description  String?
-  provider     String            @default("openai")
-  model        String            @default("gpt-4o-mini")
-  active       Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  versions     AiSkillVersion[]
+  id          String           @id @default(uuid())
+  key         String           @unique
+  name        String
+  role        String
+  description String?
+  provider    String           @default("openai")
+  model       String           @default("gpt-4o-mini")
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  versions    AiSkillVersion[]
 }
 
 // Immutable. A run records the exact version it used, so any output can be
 // explained months later even after the skill has moved on.
 model AiSkillVersion {
-  id           String   @id @default(uuid())
-  skillId      String
-  version      Int
-  instruction  String
-  notes        String?
-  createdAt    DateTime @default(now())
-  skill        AiSkill  @relation(fields: [skillId], references: [id])
+  id          String   @id @default(uuid())
+  skillId     String
+  version     Int
+  instruction String
+  notes       String?
+  createdAt   DateTime @default(now())
+  skill       AiSkill  @relation(fields: [skillId], references: [id])
 
   @@unique([skillId, version])
 }
 
 model AiCapability {
-  id           String   @id @default(uuid())
-  key          String   @unique
-  name         String
-  description  String?
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
   // Ordered skill keys, comma-separated. Plain text on purpose: the pipeline is
   // configuration an admin edits, not a schema migration.
-  skillKeys    String   @default("")
-  kind         String   @default("text")
-  minPlan      String   @default("FREE")
-  enabled      Boolean  @default(false)
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  skillKeys   String   @default("")
+  kind        String   @default("text")
+  minPlan     String   @default("FREE")
+  enabled     Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Audit log AND meter. Refusals are recorded too — "why did nothing happen"
 // has to be answerable.
 model AiRun {
-  id             String       @id @default(uuid())
-  orgId          String
-  userId         String?
-  capabilityKey  String
-  skillKey       String?
-  skillVersion   Int?
-  provider       String?
-  model          String?
-  status         String       @default("ok")
-  refusedReason  String?
-  promptTokens   Int?
-  outputTokens   Int?
-  costMicros     Int?
-  imageCount     Int          @default(0)
-  durationMs     Int?
-  createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [orgId], references: [id])
+  id            String       @id @default(uuid())
+  orgId         String
+  userId        String?
+  capabilityKey String
+  skillKey      String?
+  skillVersion  Int?
+  provider      String?
+  model         String?
+  status        String       @default("ok")
+  refusedReason String?
+  promptTokens  Int?
+  outputTokens  Int?
+  costMicros    Int?
+  imageCount    Int          @default(0)
+  durationMs    Int?
+  createdAt     DateTime     @default(now())
+  organization  Organization @relation(fields: [orgId], references: [id])
 
   @@index([orgId, createdAt])
   @@index([orgId, capabilityKey])
@@ -1201,7 +1206,6 @@ model SystemSetting {
  * Optional per-client brand guidance. Absent is a normal state: a capability
  * still runs without one, it just says its guidance is generic rather than
  * inventing a house style.
- *
  * customerId null = the organisation-wide default brief. No @@unique on
  * (orgId, customerId): Postgres treats NULLs as distinct, so a unique index
  * would not actually constrain the org-wide row. Uniqueness is enforced in the
@@ -1223,4 +1227,219 @@ model AiBrandBrief {
   organization Organization @relation(fields: [orgId], references: [id])
 
   @@index([orgId, customerId, deletedAt])
+}
+
+/**
+ * Automation module.
+ * Additive only: `prisma db push --accept-data-loss` runs on every container
+ * boot, so nothing here is ever renamed or removed.
+ * No enums anywhere. This project has been bitten four separate times by
+ * enumerated constraints that predated a new value (CRM stage, scope/country,
+ * alerts.category, invoices.status). Kind/status/channel are app-governed
+ * strings validated in code, where adding a value costs nothing.
+ */
+model AutomationWorkflow {
+  id            String    @id @default(uuid())
+  orgId         String
+  customerId    String?
+  name          String
+  description   String?
+  channel       String
+  trigger       String
+  triggerConfig String    @default("{}")
+  conditions    String    @default("[]")
+  status        String    @default("draft")
+  version       Int       @default(1)
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  organization  Organization             @relation(fields: [orgId], references: [id])
+  customer      Customer?                @relation(fields: [customerId], references: [id])
+  nodes         AutomationNode[]
+  conversations AutomationConversation[]
+  runs          AutomationRun[]
+  bindings      AutomationPostBinding[]
+
+  @@index([orgId, customerId, deletedAt])
+  @@index([orgId, channel, trigger, status])
+}
+
+/**
+ * One node of the workflow graph. Stored as nodes + edges even though v1 edits
+ * it as a vertical step list, so the drag canvas is a second view over the same
+ * rows rather than a migration.
+ * parentId is a plain column, not a self-relation: traversal happens in code and
+ * a self-referential cascade buys nothing here.
+ */
+model AutomationNode {
+  id         String   @id @default(uuid())
+  workflowId String
+  parentId   String?
+  branchKey  String?
+  kind       String
+  config     String   @default("{}")
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workflow AutomationWorkflow @relation(fields: [workflowId], references: [id])
+
+  @@index([workflowId, parentId, position])
+}
+
+/**
+ * A person, scoped to one client and one channel. externalId is the platform id (IGSID, PSID, phone).
+ */
+model AutomationContact {
+  id          String    @id @default(uuid())
+  orgId       String
+  customerId  String?
+  channel     String
+  externalId  String
+  handle      String?
+  displayName String?
+  fields      String    @default("{}")
+  tags        String    @default("[]")
+  optedOutAt  DateTime?
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  organization  Organization             @relation(fields: [orgId], references: [id])
+  customer      Customer?                @relation(fields: [customerId], references: [id])
+  conversations AutomationConversation[]
+
+  @@unique([orgId, channel, externalId])
+  @@index([orgId, customerId])
+}
+
+/**
+ * Live run state for one contact in one workflow.
+ * windowExpiresAt is the PLATFORM messaging window (24h on Instagram and
+ * WhatsApp), which is not the same thing as expiresAt (how long we are willing
+ * to wait for a reply). Conflating them is how a flow ends up sending into a
+ * closed window and failing.
+ * The unique below constrains comment-triggered runs to one per comment.
+ * Postgres treats NULLs as distinct, so it does NOT constrain DM-triggered runs
+ * (sourceCommentId null) — those are deduped in the repository by looking up an
+ * open conversation for the pair. Stated plainly because the index alone looks
+ * like it guarantees more than it does.
+ */
+model AutomationConversation {
+  id              String    @id @default(uuid())
+  orgId           String
+  workflowId      String
+  contactId       String
+  status          String    @default("running")
+  cursorNodeId    String?
+  waitingSince    DateTime?
+  expiresAt       DateTime?
+  windowExpiresAt DateTime?
+  variables       String    @default("{}")
+  sourceEventId   String?
+  sourceCommentId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workflow AutomationWorkflow @relation(fields: [workflowId], references: [id])
+  contact  AutomationContact  @relation(fields: [contactId], references: [id])
+  runs     AutomationRun[]
+
+  @@unique([workflowId, contactId, sourceCommentId])
+  @@index([orgId, status])
+  @@index([contactId, status])
+}
+
+/**
+ * Every inbound platform event, stored BEFORE processing.
+ * Meta retries webhooks. Without the unique on (channel, externalId) a retry
+ * sends the DM a second time — and a private reply is one-per-comment forever,
+ * so the duplicate is not merely noisy, it burns the only reply we get. This
+ * index is the correctness boundary of the whole ingress path.
+ * orgId is nullable on purpose: an event we cannot map to an integration is
+ * still worth recording, because "we received it but could not route it" is the
+ * answer to most "why didn't my automation fire" questions.
+ */
+model AutomationEvent {
+  id            String    @id @default(uuid())
+  orgId         String?
+  channel       String
+  kind          String
+  externalId    String
+  accountId     String?
+  integrationId String?
+  payload       String
+  processedAt   DateTime?
+  error         String?
+  createdAt     DateTime  @default(now())
+
+  organization Organization? @relation(fields: [orgId], references: [id])
+
+  @@unique([channel, externalId])
+  @@index([orgId, processedAt])
+  @@index([createdAt])
+}
+
+/**
+ * One execution attempt. steps is the per-node audit log.
+ */
+model AutomationRun {
+  id             String    @id @default(uuid())
+  orgId          String
+  workflowId     String
+  conversationId String?
+  eventId        String?
+  status         String    @default("running")
+  reason         String?
+  steps          String    @default("[]")
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+
+  workflow     AutomationWorkflow      @relation(fields: [workflowId], references: [id])
+  conversation AutomationConversation? @relation(fields: [conversationId], references: [id])
+
+  @@index([orgId, workflowId, startedAt])
+  @@index([orgId, status])
+}
+
+/**
+ * Reusable message body with {{variable}} interpolation.
+ */
+model AutomationTemplate {
+  id         String    @id @default(uuid())
+  orgId      String
+  customerId String?
+  name       String
+  channel    String?
+  body       String
+  variables  String    @default("[]")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@index([orgId, customerId, deletedAt])
+}
+
+/**
+ * Binds a workflow to a specific post. postId is set at compose time; the
+ * platform's own media id only exists after publish, so externalPostId is
+ * filled in when the post goes out. Both are indexed because ingress matches on
+ * externalPostId while the composer matches on postId.
+ */
+model AutomationPostBinding {
+  id             String   @id @default(uuid())
+  orgId          String
+  workflowId     String
+  postId         String?
+  integrationId  String?
+  externalPostId String?
+  createdAt      DateTime @default(now())
+
+  workflow AutomationWorkflow @relation(fields: [workflowId], references: [id])
+
+  @@unique([workflowId, postId])
+  @@index([externalPostId])
+  @@index([orgId])
 }

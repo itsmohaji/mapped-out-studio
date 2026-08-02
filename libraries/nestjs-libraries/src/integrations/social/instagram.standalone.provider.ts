@@ -34,6 +34,22 @@ export class InstagramStandaloneProvider
     'instagram_business_manage_comments',
     'instagram_business_manage_insights',
   ];
+
+  /**
+   * Requested at authorize time but NOT required to connect.
+   *
+   * `instagram_business_manage_messages` powers the Automation module's DM
+   * steps, and it needs Advanced Access via Meta App Review. Putting it in
+   * `scopes` would make checkScopes() throw NotEnoughScopes and break Instagram
+   * connection outright for everyone until that review passes — trading a
+   * working feature for one that is still pending.
+   *
+   * Asking for it here means it is granted the moment Meta approves it, with no
+   * code change; until then the account connects exactly as it does today and
+   * the Automation module reports DM steps as blocked with the real reason.
+   */
+  optionalScopes = ['instagram_business_manage_messages'];
+
     override maxConcurrentJob = 200; // Instagram standalone has stricter limits
   dto = InstagramDto;
 
@@ -114,7 +130,7 @@ export class InstagramStandaloneProvider
               : `${process?.env.FRONTEND_URL}`
           }/integrations/social/instagram-standalone`
         )}&response_type=code&scope=${encodeURIComponent(
-          this.scopes.join(',')
+          [...this.scopes, ...this.optionalScopes].join(',')
         )}` + `&state=${state}`,
       codeVerifier: makeId(10),
       state,

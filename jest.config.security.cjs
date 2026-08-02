@@ -14,6 +14,7 @@ module.exports = {
   roots: [
     '<rootDir>/libraries/nestjs-libraries/src/security',
     '<rootDir>/libraries/helpers/src/utils',
+    '<rootDir>/libraries/nestjs-libraries/src/automation',
   ],
   testMatch: ['**/*.spec.ts'],
   transform: {

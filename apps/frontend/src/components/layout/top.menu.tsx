@@ -231,6 +231,27 @@ export const useMenuItem = () => {
       path: '/campaigns',
     },
     {
+      name: t('automation', 'Automation'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M13 2 4.5 12.8c-.4.5-.6.8-.6 1 0 .2.1.4.3.6.2.2.5.2 1.1.2H12l-1 8.2 8.5-10.8c.4-.5.6-.8.6-1a.7.7 0 0 0-.3-.6c-.2-.2-.5-.2-1.1-.2H12l1-8.2Z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/automation',
+    },
+    {
       section: t('nav_group_library', 'Library'),
       name: t('post_library', 'Post Library'),
       icon: (
