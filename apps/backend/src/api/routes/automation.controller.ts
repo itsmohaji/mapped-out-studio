@@ -32,6 +32,33 @@ export class AutomationController {
     return allCapabilities();
   }
 
+  /** Connected accounts with automation counts — the landing page. */
+  @Get('/accounts')
+  accounts(@GetOrgFromRequest() org: Organization) {
+    return this._automation.accounts(org.id);
+  }
+
+  @Get('/templates')
+  templates(@Query('channel') channel?: string) {
+    return this._automation.templates(channel);
+  }
+
+  @Get('/stats')
+  stats(@GetOrgFromRequest() org: Organization, @Query('workflow') workflowId?: string) {
+    return this._automation.stats(org.id, workflowId);
+  }
+
+  @Post('/from-template')
+  async fromTemplate(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Body() body: { templateKey: string; channel: string; customerId?: string | null; name?: string }
+  ) {
+    const created = await this._automation.createFromTemplate(org.id, user?.id ?? null, body);
+    if (!created) throw new ForbiddenException();
+    return created;
+  }
+
   @Get('/')
   list(
     @GetOrgFromRequest() org: Organization,

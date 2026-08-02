@@ -26,6 +26,44 @@ import {
   sendPrivateReply,
 } from '@gitroom/nestjs-libraries/automation/channels/instagram.channel';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
+import {
+  TEMPLATES,
+  templateByKey,
+  templatesForChannel,
+} from '@gitroom/nestjs-libraries/automation/automation.templates';
+import { randomUUID } from 'crypto';
+
+/**
+ * A provider identifier is not a channel: `instagram-standalone` and
+ * `instagram` are two ways to connect the same place, and workflows target the
+ * channel. Anything unrecognised falls through to its own name so a new
+ * provider shows up as unsupported rather than silently becoming Instagram.
+ */
+const PROVIDER_CHANNEL: Record<string, string> = {
+  'instagram-standalone': 'instagram',
+  instagram: 'instagram',
+  facebook: 'facebook',
+  threads: 'threads',
+  tiktok: 'tiktok',
+  linkedin: 'linkedin',
+  'linkedin-page': 'linkedin',
+};
+
+export function channelForProvider(provider: string): string {
+  return PROVIDER_CHANNEL[provider] ?? provider;
+}
+
+/** Integration.profile holds the handle for most providers. */
+function parseUsername(profile?: string | null): string | null {
+  if (!profile) return null;
+  try {
+    const parsed = JSON.parse(profile);
+    return parsed?.username ?? parsed?.handle ?? null;
+  } catch {
+    // Most providers store it as a bare string, not JSON.
+    return typeof profile === 'string' ? profile : null;
+  }
+}
 
 const json = (v: any, fallback: any) => {
   try {
@@ -84,6 +122,133 @@ export class AutomationService {
 
   runs(orgId: string, workflowId?: string) {
     return this._repo.runsFor(orgId, workflowId);
+  }
+
+  stats(orgId: string, workflowId?: string) {
+    return this._repo.statsFor(orgId, workflowId);
+  }
+
+  /**
+   * Connected accounts with their automation counts, for the landing page.
+   *
+   * A provider identifier is not a channel — `instagram-standalone` and
+   * `instagram` are two different connections to the same channel, and a
+   * workflow targets the channel. Mapping here keeps that knowledge in one place.
+   */
+  async accounts(orgId: string) {
+    const [integrations, workflows, lastRuns] = await Promise.all([
+      this._repo.connectedIntegrations(orgId),
+      this._repo.list(orgId, undefined),
+      this._repo.lastRunsByWorkflow(orgId),
+    ]);
+
+    const lastRunBy = new Map(
+      (lastRuns ?? []).map((r: any) => [r.workflowId, r._max?.startedAt ?? null])
+    );
+
+    return integrations.map((i: any) => {
+      const channel = channelForProvider(i.providerIdentifier);
+      const caps = capabilitiesFor(channel as ChannelKey);
+
+      // A workflow belongs to this account when the channel matches and it is
+      // either org-wide or scoped to the same client.
+      const mine = (workflows ?? []).filter(
+        (w: any) =>
+          w.channel === channel && (!w.customerId || w.customerId === i.customerId)
+      );
+
+      const lastRun = mine
+        .map((w: any) => lastRunBy.get(w.id))
+        .filter(Boolean)
+        .sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+      const active = mine.filter((w: any) => w.status === 'active').length;
+
+      return {
+        integrationId: i.id,
+        name: i.name,
+        picture: i.picture,
+        username: parseUsername(i.profile),
+        provider: i.providerIdentifier,
+        channel,
+        customerId: i.customerId,
+        customerName: i.customer?.name ?? null,
+        automations: mine.length,
+        activeAutomations: active,
+        lastRunAt: lastRun ?? null,
+        automatable: !!caps?.automatable,
+        unavailableReason: caps?.unavailableReason ?? null,
+        // Health is deliberately about things the user can fix, not internals.
+        health: i.disabled
+          ? 'disabled'
+          : i.refreshNeeded
+          ? 'reconnect'
+          : !caps?.automatable
+          ? 'unsupported'
+          : active > 0
+          ? 'running'
+          : 'idle',
+      };
+    });
+  }
+
+  templates(channel?: string) {
+    return channel ? templatesForChannel(channel as ChannelKey) : TEMPLATES;
+  }
+
+  /**
+   * Create a workflow from a template.
+   *
+   * The template's steps are written as ordinary nodes, so a templated
+   * automation is indistinguishable from a hand-built one the moment it exists
+   * — there is no "template mode" for the engine to special-case.
+   */
+  async createFromTemplate(
+    orgId: string,
+    userId: string | null,
+    body: { templateKey: string; channel: string; customerId?: string | null; name?: string }
+  ) {
+    const tpl = templateByKey(body.templateKey);
+    if (!tpl) return null;
+
+    const workflow = await this._repo.create(orgId, userId, {
+      name: body.name || tpl.name,
+      description: tpl.description,
+      channel: body.channel || tpl.channels[0],
+      trigger: tpl.trigger,
+      status: 'draft',
+      customerId: body.customerId ?? null,
+      conditions: tpl.keywords?.length
+        ? [{ kind: 'keyword', match: 'equals', values: tpl.keywords }]
+        : [],
+    });
+
+    if (tpl.nodes.length) {
+      // Linear chain: each node's parent is the one before it. Branch children
+      // hang off the nearest preceding branch node instead.
+      const ids = tpl.nodes.map(() => randomUUID());
+      let lastMainId: string | null = null;
+      let lastBranchId: string | null = null;
+
+      const nodes = tpl.nodes.map((n, i) => {
+        const branchKey = n.branchKey ?? null;
+        const parentId = branchKey ? lastBranchId : lastMainId;
+        if (n.kind === 'branch') lastBranchId = ids[i];
+        if (!branchKey) lastMainId = ids[i];
+        return {
+          id: ids[i],
+          parentId,
+          branchKey,
+          kind: n.kind,
+          config: n.config ?? {},
+          position: i,
+        };
+      });
+
+      await this._repo.replaceNodes(workflow.id, nodes);
+    }
+
+    return this._repo.getOne(orgId, workflow.id);
   }
 
   events(orgId: string) {

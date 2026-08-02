@@ -411,4 +411,74 @@ export class AutomationRepository {
       where: { workflowId, sourceCommentId },
     });
   }
+
+  // --------------------------------------------------------- accounts + stats
+
+  /** Connected channels, for the account picker. */
+  connectedIntegrations(orgId: string) {
+    return this._integration.model.integration.findMany({
+      where: { organizationId: orgId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        picture: true,
+        providerIdentifier: true,
+        profile: true,
+        disabled: true,
+        refreshNeeded: true,
+        customerId: true,
+        customer: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /** Latest run per workflow, so a card can say "last run 2 hours ago". */
+  lastRunsByWorkflow(orgId: string) {
+    return this._run.model.automationRun.groupBy({
+      by: ['workflowId'],
+      where: { orgId },
+      _max: { startedAt: true },
+    });
+  }
+
+  /**
+   * Headline counters for one workflow (or the whole org).
+   *
+   * Derived from runs and conversations rather than stored counters — a stored
+   * counter drifts the first time a run is retried or a conversation expires,
+   * and nothing here is hot enough to need the denormalisation.
+   */
+  async statsFor(orgId: string, workflowId?: string) {
+    const scope = { orgId, ...(workflowId ? { workflowId } : {}) };
+
+    const [triggered, completed, blocked, conversations, replied, leads] = await Promise.all([
+      this._run.model.automationRun.count({ where: scope }),
+      this._run.model.automationRun.count({ where: { ...scope, status: 'completed' } }),
+      this._run.model.automationRun.count({ where: { ...scope, status: 'blocked' } }),
+      this._conversation.model.automationConversation.count({ where: scope }),
+      // A conversation that moved past 'waiting' is one where a human replied.
+      this._conversation.model.automationConversation.count({
+        where: { ...scope, status: { in: ['running', 'completed'] }, waitingSince: null },
+      }),
+      this._contact.model.automationContact.count({
+        where: { orgId, tags: { contains: 'lead' } },
+      }),
+    ]);
+
+    const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
+    return {
+      triggered,
+      conversations,
+      replied,
+      leads,
+      completed,
+      blocked,
+      // Reply rate is the honest engagement number: how many people actually
+      // answered, not how many messages we managed to fire off.
+      replyRate: pct(replied, conversations),
+      completionRate: pct(completed, triggered),
+    };
+  }
 }

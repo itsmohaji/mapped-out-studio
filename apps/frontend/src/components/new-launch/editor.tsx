@@ -55,6 +55,7 @@ import Mention from '@tiptap/extension-mention';
 import { suggestion } from '@gitroom/frontend/components/new-launch/mention.component';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { AComponent } from '@gitroom/frontend/components/new-launch/a.component';
+import { HashtagComponent } from '@gitroom/frontend/components/new-launch/hashtag.component';
 import { Placeholder } from '@tiptap/extensions';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { InformationComponent } from '@gitroom/frontend/components/launches/information.component';
@@ -791,6 +792,10 @@ export const Editor: FC<{
                   toolBar={
                     <div className="flex gap-[5px]">
                       <SignatureBox editor={editorRef?.current?.editor} />
+                      <HashtagComponent
+                        editor={editorRef?.current?.editor}
+                        currentValue={props.value!}
+                      />
                       {editorType !== 'none' && (
                         <>
                           <UText
