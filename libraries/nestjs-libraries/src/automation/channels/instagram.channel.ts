@@ -176,13 +176,23 @@ export interface SendResult {
   retryable?: boolean;
 }
 
+/**
+ * Integration tokens are stored as `accessToken___extra` for some providers.
+ * Sending the whole string as a bearer produces an opaque OAuth error, so every
+ * call site must split first — the rest of the codebase does the same
+ * (`instagram.provider.ts` splits on `___` before every Graph call).
+ */
+export function accessTokenOf(token: string): string {
+  return (token || '').split('___')[0];
+}
+
 async function graphPost(path: string, token: string, body: any): Promise<SendResult> {
   try {
     const res = await fetch(`${GRAPH}/${VERSION}/${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${accessTokenOf(token)}`,
       },
       body: JSON.stringify(body),
     });
@@ -255,7 +265,8 @@ export function replyToComment(
  * Subscribe this account to the webhook fields we need.
  *
  * Per-account, not app-level: connecting a new Instagram account and forgetting
- * this is the single most likely reason a workflow never fires.
+ * this is the single most likely reason a workflow never fires. Meta verifying
+ * the callback URL is NOT the same thing as an account being subscribed.
  */
 export function subscribeAccount(
   igUserId: string,
@@ -267,4 +278,77 @@ export function subscribeAccount(
     token,
     {}
   );
+}
+
+async function graphGet(path: string, token: string): Promise<any> {
+  const sep = path.includes('?') ? '&' : '?';
+  const res = await fetch(
+    `${GRAPH}/${VERSION}/${path}${sep}access_token=${encodeURIComponent(accessTokenOf(token))}`
+  );
+  const text = await res.text();
+  let json: any = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    /* fall through — the raw text is surfaced as the error below */
+  }
+  if (!res.ok) {
+    const err = json?.error?.message || text || `HTTP ${res.status}`;
+    throw new Error(err);
+  }
+  return json;
+}
+
+export interface InstagramMedia {
+  id: string;
+  caption: string;
+  mediaType: string;
+  thumbnail: string | null;
+  permalink: string | null;
+  timestamp: string | null;
+  commentsCount: number | null;
+}
+
+/**
+ * The account's own media, straight from Instagram.
+ *
+ * This is what the automation post picker must read. Posts published before the
+ * account was connected — or from the Instagram app directly — exist only here;
+ * our own Post table knows nothing about them.
+ *
+ * The id returned IS the media id the comments webhook reports, so a binding
+ * made from this list is live immediately instead of waiting for a publish.
+ */
+export async function fetchInstagramMedia(
+  igUserId: string,
+  token: string,
+  limit = 50
+): Promise<InstagramMedia[]> {
+  const fields =
+    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,comments_count';
+  const json = await graphGet(
+    `${igUserId}/media?fields=${fields}&limit=${Math.min(Math.max(limit, 1), 100)}`,
+    token
+  );
+
+  return (json?.data ?? []).map((m: any) => ({
+    id: String(m.id),
+    caption: m.caption ?? '',
+    mediaType: m.media_type ?? 'IMAGE',
+    // A video has no usable media_url for a grid; thumbnail_url is the frame.
+    thumbnail: m.thumbnail_url || m.media_url || null,
+    permalink: m.permalink ?? null,
+    timestamp: m.timestamp ?? null,
+    commentsCount: typeof m.comments_count === 'number' ? m.comments_count : null,
+  }));
+}
+
+/** Who the stored token actually belongs to — the token validity check. */
+export function fetchInstagramProfile(token: string): Promise<any> {
+  return graphGet('me?fields=user_id,username,name,account_type,media_count', token);
+}
+
+/** Which webhook fields this account is currently subscribed to. */
+export function fetchSubscriptions(igUserId: string, token: string): Promise<any> {
+  return graphGet(`${igUserId}/subscribed_apps`, token);
 }

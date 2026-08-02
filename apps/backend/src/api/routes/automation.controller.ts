@@ -150,11 +150,50 @@ export class AutomationController {
   async bindings(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
-    @Body() body: { postIds: string[] }
+    @Body() body: { externalPostIds?: string[]; postIds?: string[] }
   ) {
     const workflow = await this._automation.getOne(org.id, id);
     if (!workflow) throw new ForbiddenException();
-    return this._automation.setBindings(org.id, id, body?.postIds ?? []);
+    return this._automation.setBindings(
+      org.id,
+      id,
+      body?.externalPostIds ?? [],
+      body?.postIds ?? []
+    );
+  }
+
+  /** The account's real Instagram media, for the post picker. */
+  @Get('/accounts/:integrationId/posts')
+  async accountPosts(
+    @GetOrgFromRequest() org: Organization,
+    @Param('integrationId') integrationId: string,
+    @Query('refresh') refresh?: string
+  ) {
+    const res = await this._automation.instagramPosts(org.id, integrationId, refresh === 'true');
+    if (!res) throw new ForbiddenException();
+    return res;
+  }
+
+  /** Token, media, subscription and event checks against the live API. */
+  @Get('/accounts/:integrationId/diagnostics')
+  async accountDiagnostics(
+    @GetOrgFromRequest() org: Organization,
+    @Param('integrationId') integrationId: string
+  ) {
+    const res = await this._automation.diagnostics(org.id, integrationId);
+    if (!res) throw new ForbiddenException();
+    return res;
+  }
+
+  /** Subscribe this account to the webhook fields. Per-account, not app-level. */
+  @Post('/accounts/:integrationId/subscribe')
+  async accountSubscribe(
+    @GetOrgFromRequest() org: Organization,
+    @Param('integrationId') integrationId: string
+  ) {
+    const res = await this._automation.subscribe(org.id, integrationId);
+    if (!res) throw new ForbiddenException();
+    return res;
   }
 
   @Get('/:id/validate')

@@ -21,9 +21,14 @@ import {
   validateWorkflow,
 } from '@gitroom/nestjs-libraries/automation/automation.capabilities';
 import {
+  fetchInstagramMedia,
+  fetchInstagramProfile,
+  fetchSubscriptions,
   replyToComment,
   sendDirectMessage,
   sendPrivateReply,
+  subscribeAccount,
+  InstagramMedia,
 } from '@gitroom/nestjs-libraries/automation/channels/instagram.channel';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 import {
@@ -85,6 +90,19 @@ interface StepLog {
 export class AutomationService {
   private readonly logger = new Logger(AutomationService.name);
 
+  /**
+   * Instagram media cache, keyed by integration.
+   *
+   * In-memory and 2 minutes on purpose. A DB table would need invalidation
+   * rules, a migration and a cleanup job to solve a problem that is really just
+   * "don't call Graph twice a second while someone scrolls a grid".
+   *
+   * ponytail: per-process. If the API is ever scaled past one instance this
+   * becomes N caches, which is still correct, just less effective — move it to
+   * Redis then, not before.
+   */
+  private static mediaCache = new Map<string, { at: number; posts: InstagramMedia[] }>();
+
   constructor(
     private _repo: AutomationRepository,
     private _notifications: NotificationService
@@ -116,8 +134,13 @@ export class AutomationService {
     return this._repo.replaceNodes(workflowId, nodes);
   }
 
-  setBindings(orgId: string, workflowId: string, postIds: string[]) {
-    return this._repo.setBindings(orgId, workflowId, postIds);
+  setBindings(
+    orgId: string,
+    workflowId: string,
+    externalPostIds: string[],
+    legacyPostIds: string[] = []
+  ) {
+    return this._repo.setBindings(orgId, workflowId, externalPostIds, legacyPostIds);
   }
 
   runs(orgId: string, workflowId?: string) {
@@ -194,6 +217,130 @@ export class AutomationService {
 
   templates(channel?: string) {
     return channel ? templatesForChannel(channel as ChannelKey) : TEMPLATES;
+  }
+
+  /**
+   * The connected account's real Instagram posts.
+   *
+   * Deliberately NOT our own Post table: posts published before the account was
+   * connected, or straight from the Instagram app, exist only on Instagram. The
+   * picker has to show what the user actually sees on their profile.
+   *
+   * Cached briefly in memory — opening the picker should not hammer Graph, but
+   * a new post must show up without anyone clearing anything.
+   */
+  async instagramPosts(orgId: string, integrationId: string, force = false) {
+    const integration = await this._repo.integrationById(orgId, integrationId);
+    if (!integration) return null;
+
+    const key = integration.id;
+    const cached = AutomationService.mediaCache.get(key);
+    if (!force && cached && Date.now() - cached.at < 120_000) {
+      return { posts: cached.posts, cached: true };
+    }
+
+    try {
+      const posts = await fetchInstagramMedia(integration.internalId, integration.token, 50);
+      AutomationService.mediaCache.set(key, { at: Date.now(), posts });
+      return { posts, cached: false };
+    } catch (e: any) {
+      // Serve a stale list rather than an empty one: an expired token should
+      // not make the user's posts appear to vanish.
+      if (cached) {
+        return { posts: cached.posts, cached: true, error: e?.message ?? 'Instagram error' };
+      }
+      return { posts: [], cached: false, error: e?.message ?? 'Instagram error' };
+    }
+  }
+
+  /**
+   * End-to-end readiness for one account, in the order things actually fail.
+   *
+   * Each stage is checked against the live Instagram API using the stored
+   * token, so this answers "is the token stored correctly", "is this account
+   * subscribed", and "have any events arrived" with evidence rather than
+   * configuration.
+   */
+  async diagnostics(orgId: string, integrationId: string) {
+    const integration = await this._repo.integrationById(orgId, integrationId);
+    if (!integration) return null;
+
+    const out: any = {
+      account: {
+        id: integration.id,
+        name: integration.name,
+        platformId: integration.internalId,
+        provider: integration.providerIdentifier,
+        disabled: integration.disabled,
+        refreshNeeded: integration.refreshNeeded,
+      },
+      token: { stored: !!integration.token, valid: false, detail: null as string | null },
+      media: { readable: false, count: 0, detail: null as string | null },
+      subscription: { subscribed: false, fields: [] as string[], detail: null as string | null },
+      events: { received: 0, lastAt: null as string | null, lastKind: null as string | null },
+    };
+
+    if (!integration.token) {
+      out.token.detail = 'No access token stored. Reconnect the account.';
+      return out;
+    }
+
+    try {
+      const me = await fetchInstagramProfile(integration.token);
+      out.token.valid = true;
+      out.token.detail = `Token belongs to @${me?.username ?? 'unknown'}`;
+      out.account.username = me?.username ?? null;
+      out.account.mediaCount = me?.media_count ?? null;
+    } catch (e: any) {
+      out.token.detail = e?.message ?? 'Token rejected by Instagram';
+      // Everything below needs a working token; stop rather than emit three
+      // more identical failures that all mean the same thing.
+      return out;
+    }
+
+    try {
+      const posts = await fetchInstagramMedia(integration.internalId, integration.token, 25);
+      out.media.readable = true;
+      out.media.count = posts.length;
+      out.media.detail =
+        posts.length === 0 ? 'Token works, but this account has no posts.' : null;
+    } catch (e: any) {
+      out.media.detail = e?.message ?? 'Could not read media';
+    }
+
+    try {
+      const subs = await fetchSubscriptions(integration.internalId, integration.token);
+      const fields = (subs?.data ?? []).flatMap((d: any) =>
+        (d?.subscribed_fields ?? []).map((f: any) => (typeof f === 'string' ? f : f?.name))
+      );
+      out.subscription.fields = fields.filter(Boolean);
+      out.subscription.subscribed = out.subscription.fields.length > 0;
+      if (!out.subscription.subscribed) {
+        out.subscription.detail =
+          'This account is not subscribed to any webhook fields yet. Verifying the callback in Meta does not subscribe an account — use Subscribe below.';
+      }
+    } catch (e: any) {
+      out.subscription.detail = e?.message ?? 'Could not read subscriptions';
+    }
+
+    const recent = await this._repo.recentEventsForIntegration(integration.id, 1);
+    const total = await this._repo.countEventsForIntegration(integration.id);
+    out.events.received = total;
+    out.events.lastAt = recent[0]?.createdAt ?? null;
+    out.events.lastKind = recent[0]?.kind ?? null;
+
+    return out;
+  }
+
+  /** Subscribe this account to the webhook fields the automations need. */
+  async subscribe(orgId: string, integrationId: string) {
+    const integration = await this._repo.integrationById(orgId, integrationId);
+    if (!integration) return null;
+    const res = await subscribeAccount(integration.internalId, integration.token, [
+      'comments',
+      'messages',
+    ]);
+    return { ok: res.ok, detail: res.ok ? 'Subscribed.' : res.error };
   }
 
   /**

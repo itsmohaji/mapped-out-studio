@@ -171,11 +171,34 @@ export class AutomationRepository {
 
   // ----------------------------------------------------------------- bindings
 
-  async setBindings(orgId: string, workflowId: string, postIds: string[]) {
+  /**
+   * Bind a workflow to specific posts.
+   *
+   * `externalPostIds` are Instagram's own media ids — the same ids the comments
+   * webhook reports — so a binding made from the account's real media is live
+   * immediately, with no publish step to wait on.
+   *
+   * Deduped in code: the unique index is on (workflowId, postId), and postId is
+   * null here, which Postgres treats as always-distinct. The index would not
+   * stop a double-click from writing the same media twice.
+   */
+  async setBindings(
+    orgId: string,
+    workflowId: string,
+    externalPostIds: string[],
+    legacyPostIds: string[] = []
+  ) {
     await this._binding.model.automationPostBinding.deleteMany({ where: { workflowId } });
-    if (!postIds?.length) return [];
+
+    const external = Array.from(new Set((externalPostIds ?? []).filter(Boolean)));
+    const legacy = Array.from(new Set((legacyPostIds ?? []).filter(Boolean)));
+    if (!external.length && !legacy.length) return [];
+
     return this._binding.model.automationPostBinding.createMany({
-      data: postIds.map((postId) => ({ orgId, workflowId, postId })),
+      data: [
+        ...external.map((externalPostId) => ({ orgId, workflowId, externalPostId })),
+        ...legacy.map((postId) => ({ orgId, workflowId, postId })),
+      ],
       skipDuplicates: true,
     });
   }
@@ -431,6 +454,25 @@ export class AutomationRepository {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  /** One integration, scoped to the org so an id from elsewhere cannot be read. */
+  integrationById(orgId: string, integrationId: string) {
+    return this._integration.model.integration.findFirst({
+      where: { id: integrationId, organizationId: orgId, deletedAt: null },
+    });
+  }
+
+  recentEventsForIntegration(integrationId: string, take = 10) {
+    return this._event.model.automationEvent.findMany({
+      where: { integrationId },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+  }
+
+  countEventsForIntegration(integrationId: string) {
+    return this._event.model.automationEvent.count({ where: { integrationId } });
   }
 
   /** Latest run per workflow, so a card can say "last run 2 hours ago". */

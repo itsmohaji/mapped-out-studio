@@ -19,6 +19,7 @@ import {
   timeAgo,
 } from './automation.ui';
 import { WebhookSetup } from './webhook.setup';
+import { AccountDiagnostics } from './account.diagnostics';
 
 type View =
   | { name: 'accounts' }
@@ -67,6 +68,8 @@ const AccountHome: FC<{
       />
 
       <WebhookSetup />
+
+      <AccountDiagnostics integrationId={account.integrationId} />
 
       {loading && (
         <div className="flex flex-col gap-[10px]">

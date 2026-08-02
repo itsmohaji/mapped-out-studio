@@ -88,7 +88,9 @@ export const BuilderView: FC<{
       }))
     );
     setKeywords(fromCondition(parse(data.conditions, [])));
-    const bound = (data.bindings ?? []).map((b: any) => b.postId).filter(Boolean);
+    const bound = (data.bindings ?? [])
+      .map((b: any) => b.externalPostId || b.postId)
+      .filter(Boolean);
     setPostIds(bound);
     setScope(bound.length ? 'specific' : 'all');
   }
@@ -141,7 +143,9 @@ export const BuilderView: FC<{
       });
       await fetchApi(`/automation/${workflowId}/bindings`, {
         method: 'PUT',
-        body: JSON.stringify({ postIds: scope === 'specific' ? postIds : [] }),
+        body: JSON.stringify({
+          externalPostIds: scope === 'specific' ? postIds : [],
+        }),
       });
 
       const check = await (await fetchApi(`/automation/${workflowId}/validate`)).json();
