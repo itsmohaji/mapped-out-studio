@@ -46,12 +46,49 @@ export class AutomationWebhookController {
    */
   @Get('/instagram/status')
   instagramStatus() {
+    const token = resolveVerifyToken();
+
+    /**
+     * Run Meta's handshake against ourselves with the real configured token.
+     *
+     * This is the only way to prove the POSITIVE path works without publishing
+     * the token: it exercises the exact function the live GET uses, including
+     * the constant-time comparison, and reports pass/fail only. Without it,
+     * "configured" and "actually works" are two different claims and nobody
+     * finds out which they have until Meta says "verification failed".
+     */
+    const selfTest =
+      token &&
+      verifyChallenge(
+        {
+          'hub.mode': 'subscribe',
+          'hub.verify_token': token,
+          'hub.challenge': 'selftest-challenge',
+        },
+        token
+      ) === 'selftest-challenge';
+
+    // A wrong token must NOT echo. Proving the guard still rejects matters as
+    // much as proving the happy path accepts.
+    const rejectsWrongToken =
+      verifyChallenge(
+        {
+          'hub.mode': 'subscribe',
+          'hub.verify_token': 'definitely-not-the-token',
+          'hub.challenge': 'selftest-challenge',
+        },
+        token
+      ) === null;
+
     return {
       endpoint: 'ready',
-      verifyTokenConfigured: !!resolveVerifyToken(),
+      verifyTokenConfigured: !!token,
       signatureSecretConfigured: !!process.env.INSTAGRAM_APP_SECRET,
       // Derived means no separate secret had to be set anywhere.
       verifyTokenSource: process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ? 'env' : 'derived',
+      handshakeSelfTest: selfTest ? 'pass' : 'fail',
+      rejectsWrongToken: rejectsWrongToken ? 'pass' : 'fail',
+      readyForMetaVerification: !!token && !!selfTest && !!rejectsWrongToken,
     };
   }
 
