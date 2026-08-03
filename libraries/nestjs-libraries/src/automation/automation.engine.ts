@@ -16,6 +16,7 @@ import {
   WorkflowSummary,
 } from './automation.types';
 import { evaluateConditions } from './automation.matching';
+import { AI_ACTIONS } from './automation.capabilities';
 
 /** Which trigger an inbound event could satisfy. */
 export function triggerForEvent(event: AutomationEventInput): TriggerKind[] {
@@ -109,8 +110,51 @@ export function nextStep(
     }
     seen.add(next.id);
 
-    if (next.kind === 'branch') {
-      const conditions = (next.config?.conditions ?? []) as Condition[];
+    // Exit ends the run wherever it appears, ignoring anything below it.
+    if (next.kind === 'exit') return { type: 'done' };
+
+    // Merge is a pure join point — it exists so two branches can visibly come
+    // back together in the builder, and carries no behaviour of its own.
+    if (next.kind === 'merge') {
+      cursor = next.id;
+      continue;
+    }
+
+    // Go To jumps the cursor. The `seen` set is what stops a loop back into
+    // already-executed nodes from running forever.
+    if (next.kind === 'goto') {
+      const target = next.config?.targetNodeId;
+      if (!target || !all.some((n) => n.id === target)) {
+        return { type: 'blocked', reason: 'Go To points at a step that no longer exists.' };
+      }
+      if (seen.has(target)) {
+        return { type: 'blocked', reason: 'Go To would loop back on itself; stopped.' };
+      }
+      const targetNode = all.find((n) => n.id === target)!;
+      seen.add(target);
+      const step = stepFor(targetNode, ctx);
+      if (step) return step;
+      cursor = target;
+      continue;
+    }
+
+    // Branch, Split and Business Hours are all "pick an edge" nodes. They
+    // differ only in where the condition comes from, so they share one path.
+    if (next.kind === 'branch' || next.kind === 'split' || next.kind === 'business_hours') {
+      const conditions: Condition[] =
+        next.kind === 'business_hours'
+          ? [
+              {
+                kind: 'business_hours',
+                timezone: next.config?.timezone || 'UTC',
+                days: next.config?.days ?? [1, 2, 3, 4, 5],
+                start: next.config?.start || '09:00',
+                end: next.config?.end || '17:00',
+                inside: next.config?.inside !== false,
+              },
+            ]
+          : ((next.config?.conditions ?? []) as Condition[]);
+
       const took = evaluateConditions(conditions, ctx) ? 'match' : 'no_match';
       const branchChild = childrenOf(all, next.id, took)[0];
       if (!branchChild) return { type: 'done' };
@@ -161,9 +205,25 @@ function stepFor(node: WorkflowNode, ctx: EvalContext): EngineStep | null {
     };
   }
 
-  if (node.kind === 'generate_ai_response') {
-    // Registered so a workflow can be authored against it, but nothing depends
-    // on it. Skip rather than fail the run.
+  /**
+   * Wait until a fixed date/time rather than for a duration.
+   *
+   * A date already in the past is NOT an error — a campaign whose send date has
+   * passed should continue immediately rather than stranding every contact who
+   * arrives late.
+   */
+  if (node.kind === 'delay_until') {
+    const raw = node.config?.until;
+    const at = raw ? new Date(raw).getTime() : NaN;
+    if (!Number.isFinite(at)) return null;
+    if (at <= ctx.now.getTime()) return null;
+    return { type: 'suspend', reason: 'wait', untilMs: at, node };
+  }
+
+  if (AI_ACTIONS.includes(node.kind)) {
+    // Registered so a workflow can be authored against them, but nothing
+    // depends on them yet. Skip rather than fail the run — an author laying out
+    // a future flow should not have it break on save.
     return null;
   }
 

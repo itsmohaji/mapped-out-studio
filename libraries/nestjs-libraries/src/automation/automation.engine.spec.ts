@@ -454,3 +454,100 @@ describe('renderTemplate / buildVariables', () => {
     expect(vars.comment_text).toBe('YES');
   });
 });
+
+describe('flow-control nodes', () => {
+  const at = (kind: string, id: string, parentId: string | null, config: any = {}): WorkflowNode =>
+    ({ id, parentId, branchKey: null, kind: kind as any, config, position: 0 });
+
+  it('exit ends the run and ignores anything below it', () => {
+    const nodes = [
+      at('exit', 'a', null),
+      at('send_dm', 'b', 'a', { message: 'never sent' }),
+    ];
+    expect(nextStep(nodes, null, ctx())).toEqual({ type: 'done' });
+  });
+
+  it('merge is a pure join point and carries no behaviour', () => {
+    const nodes = [at('merge', 'a', null), at('notify_team', 'b', 'a')];
+    expect(nextStep(nodes, null, ctx())).toMatchObject({ type: 'action', node: { id: 'b' } });
+  });
+
+  it('goto jumps the cursor to the target step', () => {
+    const nodes = [
+      at('goto', 'a', null, { targetNodeId: 'c' }),
+      at('send_dm', 'b', 'a', { message: 'skipped' }),
+      at('notify_team', 'c', null),
+    ];
+    expect(nextStep(nodes, null, ctx())).toMatchObject({ type: 'action', node: { id: 'c' } });
+  });
+
+  it('goto to a deleted step blocks instead of silently ending', () => {
+    const nodes = [at('goto', 'a', null, { targetNodeId: 'gone' })];
+    const step = nextStep(nodes, null, ctx());
+    expect(step.type).toBe('blocked');
+    expect((step as any).reason).toMatch(/no longer exists/i);
+  });
+
+  it('goto that loops back on itself is stopped', () => {
+    const nodes = [at('goto', 'a', null, { targetNodeId: 'a' })];
+    expect(nextStep(nodes, null, ctx()).type).toBe('blocked');
+  });
+
+  it('delay_until suspends for a future date', () => {
+    const future = new Date(NOW.getTime() + 3600_000).toISOString();
+    const nodes = [at('delay_until', 'a', null, { until: future })];
+    const step = nextStep(nodes, null, ctx());
+    expect(step.type).toBe('suspend');
+    expect((step as any).untilMs).toBe(new Date(future).getTime());
+  });
+
+  it('delay_until in the PAST continues immediately', () => {
+    // A campaign whose send date has passed should not strand late arrivals.
+    const past = new Date(NOW.getTime() - 3600_000).toISOString();
+    const nodes = [at('delay_until', 'a', null, { until: past }), at('notify_team', 'b', 'a')];
+    expect(nextStep(nodes, null, ctx())).toMatchObject({ type: 'action', node: { id: 'b' } });
+  });
+
+  it('business_hours picks the match edge inside working hours', () => {
+    const cfg = { timezone: 'Asia/Bahrain', days: [0, 1, 2, 3, 4], start: '09:00', end: '17:00' };
+    const nodes: WorkflowNode[] = [
+      at('business_hours', 'a', null, cfg),
+      { ...at('send_dm', 'open', 'a'), branchKey: 'match' },
+      { ...at('notify_team', 'closed', 'a'), branchKey: 'no_match' },
+    ];
+    // 12:00 UTC = 15:00 Bahrain on a Sunday, a working day there.
+    expect(nextStep(nodes, null, ctx())).toMatchObject({ type: 'action', node: { id: 'open' } });
+    // 04:00 UTC = 07:00 Bahrain, before opening.
+    const early = ctx({ now: new Date('2026-08-02T04:00:00Z') });
+    expect(nextStep(nodes, null, early)).toMatchObject({ type: 'action', node: { id: 'closed' } });
+  });
+
+  it('split behaves as a branch', () => {
+    const nodes: WorkflowNode[] = [
+      at('split', 'a', null, {
+        conditions: [{ kind: 'keyword', match: 'contains', values: ['price'] }],
+      }),
+      { ...at('send_dm', 'yes', 'a'), branchKey: 'match' },
+      { ...at('send_dm', 'no', 'a'), branchKey: 'no_match' },
+    ];
+    const asking = ctx({ event: commentEvent({ text: 'what is the price' }) });
+    expect(nextStep(nodes, null, asking)).toMatchObject({ type: 'action', node: { id: 'yes' } });
+  });
+
+  it('every AI node is skipped rather than failing the run', () => {
+    for (const kind of ['ai_reply', 'ai_qualify', 'ai_translate', 'ai_summarize']) {
+      const nodes = [at(kind, 'a', null), at('notify_team', 'b', 'a')];
+      expect(nextStep(nodes, null, ctx())).toMatchObject({ type: 'action', node: { id: 'b' } });
+    }
+  });
+
+  it('AI nodes warn but never block activation', () => {
+    const issues = validateWorkflow({
+      channel: 'instagram',
+      trigger: 'comment',
+      nodeKinds: ['ai_reply', 'ai_qualify'] as any,
+    });
+    expect(issues.filter((i) => i.level === 'error')).toHaveLength(0);
+    expect(issues.some((i) => i.level === 'warning')).toBe(true);
+  });
+});

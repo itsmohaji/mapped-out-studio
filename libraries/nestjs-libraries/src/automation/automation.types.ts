@@ -37,6 +37,20 @@ export type ActionKind =
   | 'assign_manager'
   | 'call_webhook'
   | 'add_tag'
+  // Flow control. Real engine behaviour, buildable and testable today.
+  | 'delay_until'
+  | 'business_hours'
+  | 'split'
+  | 'merge'
+  | 'goto'
+  | 'exit'
+  // AI nodes. Registered so a workflow can be authored against them, but they
+  // report themselves unavailable until an AI provider/router exists. Same
+  // honest pattern as TikTok declaring zero capability rather than pretending.
+  | 'ai_reply'
+  | 'ai_qualify'
+  | 'ai_translate'
+  | 'ai_summarize'
   | 'generate_ai_response';
 
 /**

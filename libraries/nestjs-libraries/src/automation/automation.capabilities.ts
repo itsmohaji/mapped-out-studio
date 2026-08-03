@@ -57,6 +57,16 @@ const INSTAGRAM: ChannelCapabilities = {
     'assign_manager',
     'call_webhook',
     'add_tag',
+    'delay_until',
+    'business_hours',
+    'split',
+    'merge',
+    'goto',
+    'exit',
+    'ai_reply',
+    'ai_qualify',
+    'ai_translate',
+    'ai_summarize',
   ],
   requiredScopes: ['instagram_business_basic', 'instagram_business_manage_comments'],
   messagingScopes: ['instagram_business_manage_messages'],
@@ -104,6 +114,16 @@ const WHATSAPP: ChannelCapabilities = {
     'assign_manager',
     'call_webhook',
     'add_tag',
+    'delay_until',
+    'business_hours',
+    'split',
+    'merge',
+    'goto',
+    'exit',
+    'ai_reply',
+    'ai_qualify',
+    'ai_translate',
+    'ai_summarize',
   ],
   requiredScopes: ['whatsapp_business_messaging'],
   messagingScopes: ['whatsapp_business_messaging'],
@@ -173,6 +193,19 @@ export function allCapabilities(): ChannelCapabilities[] {
 /** Actions that cannot run without the messaging scopes / an open window. */
 const MESSAGING_ACTIONS: ActionKind[] = ['send_dm', 'send_template', 'wait_reply'];
 
+/**
+ * Nodes that need an AI provider. They are offered and saveable, but the engine
+ * skips them until a router exists — an author should be able to lay out the
+ * flow they want before the capability lands.
+ */
+export const AI_ACTIONS: ActionKind[] = [
+  'ai_reply',
+  'ai_qualify',
+  'ai_translate',
+  'ai_summarize',
+  'generate_ai_response',
+];
+
 export function isMessagingAction(kind: ActionKind): boolean {
   return MESSAGING_ACTIONS.includes(kind);
 }
@@ -218,7 +251,7 @@ export function validateWorkflow(
   }
 
   for (const kind of new Set(workflow.nodeKinds)) {
-    if (kind === 'generate_ai_response') {
+    if (AI_ACTIONS.includes(kind)) {
       issues.push({
         level: 'warning',
         message:
