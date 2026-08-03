@@ -151,6 +151,30 @@ export class AutomationService {
     return this._repo.statsFor(orgId, workflowId);
   }
 
+  // ------------------------------------------------------------------- leads
+
+  leads(orgId: string, filters: any) {
+    return this._repo.listLeads(orgId, filters);
+  }
+
+  lead(orgId: string, id: string) {
+    return this._repo.getLead(orgId, id);
+  }
+
+  updateLead(orgId: string, id: string, patch: any, actorId?: string) {
+    // Attribution columns are write-once. Accepting them here would let a
+    // careless PATCH rewrite where a lead came from, which is the one thing
+    // this record exists to remember.
+    const {
+      sourcePlatform, sourceAccountId, sourceAccountName, sourceWorkflowId,
+      sourceWorkflowName, sourceCampaignId, sourceKeyword, sourceComment,
+      sourceConversationId, sourceScope, sourcePostId, sourcePostThumbnail,
+      sourcePostCaption, sourcePostUrl, sourcePostDate, orgId: _o, id: _i,
+      ...safe
+    } = patch ?? {};
+    return this._repo.updateLead(orgId, id, safe, actorId);
+  }
+
   /**
    * Connected accounts with their automation counts, for the landing page.
    *
@@ -812,8 +836,15 @@ export class AutomationService {
 
       case 'create_lead': {
         await this._repo.mergeContactFields(env.contact.id, vars, ['lead']);
+
+        // Attribution is captured HERE, once, at the moment the lead is born.
+        // It cannot be reconstructed later: the post may be deleted, the
+        // workflow renamed, the keyword changed. "Which post generated this
+        // lead" is only answerable if we write it down now.
+        const lead = await this.captureLead(node, ctx, env, vars);
+
         const pushed = await this.pushLeadToDbu(env, vars);
-        return { ok: true, detail: pushed };
+        return { ok: true, detail: lead ? `Lead captured. ${pushed}` : pushed };
       }
 
       case 'notify_team':
@@ -859,6 +890,80 @@ export class AutomationService {
 
       default:
         return { ok: true, detail: `Unknown step "${node.kind}" skipped.` };
+    }
+  }
+
+  /**
+   * Write the lead plus an immutable snapshot of where it came from.
+   *
+   * The post details are COPIED, not joined. A join answers "what does that
+   * post say now", which is the wrong question for attribution — the post can
+   * be edited or deleted and the lead must still name it a year later.
+   *
+   * Best-effort: a lead that fails to file must never break the conversation
+   * the contact is still having with us.
+   */
+  private async captureLead(
+    node: WorkflowNode,
+    ctx: EvalContext,
+    env: any,
+    vars: Record<string, string>
+  ): Promise<boolean> {
+    try {
+      const workflow = await this._repo.getOne(env.workflow.orgId, env.workflow.id);
+      const bindings = workflow?.bindings ?? [];
+      const mediaId = env.event?.externalPostId ?? null;
+
+      // Reuse the media cache rather than calling Graph mid-conversation: the
+      // picker populated it, and a lead is not worth an extra round trip.
+      let post: any = null;
+      if (mediaId && env.integration?.id) {
+        const cached = AutomationService.mediaCache.get(env.integration.id);
+        post = (cached?.posts ?? []).find((p: any) => p.id === mediaId) ?? null;
+      }
+
+      const keyword = (() => {
+        const kw = (workflow ? json(workflow.conditions, []) : []).find(
+          (c: any) => c?.kind === 'keyword'
+        );
+        const values: string[] = kw?.values ?? [];
+        const text = (env.event?.text ?? '').toLowerCase();
+        // Which of the configured keywords actually fired, not just the first.
+        return values.find((v) => text.includes(String(v).toLowerCase())) ?? values[0] ?? null;
+      })();
+
+      await this._repo.createLead({
+        orgId: env.workflow.orgId,
+        customerId: env.workflow.customerId ?? env.integration?.customerId ?? null,
+        contactId: env.contact?.id ?? null,
+        fullName: vars.first_name || vars.full_name || null,
+        handle: env.contact?.handle ?? vars.handle ?? null,
+        email: vars.email ?? null,
+        phone: vars.phone ?? null,
+        fields: vars,
+        assignedUserId: node.config?.assignTo ?? null,
+
+        sourcePlatform: env.event?.channel ?? null,
+        sourceAccountId: env.integration?.id ?? null,
+        sourceAccountName: env.integration?.name ?? null,
+        sourceWorkflowId: env.workflow.id,
+        sourceWorkflowName: workflow?.name ?? null,
+        sourceKeyword: keyword,
+        sourceComment: env.conversation?.sourceCommentId ? env.event?.text ?? null : null,
+        sourceConversationId: env.conversation?.id ?? null,
+        // How the automation was targeted, not how this one comment arrived.
+        sourceScope: bindings.length ? 'specific_post' : 'all_posts',
+        sourcePostId: mediaId,
+        sourcePostThumbnail: post?.thumbnail ?? null,
+        sourcePostCaption: post?.caption ?? null,
+        sourcePostUrl: post?.permalink ?? null,
+        sourcePostDate: post?.timestamp ? new Date(post.timestamp) : null,
+      });
+
+      return true;
+    } catch (e: any) {
+      this.logger.warn(`lead capture failed: ${e?.message}`);
+      return false;
     }
   }
 

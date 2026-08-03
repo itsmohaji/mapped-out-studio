@@ -107,6 +107,41 @@ export class AutomationController {
     return this._automation.events(org.id);
   }
 
+  @Get('/leads')
+  leads(
+    @GetOrgFromRequest() org: Organization,
+    @Query() query: Record<string, string>
+  ) {
+    return this._automation.leads(org.id, {
+      customerId: query.customer && query.customer !== 'all' ? query.customer : undefined,
+      status: query.status,
+      platform: query.platform,
+      workflowId: query.workflow,
+      postId: query.post,
+      assignedUserId: query.assignee,
+      search: query.search,
+    });
+  }
+
+  @Get('/leads/:leadId')
+  async leadOne(@GetOrgFromRequest() org: Organization, @Param('leadId') leadId: string) {
+    const lead = await this._automation.lead(org.id, leadId);
+    if (!lead) throw new ForbiddenException();
+    return lead;
+  }
+
+  @Put('/leads/:leadId')
+  async leadUpdate(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('leadId') leadId: string,
+    @Body() body: any
+  ) {
+    const updated = await this._automation.updateLead(org.id, leadId, body, user?.id);
+    if (!updated) throw new ForbiddenException();
+    return updated;
+  }
+
   @Get('/:id')
   async getOne(@GetOrgFromRequest() org: Organization, @Param('id') id: string) {
     const workflow = await this._automation.getOne(org.id, id);

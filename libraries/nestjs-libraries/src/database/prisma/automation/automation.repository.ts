@@ -14,6 +14,45 @@ const j = (v: any, fallback: any) => {
   }
 };
 
+/**
+ * A new lead plus its attribution snapshot.
+ *
+ * Written out explicitly rather than `Record<string, any>` so a typo in an
+ * attribution field is a compile error, not a column that silently stays null
+ * on every lead forever.
+ */
+export interface LeadWrite {
+  orgId: string;
+  customerId?: string | null;
+  contactId?: string | null;
+  fullName?: string | null;
+  handle?: string | null;
+  facebookName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status?: string;
+  notes?: string | null;
+  assignedUserId?: string | null;
+  fields?: Record<string, string>;
+  tags?: string[];
+
+  sourcePlatform?: string | null;
+  sourceAccountId?: string | null;
+  sourceAccountName?: string | null;
+  sourceWorkflowId?: string | null;
+  sourceWorkflowName?: string | null;
+  sourceCampaignId?: string | null;
+  sourceKeyword?: string | null;
+  sourceComment?: string | null;
+  sourceConversationId?: string | null;
+  sourceScope?: string | null;
+  sourcePostId?: string | null;
+  sourcePostThumbnail?: string | null;
+  sourcePostCaption?: string | null;
+  sourcePostUrl?: string | null;
+  sourcePostDate?: Date | null;
+}
+
 export interface WorkflowWrite {
   name?: string;
   description?: string | null;
@@ -36,6 +75,8 @@ export class AutomationRepository {
     private _run: PrismaRepository<'automationRun'>,
     private _binding: PrismaRepository<'automationPostBinding'>,
     private _integration: PrismaRepository<'integration'>,
+    private _lead: PrismaRepository<'automationLead'>,
+    private _leadActivity: PrismaRepository<'automationLeadActivity'>,
     private _tx: PrismaTransaction
   ) {}
 
@@ -454,6 +495,121 @@ export class AutomationRepository {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  // -------------------------------------------------------------------- leads
+
+  async createLead(data: LeadWrite) {
+    const { fields, tags, ...rest } = data;
+    const lead = await this._lead.model.automationLead.create({
+      data: {
+        ...rest,
+        orgId: data.orgId,
+        fields: JSON.stringify(fields ?? {}),
+        tags: JSON.stringify(tags ?? []),
+      },
+    });
+
+    // The timeline starts at creation, with the attribution written into the
+    // first entry so it survives even if someone later edits the lead record.
+    await this._leadActivity.model.automationLeadActivity.create({
+      data: {
+        leadId: lead.id,
+        kind: 'created',
+        summary: data.sourceWorkflowName
+          ? `Captured by “${data.sourceWorkflowName}”`
+          : 'Lead captured',
+        detail: [
+          data.sourceKeyword ? `Keyword: ${data.sourceKeyword}` : null,
+          data.sourcePostId ? `Post: ${data.sourcePostId}` : null,
+          data.sourcePlatform ? `Platform: ${data.sourcePlatform}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      },
+    });
+
+    return lead;
+  }
+
+  listLeads(
+    orgId: string,
+    filters: {
+      customerId?: string | null;
+      status?: string;
+      platform?: string;
+      workflowId?: string;
+      postId?: string;
+      assignedUserId?: string;
+      search?: string;
+    } = {}
+  ) {
+    return this._lead.model.automationLead.findMany({
+      where: {
+        orgId,
+        deletedAt: null,
+        ...(filters.customerId ? { customerId: filters.customerId } : {}),
+        ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(filters.platform ? { sourcePlatform: filters.platform } : {}),
+        ...(filters.workflowId ? { sourceWorkflowId: filters.workflowId } : {}),
+        ...(filters.postId ? { sourcePostId: filters.postId } : {}),
+        ...(filters.assignedUserId ? { assignedUserId: filters.assignedUserId } : {}),
+        ...(filters.search
+          ? {
+              OR: [
+                { fullName: { contains: filters.search, mode: 'insensitive' as const } },
+                { handle: { contains: filters.search, mode: 'insensitive' as const } },
+                { email: { contains: filters.search, mode: 'insensitive' as const } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: { customer: { select: { id: true, name: true } } },
+    });
+  }
+
+  getLead(orgId: string, id: string) {
+    return this._lead.model.automationLead.findFirst({
+      where: { id, orgId, deletedAt: null },
+      include: {
+        customer: { select: { id: true, name: true } },
+        activities: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+  }
+
+  async updateLead(orgId: string, id: string, patch: Record<string, any>, actorId?: string) {
+    const existing = await this._lead.model.automationLead.findFirst({
+      where: { id, orgId, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!existing) return null;
+
+    const updated = await this._lead.model.automationLead.update({
+      where: { id },
+      data: {
+        ...patch,
+        ...(patch.tags !== undefined ? { tags: JSON.stringify(patch.tags) } : {}),
+        ...(patch.fields !== undefined ? { fields: JSON.stringify(patch.fields) } : {}),
+      },
+    });
+
+    // A stage change is the event people audit; log it explicitly rather than
+    // leaving it as an undifferentiated "updated".
+    if (patch.status && patch.status !== existing.status) {
+      await this._leadActivity.model.automationLeadActivity.create({
+        data: {
+          leadId: id,
+          kind: 'stage_changed',
+          summary: `Moved from ${existing.status} to ${patch.status}`,
+          actorId: actorId ?? null,
+        },
+      });
+    }
+
+    return updated;
   }
 
   /** One integration, scoped to the org so an id from elsewhere cannot be read. */

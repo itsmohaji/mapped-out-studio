@@ -51,6 +51,7 @@ model Organization {
   automationWorkflows AutomationWorkflow[]
   automationContacts  AutomationContact[]
   automationEvents    AutomationEvent[]
+  automationLeads     AutomationLead[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -364,6 +365,7 @@ model Customer {
   campaigns           Campaign[]
   automationWorkflows AutomationWorkflow[]
   automationContacts  AutomationContact[]
+  automationLeads     AutomationLead[]
 
   @@unique([orgId, name, deletedAt])
 }
@@ -1442,4 +1444,92 @@ model AutomationPostBinding {
   @@unique([workflowId, postId])
   @@index([externalPostId])
   @@index([orgId])
+}
+
+/**
+ * Leads — the lightweight CRM behind the automation engine.
+ * A Lead is deliberately NOT the same row as AutomationContact. A contact is
+ * "a person we have spoken to on a channel"; a lead is "a commercial
+ * opportunity, captured at a moment in time, from a specific source". One
+ * contact can produce several leads months apart, and each must keep the
+ * attribution it was born with.
+ * ATTRIBUTION IS WRITTEN ONCE AND NEVER RECOMPUTED. The post can be deleted,
+ * the workflow renamed, the keyword changed, the account disconnected — the
+ * lead must still be able to say which post generated it a year later. That is
+ * why the post caption, thumbnail, URL and date are COPIED here rather than
+ * joined: a join answers "what does that post say now", which is the wrong
+ * question for attribution.
+ */
+model AutomationLead {
+  id         String  @id @default(uuid())
+  orgId      String
+  customerId String?
+  contactId  String?
+
+  fullName       String?
+  handle         String?
+  facebookName   String?
+  email          String?
+  phone          String?
+  // Pipeline stage. App-governed string, never a DB enum — see the note on
+  // AutomationWorkflow for why this project does not use enumerated checks.
+  status         String  @default("new")
+  tags           String  @default("[]")
+  notes          String?
+  assignedUserId String?
+  /**
+   * Everything the workflow collected, whatever the fields were named.
+   */
+  fields         String  @default("{}")
+
+  // --- Source attribution (immutable snapshot) ---
+  sourcePlatform       String?
+  sourceAccountId      String?
+  sourceAccountName    String?
+  sourceWorkflowId     String?
+  sourceWorkflowName   String?
+  sourceCampaignId     String?
+  sourceKeyword        String?
+  sourceComment        String?
+  sourceConversationId String?
+  /**
+   * 'all_posts' or 'specific_post' — how the automation was targeted.
+   */
+  sourceScope          String?
+  sourcePostId         String?
+  sourcePostThumbnail  String?
+  sourcePostCaption    String?
+  sourcePostUrl        String?
+  sourcePostDate       DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  organization Organization             @relation(fields: [orgId], references: [id])
+  customer     Customer?                @relation(fields: [customerId], references: [id])
+  activities   AutomationLeadActivity[]
+
+  @@index([orgId, status, deletedAt])
+  @@index([orgId, customerId, deletedAt])
+  @@index([orgId, sourceWorkflowId])
+  @@index([orgId, sourcePostId])
+  @@index([orgId, assignedUserId])
+}
+
+/**
+ * Append-only timeline. Nothing here is ever edited, only added.
+ */
+model AutomationLeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  kind      String
+  summary   String
+  detail    String?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  lead AutomationLead @relation(fields: [leadId], references: [id])
+
+  @@index([leadId, createdAt])
 }
