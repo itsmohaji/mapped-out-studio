@@ -1,3 +1,4 @@
+import { capabilitySpec } from './ai.capabilities';
 import {
   ENABLED_CAPABILITIES,
   SHARED_RULES,
@@ -73,13 +74,34 @@ describe('the no-invented-numbers rule', () => {
 });
 
 describe('enabled capabilities', () => {
-  it('turns on exactly the four this phase committed to', () => {
-    expect(Object.keys(ENABLED_CAPABILITIES).sort()).toEqual([
-      'analyze_account',
-      'content_ideas',
-      'performance_recos',
-      'write_captions',
-    ]);
+  it('every enabled capability has a real brief and output shape', () => {
+    // The invariant, rather than a snapshot of the list: a capability may only
+    // be switched on once it knows what it is producing. Before the registry,
+    // "monthly plan" and "campaign strategy" both ran the generic strategist
+    // and returned the same shapeless essay, which is why they stayed off.
+    for (const key of Object.keys(ENABLED_CAPABILITIES)) {
+      const spec = capabilitySpec(key);
+      expect({ key, hasSpec: !!spec }).toEqual({ key, hasSpec: true });
+      expect(spec!.brief.length).toBeGreaterThan(80);
+      expect(spec!.sections.length).toBeGreaterThan(1);
+    }
+  });
+
+  it('keeps image generation OFF until there is an image provider', () => {
+    // A beautiful card whose button refuses is worse than a card that says it
+    // is coming. Nano Banana is registered but reports itself unavailable.
+    expect(ENABLED_CAPABILITIES.generate_images).toBeUndefined();
+  });
+
+  it('the capability pipelines agree with the registry', () => {
+    // Two lists that must not drift: the registry draws the card, this decides
+    // what actually runs.
+    for (const [key, pipeline] of Object.entries(ENABLED_CAPABILITIES)) {
+      expect({ key, skills: pipeline }).toEqual({
+        key,
+        skills: capabilitySpec(key)!.skills,
+      });
+    }
   });
 
   it('every skill an enabled capability uses has a real instruction', () => {

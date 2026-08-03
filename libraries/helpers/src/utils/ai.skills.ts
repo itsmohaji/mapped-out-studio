@@ -178,6 +178,18 @@ export const ENABLED_CAPABILITIES: Record<string, string[]> = {
   content_ideas: ['creative_director', 'copywriter'],
   write_captions: ['copywriter', 'final_reviewer'],
   performance_recos: ['performance_analyst', 'final_reviewer'],
+  // These four were switched off because they had no brief of their own — they
+  // all ran the generic strategist and produced the same shapeless essay. Each
+  // now has a specific deliverable and output shape in ai.capabilities.ts, and
+  // a brief that forbids inventing the dates, offers and budgets they would
+  // otherwise be most tempted to fabricate.
+  monthly_plan: ['strategist', 'final_reviewer'],
+  campaign_strategy: ['strategist', 'final_reviewer'],
+  target_audience: ['analyst', 'strategist'],
+  recommend_budget: ['performance_analyst', 'final_reviewer'],
+  // generate_images stays OFF: it specifies visuals rather than rendering them,
+  // and there is still no image provider configured. A card whose button
+  // refuses is worse than a card that says it is coming.
 };
 
 /**

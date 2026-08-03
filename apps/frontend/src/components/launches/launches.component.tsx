@@ -81,7 +81,11 @@ interface MenuComponentInterface {
   collapsed: boolean;
   continueIntegration: (integration: Integration) => () => void;
   totalNonDisabledChannels: number;
-  mutate: (shouldReload?: boolean) => void;
+  // SWR's revalidate trigger. It was typed as `(shouldReload?: boolean)`,
+  // which is `update`'s signature, not this one — nothing ever passed it a
+  // boolean, and the wrong type only surfaced once the hook became properly
+  // typed.
+  mutate: () => void;
   update: (shouldReload: boolean) => void;
 }
 export const OpenClose: FC<{
@@ -369,12 +373,14 @@ export const LaunchesComponent = () => {
   const [mode] = useCookie('mode', 'dark');
   const { isLoading, data: integrations, mutate } = useIntegrationList();
 
-  const totalNonDisabledChannels = useMemo(() => {
-    return (
-      integrations?.filter((integration: any) => !integration.disabled)
-        ?.length || 0
-    );
-  }, [integrations]);
+  // `integrations` is guaranteed to be an array by useIntegrationList now, so
+  // the `?.` chain that used to be here is not just unnecessary — it was
+  // actively misleading, because it never protected against the shape that
+  // actually crashed this page.
+  const totalNonDisabledChannels = useMemo(
+    () => integrations.filter((integration: any) => !integration.disabled).length,
+    [integrations]
+  );
   const changeItemGroup = useCallback(
     async (id: string, group: string) => {
       mutate(

@@ -25,6 +25,7 @@ import {
   CalendarDisplay,
   groupPostsByBucket,
 } from '@gitroom/helpers/utils/calendar.buckets';
+import { asArray } from '@gitroom/helpers/utils/as.array';
 
 export type ListStateFilter =
   | 'all'
@@ -328,20 +329,28 @@ export const CalendarWeekProvider: FC<{
     []
   );
 
-  const posts = useMemo(() => calendarData?.posts || [], [calendarData?.posts]);
-  const comments = useMemo(() => calendarData?.comments || [], [calendarData?.comments]);
+  // `|| []` only catches null/undefined. A present-but-wrong value — an error
+  // envelope, a half-decoded payload — walked straight through and became a
+  // `.filter is not a function` several components away from the cause.
+  const posts = useMemo(() => asArray<any>(calendarData?.posts), [calendarData?.posts]);
+  const comments = useMemo(
+    () => asArray<any>(calendarData?.comments),
+    [calendarData?.comments]
+  );
 
   const byChannel = useCallback(
-    (list: any[]) =>
-      !channelIds.length
-        ? list
-        : list.filter((p: any) => channelIds.includes(p?.integration?.id)),
+    (list: any[]) => {
+      const safe = asArray<any>(list);
+      return !channelIds.length
+        ? safe
+        : safe.filter((p: any) => channelIds.includes(p?.integration?.id));
+    },
     [channelIds]
   );
 
   // List view data
   const listPosts = useMemo(
-    () => byChannel(listData?.posts || []),
+    () => byChannel(asArray<any>(listData?.posts)),
     [listData?.posts, byChannel]
   );
   const listTotal = listData?.total || 0;
@@ -418,7 +427,7 @@ export const CalendarWeekProvider: FC<{
       setFilters: setFiltersWrapper,
       changeDate,
       comments,
-      sets: sets || [],
+      sets: asArray<any>(sets),
       signature: sign,
       // List view specific
       listPosts,

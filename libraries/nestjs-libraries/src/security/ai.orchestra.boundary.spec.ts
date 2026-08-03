@@ -68,13 +68,36 @@ describe('AI Orchestra publishing boundary', () => {
   });
 
   it('a run returns content only — no post id, no schedule', () => {
-    // The success path returns the text and a description of the data it was
-    // based on. Nothing that could identify or reach a post.
-    expect(service).toContain(
-      'return { ok: true as const, output: carried, coverage }'
-    );
+    // Asserted by INTENT, not by the literal return statement: pinning the
+    // exact string made this fail the moment structured sections were added,
+    // which is a change to the shape of the CONTENT and not to the boundary.
+    //
+    // What must hold is that the success path returns the draft, the sections
+    // it was parsed into, and a description of the data it rested on — and
+    // nothing that could identify or reach a post.
+    const success = service.slice(service.indexOf('ok: true as const'));
+    expect(success).toContain('output: carried');
+    expect(success).toContain('coverage');
+
     for (const leak of ['postId', 'post.id', 'integrationId', 'publishDate']) {
       expect(codeOnly(service)).not.toContain(leak);
+    }
+  });
+
+  it('the run result carries no field that could reach a post', () => {
+    // Belt and braces on the same boundary: whatever the success object grows
+    // in future, these keys may never appear in it.
+    const success = codeOnly(service).slice(
+      codeOnly(service).indexOf('ok: true as const')
+    );
+    for (const forbidden of [
+      'integration',
+      'token',
+      'schedule(',
+      'publish',
+      'createPost',
+    ]) {
+      expect(success.toLowerCase()).not.toContain(forbidden.toLowerCase());
     }
   });
 });

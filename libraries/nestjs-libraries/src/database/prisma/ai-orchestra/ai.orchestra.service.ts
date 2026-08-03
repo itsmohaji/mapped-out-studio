@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   AiOrchestraRepository,
   BriefWrite,
@@ -20,6 +20,11 @@ import {
 import { AiGatewayService } from '@gitroom/nestjs-libraries/ai/ai.gateway.service';
 import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
 import { AiTask } from '@gitroom/nestjs-libraries/ai/ai.router';
+import {
+  capabilitySpec,
+  outputContract,
+  parseStructured,
+} from '@gitroom/helpers/utils/ai.capabilities';
 import {
   coverageOf,
   hasEnoughData,
@@ -57,6 +62,8 @@ const DEFAULT_ENTITLEMENT = { monthlyCredits: 200, monthlyImages: 20 };
 
 @Injectable()
 export class AiOrchestraService implements OnModuleInit {
+  private readonly _logger = new Logger(AiOrchestraService.name);
+
   constructor(
     private _repo: AiOrchestraRepository,
     private _context: AiContextService,
@@ -339,6 +346,20 @@ export class AiOrchestraService implements OnModuleInit {
 
     const contextBlock = renderContext(context);
 
+    // The capability's OWN brief and output shape. A skill knows how to think;
+    // the capability knows what is being asked for and what the answer has to
+    // look like. Without this, "monthly plan" and "campaign strategy" both ran
+    // the generic strategist and produced the same shapeless essay.
+    const spec = capabilitySpec(capabilityKey);
+    const brief = spec
+      ? [
+          '',
+          `THE DELIVERABLE:\n${spec.brief}`,
+          '',
+          outputContract(spec),
+        ].join('\n')
+      : '';
+
     const pipeline = skillPipeline(capability as any);
     let carried = '';
 
@@ -368,6 +389,7 @@ export class AiOrchestraService implements OnModuleInit {
           '',
           `REQUEST FROM THE OPERATOR:\n${input || '(none given)'}`,
           carried ? `\nDRAFT SO FAR (from a colleague):\n${carried}` : '',
+          brief,
         ].join('\n'),
         orgId,
         userId,
@@ -387,6 +409,24 @@ export class AiOrchestraService implements OnModuleInit {
     // Content only. Never a post id, never a schedule, never an integration.
     // `coverage` travels with it so the operator can see what the answer was
     // based on before they read the answer.
-    return { ok: true as const, output: carried, coverage };
+    //
+    // `structured` is parsed server-side so a malformed reply is caught in one
+    // place. It NEVER throws and never returns nothing — a model that ignores
+    // the contract still gets its text through, just as one plain section.
+    const structured = spec ? parseStructured(carried, spec) : null;
+    if (structured?.degraded) {
+      // Worth knowing: a model that keeps ignoring the contract is a routing
+      // problem, not a rendering one.
+      this._logger.log(
+        `ai: ${capabilityKey} returned unstructured output; rendered as plain text`
+      );
+    }
+
+    return {
+      ok: true as const,
+      output: carried,
+      sections: structured?.sections ?? [],
+      coverage,
+    };
   }
 }
