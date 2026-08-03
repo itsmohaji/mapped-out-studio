@@ -140,7 +140,7 @@ export const SettingsPopup: FC<{
           {tab === 'account' && <AccountComponent />}
 
           {tab === 'developer' && (
-            <ApiAndKeysComponent showAiKeys={isAdmin} showApi={showApiTab} />
+            <ApiAndKeysComponent showAiKeys={!!user?.isSuperAdmin} showApi={showApiTab} />
           )}
 
           {tab === 'notifications' && (

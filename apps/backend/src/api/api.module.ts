@@ -43,6 +43,7 @@ import { TasksController } from '@gitroom/backend/api/routes/tasks.controller';
 import { CampaignsController } from '@gitroom/backend/api/routes/campaigns.controller';
 import { AiOrchestraController } from '@gitroom/backend/api/routes/ai-orchestra.controller';
 import { AutomationController } from '@gitroom/backend/api/routes/automation.controller';
+import { AiProvidersController } from '@gitroom/backend/api/routes/ai-providers.controller';
 import { AutomationWebhookController } from '@gitroom/backend/api/routes/automation.webhook.controller';
 import { AuthProviderManager } from '@gitroom/backend/services/auth/providers/providers.manager';
 import { GithubProvider } from '@gitroom/backend/services/auth/providers/github.provider';
@@ -77,6 +78,7 @@ const authenticatedController = [
   CampaignsController,
   AiOrchestraController,
   AutomationController,
+  AiProvidersController,
 ];
 @Module({
   imports: [UploadModule],

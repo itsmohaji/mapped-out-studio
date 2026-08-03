@@ -55,6 +55,7 @@ import { AiContextService } from '@gitroom/nestjs-libraries/database/prisma/ai-o
 import { AiContextRepository } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.context.repository';
 import { AutomationRepository } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.repository';
 import { AutomationService } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.service';
+import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
 
 @Global()
 @Module({
@@ -119,6 +120,7 @@ import { AutomationService } from '@gitroom/nestjs-libraries/database/prisma/aut
     AiContextRepository,
     AutomationRepository,
     AutomationService,
+    AiProvidersService,
   ],
   get exports() {
     return this.providers;

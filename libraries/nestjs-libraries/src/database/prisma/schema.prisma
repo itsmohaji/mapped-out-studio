@@ -1533,3 +1533,78 @@ model AutomationLeadActivity {
 
   @@index([leadId, createdAt])
 }
+
+/**
+ * A configured AI provider.
+ * PLATFORM-LEVEL, not per organisation: providers are the platform owner's
+ * commercial arrangement, and a client must never see that they exist. Clients
+ * see credits (AiEntitlement); only the owner sees keys, endpoints and costs.
+ * `apiKey` holds ciphertext, never plaintext, and is never returned by any API
+ * — only its last four characters ever leave the server.
+ */
+model AiProviderConfig {
+  id       String  @id @default(uuid())
+  /**
+   * Registry key: openai, anthropic, groq, custom …
+   */
+  provider String  @unique
+  enabled  Boolean @default(false)
+  /**
+   * Lower runs first. Breaks ties the task preference list does not.
+   */
+  priority Int     @default(10)
+
+  /**
+   * Encrypted at rest.
+   */
+  apiKey   String?
+  endpoint String?
+  orgId    String?
+  /**
+   * JSON array of model names; empty falls back to the registry default.
+   */
+  models   String  @default("[]")
+
+  /**
+   * 'unknown' | 'ok' | 'error' — only 'error' takes a provider out of routing.
+   */
+  health        String    @default("unknown")
+  healthMessage String?
+  healthAt      DateTime?
+
+  /**
+   * Soft rate limits, enforced by the caller rather than the provider.
+   */
+  rpmLimit    Int?
+  dailyTokens Int?
+
+  /**
+   * Running totals. Cheap to keep, and the only cost signal we have.
+   */
+  usedTokens   Int   @default(0)
+  usedRequests Int   @default(0)
+  usedCostUsd  Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, priority])
+}
+
+/**
+ * Append-only audit of who touched a provider secret.
+ * Deliberately has no update or delete path: the point of a key audit is that
+ * it cannot be tidied up afterwards.
+ */
+model AiProviderAudit {
+  id        String   @id @default(uuid())
+  provider  String
+  action    String
+  actorId   String?
+  actorName String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@index([createdAt])
+}
