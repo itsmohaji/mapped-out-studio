@@ -1,12 +1,10 @@
 'use client';
-import dayjs, { ConfigType } from 'dayjs';
+import { ConfigType } from 'dayjs';
 import { FC, useEffect } from 'react';
-import timezone from 'dayjs/plugin/timezone';
-import utc from 'dayjs/plugin/utc';
-import relativeTime from 'dayjs/plugin/relativeTime';
-dayjs.extend(timezone);
-dayjs.extend(utc);
-dayjs.extend(relativeTime);
+// Every plugin the frontend uses, registered in one place. Importing this here
+// means the whole app inherits them: most components already reach dayjs
+// through `newDayjs` below.
+import dayjs from '@gitroom/frontend/components/layout/dayjs.setup';
 
 const { utc: originalUtc } = dayjs;
 

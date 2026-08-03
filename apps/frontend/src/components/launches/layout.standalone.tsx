@@ -4,8 +4,7 @@ import { ReactNode, useMemo } from 'react';
 import { PreviewWrapper } from '@gitroom/frontend/components/preview/preview.wrapper';
 import { usePathname } from 'next/navigation';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-dayjs.extend(utc);
+import '@gitroom/frontend/components/layout/dayjs.setup';
 export const AppLayout = ({ children }: { children: ReactNode }) => {
   const params = usePathname();
   const style = useMemo(() => {

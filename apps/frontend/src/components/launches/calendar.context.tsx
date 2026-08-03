@@ -12,19 +12,19 @@ import {
   useState,
 } from 'react';
 import dayjs from 'dayjs';
+import '@gitroom/frontend/components/layout/dayjs.setup';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Post, Integration, Tags } from '@prisma/client';
 import { useSearchParams } from 'next/navigation';
-import isoWeek from 'dayjs/plugin/isoWeek';
-import weekOfYear from 'dayjs/plugin/weekOfYear';
-import { extend } from 'dayjs';
 import useCookie from 'react-use-cookie';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { expandPostsList, expandPosts } from '@gitroom/helpers/utils/posts.list.minify';
-extend(isoWeek);
-extend(weekOfYear);
+import {
+  CalendarDisplay,
+  groupPostsByBucket,
+} from '@gitroom/helpers/utils/calendar.buckets';
 
 export type ListStateFilter =
   | 'all'
@@ -61,6 +61,9 @@ export const CalendarContext = createContext({
       }[];
     }
   >,
+  // Posts pre-grouped into their calendar cells. A cell does an O(1) lookup
+  // instead of scanning the whole list for itself.
+  postBuckets: new Map<string, any[]>(),
   reloadCalendarView: () => {
     /** empty **/
   },
@@ -358,7 +361,10 @@ export const CalendarWeekProvider: FC<{
         })
       );
     },
-    [posts, internalData]
+    // Deliberately empty: the body is a functional setState and reads nothing
+    // from scope. It used to list [posts, internalData], which gave it a new
+    // identity on every fetch and re-rendered all 168 week cells for nothing.
+    []
   );
 
   useEffect(() => {
@@ -376,32 +382,80 @@ export const CalendarWeekProvider: FC<{
   // Determine loading state based on current view
   const loading = filters.display === 'list' ? listIsLoading : calendarIsLoading;
 
+  const visiblePosts = useMemo(
+    () => (calendarIsLoading ? [] : byChannel(internalData)),
+    [calendarIsLoading, byChannel, internalData]
+  );
+
+  // Grouped ONCE here instead of each of the 168 week cells filtering the whole
+  // post list for itself. That was O(cells x posts) on every single render.
+  const postBuckets = useMemo(
+    () => groupPostsByBucket(visiblePosts, filters.display as CalendarDisplay),
+    [visiblePosts, filters.display]
+  );
+
+  /**
+   * The context value MUST be memoised.
+   *
+   * It was an inline object literal, so every render of this provider produced
+   * a new identity — and a new context identity re-renders every consumer no
+   * matter how well it is memo()'d. With 168 cells consuming it, the 2-minute
+   * `nowTick` alone re-rendered the entire calendar, and so did every keystroke
+   * that touched provider state. This is the single biggest cause of the
+   * calendar feeling slow on an iPad.
+   */
+  const value = useMemo(
+    () => ({
+      trendings,
+      reloadCalendarView,
+      ...filters,
+      posts: visiblePosts,
+      postBuckets,
+      loading,
+      integrations,
+      channelIds,
+      setChannelIds,
+      setFilters: setFiltersWrapper,
+      changeDate,
+      comments,
+      sets: sets || [],
+      signature: sign,
+      // List view specific
+      listPosts,
+      listPage,
+      listTotalPages,
+      setListPage,
+      listState,
+      setListState,
+      nowTick,
+    }),
+    [
+      trendings,
+      reloadCalendarView,
+      filters,
+      visiblePosts,
+      postBuckets,
+      loading,
+      integrations,
+      channelIds,
+      setChannelIds,
+      setFiltersWrapper,
+      changeDate,
+      comments,
+      sets,
+      sign,
+      listPosts,
+      listPage,
+      listTotalPages,
+      setListPage,
+      listState,
+      setListState,
+      nowTick,
+    ]
+  );
+
   return (
-    <CalendarContext.Provider
-      value={{
-        trendings,
-        reloadCalendarView,
-        ...filters,
-        posts: calendarIsLoading ? [] : byChannel(internalData),
-        loading,
-        integrations,
-        channelIds,
-        setChannelIds,
-        setFilters: setFiltersWrapper,
-        changeDate,
-        comments,
-        sets: sets || [],
-        signature: sign,
-        // List view specific
-        listPosts,
-        listPage,
-        listTotalPages,
-        setListPage,
-        listState,
-        setListState,
-        nowTick,
-      }}
-    >
+    <CalendarContext.Provider value={value}>
       {children}
     </CalendarContext.Provider>
   );

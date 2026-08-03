@@ -3,6 +3,7 @@
 import { useCalendar, ListStateFilter } from '@gitroom/frontend/components/launches/calendar.context';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
+import '@gitroom/frontend/components/layout/dayjs.setup';
 import { useCallback } from 'react';
 import { SelectCustomer } from '@gitroom/frontend/components/launches/select.customer';
 import { ChannelFilter } from '@gitroom/frontend/components/launches/channel.filter';

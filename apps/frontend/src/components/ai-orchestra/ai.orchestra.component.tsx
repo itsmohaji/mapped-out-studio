@@ -9,6 +9,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
+import { AsyncBoundary } from '@gitroom/frontend/components/ui/async.boundary';
 
 interface Capability {
   key: string;
@@ -194,7 +195,7 @@ const AdminConsole: FC = () => {
   const fetch = useFetch();
   const toast = useToaster();
   const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
-  const { data, mutate } = useSWR('/ai-orchestra/admin/overview', load, {
+  const { data, mutate, error, isLoading } = useSWR('/ai-orchestra/admin/overview', load, {
     revalidateOnFocus: false,
   });
 
@@ -224,7 +225,20 @@ const AdminConsole: FC = () => {
     mutate();
   }, [credits, images, mutate, t]);
 
-  if (!data) return null;
+  // Was `if (!data) return null` — a failed fetch rendered a permanently blank
+  // page with no error and no retry, which reads as the feature being broken.
+  if (isLoading || error || !data) {
+    return (
+      <AsyncBoundary
+        isLoading={isLoading}
+        error={error}
+        data={data}
+        onRetry={() => mutate()}
+      >
+        <div />
+      </AsyncBoundary>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-[16px]">

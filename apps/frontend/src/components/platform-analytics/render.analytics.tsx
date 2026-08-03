@@ -207,7 +207,7 @@ const METRIC_ORDER: Array<[string, string]> = [
   ['saved', 'Saves'],
 ];
 
-const TopPosts: FC<{ integration: Integration; date: number }> = ({
+const TopPosts: FC<{ integration: { id: string }; date: number }> = ({
   integration,
   date,
 }) => {
@@ -279,7 +279,9 @@ const TopPosts: FC<{ integration: Integration; date: number }> = ({
 };
 
 export const RenderAnalytics: FC<{
-  integration: Integration;
+  // Only `id` is ever read. This used to demand the whole Prisma `Integration`
+  // row, so any caller holding a narrower view of a channel could not pass it.
+  integration: { id: string };
   date: number;
 }> = (props) => {
   const { integration, date } = props;

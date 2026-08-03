@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, useCallback, useMemo, useState } from 'react';
+import React, { FC, useCallback, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -71,9 +71,26 @@ export const BuilderView: FC<{
   const [issues, setIssues] = useState<{ level: string; message: string }[]>([]);
   const [seeded, setSeeded] = useState('');
 
-  const { data, mutate } = useSWR(`/automation/${workflowId}`, async (url: string) =>
-    (await fetchApi(url)).json()
+  // An EDITOR must never have the document swapped under the user. SWR
+  // revalidates on focus by default, which on an iPad means every app switch
+  // refetched the workflow and re-seeded the canvas — silently discarding any
+  // block added since the last save. Reloads happen explicitly, via mutate().
+  const { data, mutate } = useSWR(
+    `/automation/${workflowId}`,
+    async (url: string) => (await fetchApi(url)).json(),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
   );
+
+  // True from the first local edit until a save completes. While it is set, a
+  // server payload is NEVER allowed to overwrite the canvas.
+  const dirty = useRef(false);
+  const markDirty = useCallback(() => {
+    dirty.current = true;
+  }, []);
 
   const { data: stats } = useSWR(
     `/automation/stats?workflow=${workflowId}`,
@@ -83,7 +100,11 @@ export const BuilderView: FC<{
   // Seed once the saved workflow arrives. Nodes collapse back into cards; a
   // workflow saved before blocks existed still reopens as editable steps.
   const seedKey = `${data?.id}:${data?.nodes?.length ?? 0}:${data?.updatedAt ?? ''}`;
-  if (data?.id && seedKey !== seeded) {
+  // `!dirty.current` is the load-bearing part. Re-seeding on any change of
+  // updatedAt is what made edits vanish: a save bumps updatedAt, and so does
+  // any other refetch, so an in-flight response could land on top of work the
+  // user had not saved yet.
+  if (data?.id && seedKey !== seeded && !dirty.current) {
     setSeeded(seedKey);
     setBlocks(
       collapseNodes(
@@ -111,20 +132,23 @@ export const BuilderView: FC<{
   );
 
   const addBlock = (kind: BlockKind, atIndex: number) => {
+    markDirty();
     const block: Block = { id: uid(), kind, config: {} };
     setBlocks((all) => [...all.slice(0, atIndex), block, ...all.slice(atIndex)]);
     setSelectedId(block.id);
     setTriggerOpen(false);
   };
 
-  const move = (i: number, dir: -1 | 1) =>
-    setBlocks((all) => {
+  const move = (i: number, dir: -1 | 1) => {
+    markDirty();
+    return setBlocks((all) => {
       const next = [...all];
       const j = i + dir;
       if (j < 0 || j >= next.length) return all;
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+  };
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -148,6 +172,9 @@ export const BuilderView: FC<{
 
       const check = await (await fetchApi(`/automation/${workflowId}/validate`)).json();
       setIssues(check ?? []);
+      // Cleared only after the writes succeeded. On failure it stays set, so a
+      // refetch cannot overwrite work that is not on the server yet.
+      dirty.current = false;
       await mutate();
       toast.show('Saved', 'success');
     } catch {
@@ -247,6 +274,7 @@ export const BuilderView: FC<{
             }}
             onAdd={addBlock}
             onRemove={(id) => {
+              markDirty();
               setBlocks((all) => all.filter((b) => b.id !== id));
               if (selectedId === id) setSelectedId(null);
             }}
@@ -268,24 +296,35 @@ export const BuilderView: FC<{
                   scope={scope}
                   selectedPostIds={postIds}
                   integrationId={account.integrationId}
-                  onScope={setScope}
-                  onToggle={(id) =>
+                  onScope={(next) => {
+                    markDirty();
+                    setScope(next);
+                  }}
+                  onToggle={(id) => {
+                    markDirty();
                     setPostIds((ids) =>
                       ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]
-                    )
-                  }
+                    );
+                  }}
                 />
-                <KeywordBuilder value={keywords} onChange={setKeywords} />
+                <KeywordBuilder
+                  value={keywords}
+                  onChange={(next) => {
+                    markDirty();
+                    setKeywords(next);
+                  }}
+                />
               </div>
             </div>
           ) : (
             <BlockInspector
               block={selected}
-              onChange={(config) =>
+              onChange={(config) => {
+                markDirty();
                 setBlocks((all) =>
                   all.map((b) => (b.id === selectedId ? { ...b, config } : b))
-                )
-              }
+                );
+              }}
             />
           )}
         </Glass>

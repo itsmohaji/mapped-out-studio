@@ -10,8 +10,7 @@ const dateMetrics = [
 ];
 
 import dayjs from 'dayjs';
-import timezone from 'dayjs/plugin/timezone';
-dayjs.extend(timezone);
+import '@gitroom/frontend/components/layout/dayjs.setup';
 
 const MetricComponent = () => {
   const [currentMetric, setCurrentMetric] = useState(isUSCitizen());

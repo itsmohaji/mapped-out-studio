@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { useAnalyticsChannels } from '@gitroom/frontend/components/platform-analytics/use.analytics.channels';
 import { useCallback, useMemo, useState } from 'react';
 import { capitalize, orderBy } from 'lodash';
 import clsx from 'clsx';
@@ -40,33 +41,10 @@ export const PlatformAnalytics = () => {
   const [refresh, setRefresh] = useState(false);
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
   const toaster = useToaster();
-  const load = useCallback(async () => {
-    const int = (
-      await (await fetch('/integrations/list')).json()
-    ).integrations.filter((f: any) => {
-      if (f.identifier === 'x' && disableXAnalytics) {
-        return false;
-      }
-      return true;
-    });
-    return int.filter((f: any) => allowedIntegrations.includes(f.identifier));
-  }, []);
-  const { data, isLoading } = useSWR('analytics-list', load, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-    fallbackData: [],
-  });
-  const sortedIntegrations = useMemo(() => {
-    return orderBy(
-      data,
-      ['type', 'disabled', 'identifier'],
-      ['desc', 'asc', 'asc']
-    );
-  }, [data]);
+  // Shared with the Overview tab: one request, one definition of which
+  // channels report analytics, already sorted and de-duplicated.
+  const { data, isLoading } = useAnalyticsChannels();
+  const sortedIntegrations = data ?? [];
   const currentIntegration = useMemo(() => {
     return sortedIntegrations[current];
   }, [current, sortedIntegrations]);

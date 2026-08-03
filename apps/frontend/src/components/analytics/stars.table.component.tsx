@@ -11,6 +11,7 @@ import {
 import { UtcToLocalDateRender } from '@gitroom/react/helpers/utc.date.render';
 import { Button } from '@gitroom/react/form/button';
 import dayjs from 'dayjs';
+import '@gitroom/frontend/components/layout/dayjs.setup';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';

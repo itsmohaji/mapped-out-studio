@@ -2,8 +2,7 @@
 
 import { FC } from 'react';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-dayjs.extend(utc);
+import '@gitroom/frontend/components/layout/dayjs.setup';
 
 export const RenderPreviewDate: FC<{ date: string }> = ({ date }) => {
   console.log(date);

@@ -110,9 +110,32 @@ export const LeadsComponent: FC = () => {
     return p.toString();
   }, [filters]);
 
+  /**
+   * Leads arrive from OUTSIDE the browser: an Instagram comment fires a webhook,
+   * the automation engine runs server-side and writes the lead. An open Leads
+   * page has no way to hear about that, so with SWR's defaults it sat stale
+   * until the user reloaded.
+   *
+   * Polling rather than a push channel is a deliberate trade. A real SSE
+   * endpoint is the better architecture and is the follow-up, but it needs
+   * per-tab connection handling and adds a persistent connection per open tab
+   * to a VPS that is already the documented bottleneck. A 15s poll on one
+   * screen delivers the actual requirement — a lead shows up on its own,
+   * within seconds — at a fraction of the risk.
+   */
   const { data: leads, isLoading, mutate } = useSWR<Lead[]>(
     `/automation/leads${query ? `?${query}` : ''}`,
-    async (url: string) => (await fetchApi(url)).json()
+    async (url: string) => (await fetchApi(url)).json(),
+    {
+      refreshInterval: 15000,
+      // Coming back to the tab should never show a stale board.
+      revalidateOnFocus: true,
+      // Nothing is gained by polling a screen nobody is looking at, and on an
+      // iPad a background timer is battery the user notices.
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      keepPreviousData: true,
+    }
   );
 
   const { data: customers } = useSWR<{ id: string; name: string }[]>(

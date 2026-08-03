@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { useAnalyticsChannels } from '@gitroom/frontend/components/platform-analytics/use.analytics.channels';
 import { useCallback, useMemo, useState } from 'react';
 import { orderBy } from 'lodash';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -139,11 +140,12 @@ export const AnalyticsOverview = () => {
   const t = useT();
   const { disableXAnalytics } = useVariables();
   const [date, setDate] = useState(7);
+  const { data: channels } = useAnalyticsChannels();
 
   const load = useCallback(async (): Promise<ChannelBlock[]> => {
-    const list = (await (await fetch('/integrations/list')).json()).integrations
-      .filter((f: any) => !(f.identifier === 'x' && disableXAnalytics))
-      .filter((f: any) => allowedIntegrations.includes(f.identifier));
+    // Channel list comes from the shared hook's cache — the same entry the
+    // By-channel tab uses, so opening Analytics fetches it once, not twice.
+    const list = channels ?? [];
 
     return Promise.all(
       orderBy(list, ['disabled'], ['asc']).map(async (integration: any) => {
@@ -158,13 +160,17 @@ export const AnalyticsOverview = () => {
         }
       })
     );
-  }, [date, disableXAnalytics]);
+  }, [date, channels]);
 
-  const { data: blocks, isLoading } = useSWR(`overview-analytics-${date}`, load, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    fallbackData: [],
-  });
+  const { data: blocks, isLoading } = useSWR(
+    channels ? `overview-analytics-${date}-${channels.length}` : null,
+    load,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      fallbackData: [],
+    }
+  );
 
   const totals = useMemo(() => {
     const channels = blocks?.length || 0;

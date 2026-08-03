@@ -7,14 +7,13 @@ import SafeImage from '@gitroom/react/helpers/safe.image';
 import Link from 'next/link';
 import { CommentsComponents } from '@gitroom/frontend/components/preview/comments.components';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+import '@gitroom/frontend/components/layout/dayjs.setup';
 import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
 import { CopyClient } from '@gitroom/frontend/components/preview/copy.client';
 import { getT } from '@gitroom/react/translation/get.translation.service.backend';
 import { RenderPreviewDateClient } from '@gitroom/frontend/components/preview/render.preview.date.client';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 
-dayjs.extend(utc);
 export const metadata: Metadata = {
   title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Preview`,
   description: '',

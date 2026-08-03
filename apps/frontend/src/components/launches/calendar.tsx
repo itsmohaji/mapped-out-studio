@@ -39,8 +39,6 @@ import { Integration, Post, State, Tags } from '@prisma/client';
 import { useAddProvider } from '@gitroom/frontend/components/launches/add.provider.component';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { groupBy, random, sortBy } from 'lodash';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { extend } from 'dayjs';
@@ -56,12 +54,18 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import copy from 'copy-to-clipboard';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { firstMediaPath } from '@gitroom/helpers/utils/post.media';
+import {
+  CalendarDisplay,
+  postsInBucket,
+} from '@gitroom/helpers/utils/calendar.buckets';
+import '@gitroom/frontend/components/layout/dayjs.setup';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { Button } from '@gitroom/react/form/button';
 
-// Extend dayjs with necessary plugins
-extend(isSameOrAfter);
-extend(isSameOrBefore);
+// Plugins come from the single setup module. This file used to register
+// isSameOrAfter/isSameOrBefore itself while ALSO calling `.isoWeekday()` in
+// month view — a method it never registered, which only worked because
+// calendar.context.tsx happened to load first.
 extend(localizedFormat);
 
 // Initialize language
@@ -358,6 +362,22 @@ export const WeekView = () => {
     return days;
   }, [i18next.resolvedLanguage, startDate]);
 
+  // The 168 cell dates, built once per week. Previously each cell's date was
+  // constructed inline during render, which gave CalendarColumn a brand-new
+  // `getDate` object every time and defeated its memo() entirely — so a single
+  // provider update re-rendered all 168 cells.
+  const cells = useMemo(
+    () =>
+      hours.map((hour) => ({
+        hour,
+        days: localizedDays.map((day) => ({
+          key: `${startDate}-${day.date.format('YYYY-MM-DD')}-${hour}`,
+          date: day.date.hour(hour).startOf('hour'),
+        })),
+      })),
+    [localizedDays, startDate]
+  );
+
   return (
     <div className="flex flex-col text-textColor flex-1">
       <div className="flex-1 relative">
@@ -385,19 +405,15 @@ export const WeekView = () => {
               </div>
             </div>
           ))}
-          {hours.map((hour) => (
-            <Fragment key={hour}>
+          {cells.map((row) => (
+            <Fragment key={row.hour}>
               <div className="p-2 pe-4 text-center items-center justify-center flex text-[14px] text-newTableText">
-                {convertTimeFormatBasedOnLocality(hour)}
+                {convertTimeFormatBasedOnLocality(row.hour)}
               </div>
-              {localizedDays.map((day, indexDay) => (
-                <Fragment
-                  key={`${startDate}-${day.date.format('YYYY-MM-DD')}-${hour}`}
-                >
+              {row.days.map((cell) => (
+                <Fragment key={cell.key}>
                   <div className="relative">
-                    <CalendarColumn
-                      getDate={day.date.hour(hour).startOf('hour')}
-                    />
+                    <CalendarColumn getDate={cell.date} />
                   </div>
                 </Fragment>
               ))}
@@ -449,6 +465,10 @@ export const MonthView = () => {
       calendarDays.push({
         day: currentDay,
         label,
+        // Precomputed so the identity is stable across renders. Building this
+        // inline in the JSX gave CalendarColumn a new `getDate` every render
+        // and defeated its memo().
+        cellDate: currentDay.endOf('day'),
       });
 
       // Move to the next day
@@ -469,15 +489,12 @@ export const MonthView = () => {
               <div>{day}</div>
             </div>
           ))}
-          {calendarDays.map((date, index) => (
+          {calendarDays.map((date) => (
             <div
-              key={index}
+              key={date.cellDate.valueOf()}
               className="text-center items-center justify-center flex"
             >
-              <CalendarColumn
-                getDate={newDayjs(date.day).endOf('day')}
-                randomHour={true}
-              />
+              <CalendarColumn getDate={date.cellDate} randomHour={true} />
             </div>
           ))}
         </div>
@@ -593,6 +610,7 @@ export const CalendarColumn: FC<{
   const {
     integrations,
     posts,
+    postBuckets,
     changeDate,
     display,
     reloadCalendarView,
@@ -607,20 +625,13 @@ export const CalendarColumn: FC<{
 
   // Use shared post actions hook
   const { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease } = usePostActions();
-  const postList = useMemo(() => {
-    return posts.filter((post) => {
-      const pList = dayjs.utc(post.publishDate).local();
-      const check =
-        display === 'day'
-          ? pList.format('YYYY-MM-DD HH:mm') ===
-            getDate.format('YYYY-MM-DD HH:mm')
-          : display === 'week'
-          ? pList.isSameOrAfter(getDate.startOf('hour')) &&
-            pList.isBefore(getDate.endOf('hour'))
-          : pList.format('DD/MM/YYYY') === getDate.format('DD/MM/YYYY');
-      return check;
-    });
-  }, [posts, display, getDate]);
+  // O(1) lookup into the buckets the provider built in one pass. This used to
+  // filter the ENTIRE post list here, in every one of the 168 week cells, on
+  // every render.
+  const postList = useMemo(
+    () => postsInBucket(postBuckets, getDate, display as CalendarDisplay),
+    [postBuckets, getDate, display]
+  );
   const [showAll, setShowAll] = useState(false);
   const showAllFunc = useCallback(() => {
     setShowAll(true);
