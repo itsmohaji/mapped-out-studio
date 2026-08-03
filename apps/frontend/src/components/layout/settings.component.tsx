@@ -9,6 +9,7 @@ import { LogoutComponent } from '@gitroom/frontend/components/layout/logout.comp
 import { useSearchParams } from 'next/navigation';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import ApiAndKeysComponent from '@gitroom/frontend/components/settings/api-and-keys.component';
+import { AiProvidersComponent } from '@gitroom/frontend/components/settings/ai-providers.component';
 import Link from 'next/link';
 import { Webhooks } from '@gitroom/frontend/components/webhooks/webhooks';
 import { Sets } from '@gitroom/frontend/components/sets/sets';
@@ -31,6 +32,12 @@ export const SettingsPopup: FC<{
   const url = useSearchParams();
   const showLogout = !url.get('onboarding') || user?.tier?.current === 'FREE';
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  // AI Providers is owner-only. `user.admin` is the PLATFORM flag as exposed by
+  // /user/self (the raw column is isSuperAdmin, renamed on the way out); the org
+  // SUPERADMIN role is the owner on a self-hosted install, where that platform
+  // flag is never set. Checking only the platform flag hid the page from the
+  // actual owner. ADMIN is deliberately excluded — agency staff must not see keys.
+  const isOwner = user?.role === 'SUPERADMIN' || !!(user as any)?.admin;
   const showApiTab = !!(user?.tier?.public_api && isGeneral && showLogout);
   const paid = user?.tier?.current !== 'FREE';
 
@@ -86,8 +93,10 @@ export const SettingsPopup: FC<{
       { tab: 'notifications', label: t('notifications', 'Notifications') },
       { tab: 'integrations', label: t('integrations', 'Integrations') },
     ];
-    // AI provider keys + public API / developers, together in one section
-    if (isAdmin || showApiTab) {
+    if (isOwner) {
+      arr.push({ tab: 'ai_providers', label: t('ai_providers', 'AI Providers') });
+    }
+    if (showApiTab) {
       arr.push({ tab: 'developer', label: t('api_and_keys', 'API & Keys') });
     }
     arr.push({ tab: 'general', label: t('general', 'General') });
@@ -98,7 +107,7 @@ export const SettingsPopup: FC<{
       arr.push({ tab: 'teams', label: t('teams', 'Teams') });
     }
     return arr;
-  }, [user, isGeneral, isAdmin, showApiTab, automationTabs, t]);
+  }, [user, isGeneral, isOwner, showApiTab, automationTabs, t]);
 
   return (
     // One card, two halves — so the panel gap between page-level siblings
@@ -139,8 +148,9 @@ export const SettingsPopup: FC<{
         <div className="w-full mx-auto gap-[24px] flex flex-col relative">
           {tab === 'account' && <AccountComponent />}
 
+          {tab === 'ai_providers' && isOwner && <AiProvidersComponent />}
           {tab === 'developer' && (
-            <ApiAndKeysComponent showAiKeys={!!user?.isSuperAdmin} showApi={showApiTab} />
+            <ApiAndKeysComponent showAiKeys={false} showApi={showApiTab} />
           )}
 
           {tab === 'notifications' && (

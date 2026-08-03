@@ -9,47 +9,42 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
+import { OrgRoles } from '@gitroom/backend/services/auth/permissions/roles.guard';
 import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
 
 /**
- * AI Providers — platform owner only.
+ * AI Providers — owner only.
  *
- * Every route here is super-admin gated. Providers, keys, endpoints and costs
- * are the operator's commercial arrangement; a client must never learn that
- * they exist, let alone which one served their request. Clients see credits.
+ * Gated with @OrgRoles(SUPERADMIN), which the global RolesGuard enforces for
+ * every route on the controller. The guard already lets a platform
+ * User.isSuperAdmin through as a bypass.
  *
- * The gate is repeated per route rather than hidden in a decorator so that a
- * new route cannot be added without visibly deciding who may call it.
+ * Gating on User.isSuperAdmin ALONE was wrong and made this page unreachable:
+ * that flag is for a multi-tenant platform operator and is never set on a
+ * self-hosted install, where the org SUPERADMIN *is* the owner. ADMIN, USER and
+ * CLIENT are still excluded, so agency staff and clients never see keys.
  */
 @ApiTags('AI Providers')
+@OrgRoles(Role.SUPERADMIN)
 @Controller('/ai-providers')
 export class AiProvidersController {
   constructor(private _providers: AiProvidersService) {}
 
-  private assertOwner(user: User) {
-    if (!user?.isSuperAdmin) {
-      throw new ForbiddenException();
-    }
-  }
-
   @Get('/')
   async list(@GetUserFromRequest() user: User) {
-    this.assertOwner(user);
     return this._providers.list();
   }
 
   /** Which provider each task will actually use, and why. */
   @Get('/routing')
   async routing(@GetUserFromRequest() user: User) {
-    this.assertOwner(user);
     return this._providers.routing();
   }
 
   @Get('/audit')
   async audit(@GetUserFromRequest() user: User, @Query('take') take?: string) {
-    this.assertOwner(user);
     return this._providers.auditLog(Math.min(Number(take) || 100, 300));
   }
 
@@ -59,7 +54,6 @@ export class AiProvidersController {
     @Param('provider') provider: string,
     @Body() body: any
   ) {
-    this.assertOwner(user);
     const saved = await this._providers.upsert(provider, body ?? {}, {
       id: user.id,
       name: user.name || user.email,
@@ -76,7 +70,6 @@ export class AiProvidersController {
     @Param('provider') provider: string,
     @Body() body: { apiKey?: string }
   ) {
-    this.assertOwner(user);
     return this._providers.test(provider, body?.apiKey, {
       id: user.id,
       name: user.name || user.email,
