@@ -28,6 +28,19 @@ export class AiContextService {
     return this._repo.customers(orgId);
   }
 
+  /**
+   * The brand brief alone — this client's, else the workspace default, else
+   * none.
+   *
+   * Exposed separately from `build` because a caption does not need live
+   * analytics: `build` calls every connected channel's stats API, which is
+   * seconds of latency for a button that should feel instant. The brief is one
+   * query and is the only part of the context a caption actually uses.
+   */
+  brief(orgId: string, customerId?: string | null) {
+    return this._repo.briefFor(orgId, customerId);
+  }
+
   static normaliseTimeframe(days?: number | null): number {
     const n = Number(days);
     return ALLOWED_TIMEFRAMES.includes(n) ? n : DEFAULT_TIMEFRAME_DAYS;

@@ -94,6 +94,29 @@ describe('routeTask', () => {
     expect(res.provider).toBe('gemini');
   });
 
+  // Media understanding is the whole point of asking for `vision` separately.
+  // Groq is text-only, so a Groq-only workspace must LOSE this task rather than
+  // quietly answer it blind — the caller then falls back to a text-only prompt
+  // knowingly, instead of shipping a caption about an image nothing looked at.
+  it('never routes vision to a text-only provider', () => {
+    const res = routeTask('vision', [p({ key: 'groq' })]);
+    expect(res.provider).toBeNull();
+    expect(res.reason).toMatch(/needs vision/i);
+  });
+
+  it('routes vision to a provider that can actually see', () => {
+    expect(
+      routeTask('vision', [p({ key: 'groq' }), p({ key: 'gemini' })]).provider
+    ).toBe('gemini');
+    expect(routeTask('vision', [p({ key: 'anthropic' })]).provider).toBe('anthropic');
+  });
+
+  it('still routes the plain caption task on a Groq-only workspace', () => {
+    // The text path must survive the vision path failing, or attaching an image
+    // would break captions entirely.
+    expect(routeTask('caption', [p({ key: 'groq' })]).provider).toBe('groq');
+  });
+
   it('distinguishes "nothing configured" from "nothing capable"', () => {
     expect(routeTask('caption', []).reason).toMatch(/no ai provider is enabled/i);
     expect(routeTask('image', [p({ key: 'groq' })]).reason).toMatch(/needs image/i);

@@ -6,12 +6,7 @@ import {
   SkillWrite,
 } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.orchestra.repository';
 import {
-  getProvider,
-  listProviders,
-} from '@gitroom/nestjs-libraries/ai-orchestra/providers';
-import {
   canRun,
-  costMicros,
   remaining,
   skillPipeline,
   toClientCapability,
@@ -20,7 +15,11 @@ import {
   ENABLED_CAPABILITIES,
   SKILL_INSTRUCTIONS,
   isStub,
+  taskForSkill,
 } from '@gitroom/helpers/utils/ai.skills';
+import { AiGatewayService } from '@gitroom/nestjs-libraries/ai/ai.gateway.service';
+import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
+import { AiTask } from '@gitroom/nestjs-libraries/ai/ai.router';
 import {
   coverageOf,
   hasEnoughData,
@@ -60,7 +59,9 @@ const DEFAULT_ENTITLEMENT = { monthlyCredits: 200, monthlyImages: 20 };
 export class AiOrchestraService implements OnModuleInit {
   constructor(
     private _repo: AiOrchestraRepository,
-    private _context: AiContextService
+    private _context: AiContextService,
+    private _gateway: AiGatewayService,
+    private _providers: AiProvidersService
   ) {}
 
   async onModuleInit() {
@@ -126,8 +127,20 @@ export class AiOrchestraService implements OnModuleInit {
     }
   }
 
-  providers() {
-    return listProviders();
+  /**
+   * Provider availability for the admin console.
+   *
+   * Reads the real configured catalogue rather than a hardcoded pair, so the
+   * panel shows every provider the owner could enable and tells the truth about
+   * which of them routing can actually use. Never returns a key.
+   */
+  async providers() {
+    const rows = await this._providers.list();
+    return rows.map((p) => ({
+      key: p.key,
+      label: p.label,
+      available: p.enabled && p.hasKey && p.health !== 'error',
+    }));
   }
 
   skills() {
@@ -201,6 +214,11 @@ export class AiOrchestraService implements OnModuleInit {
       this._repo.usageThisMonth(orgId),
     ]);
 
+    // "Is anything routable at all" — the plain chat task, which every text
+    // provider can serve. A capability's own skills each resolve their own task
+    // at run time; this is only the coarse "no AI is configured" gate.
+    const providerAvailable = await this._gateway.available('chat');
+
     const items = caps.map((c) =>
       toClientCapability(
         c as any,
@@ -209,7 +227,7 @@ export class AiOrchestraService implements OnModuleInit {
           orgPlan,
           entitlement,
           usage,
-          providerAvailable: !!getProvider('openai')?.available(),
+          providerAvailable,
         })
       )
     );
@@ -257,13 +275,12 @@ export class AiOrchestraService implements OnModuleInit {
       this._repo.usageThisMonth(orgId),
     ]);
 
-    const provider = getProvider('openai');
     const decision = canRun({
       capability: capability as any,
       orgPlan,
       entitlement,
       usage,
-      providerAvailable: !!provider?.available(),
+      providerAvailable: await this._gateway.available('chat'),
     });
 
     if (!decision.allowed) {
@@ -324,90 +341,48 @@ export class AiOrchestraService implements OnModuleInit {
 
     const pipeline = skillPipeline(capability as any);
     let carried = '';
-    let lastSkill: string | null = null;
-    let lastVersion: number | null = null;
-    let lastModel: string | null = null;
-    let promptTokens = 0;
-    let outputTokens = 0;
 
+    // Each skill asks the ROUTER for the kind of thinking it needs — the
+    // analyst wants reasoning, the copywriter wants speed. The skill's stored
+    // `provider`/`model` columns are no longer consulted: they were a second,
+    // silently diverging source of truth next to the routing table the owner
+    // actually configures.
     for (const skillKey of pipeline) {
       const skill = await this._repo.skillByKey(skillKey);
       if (!skill || !skill.active) continue;
       const version = skill.versions?.[0];
       if (!version) continue;
 
-      const skillProvider = getProvider(skill.provider);
-      if (!skillProvider?.available()) {
-        await this._repo.logRun({
-          orgId,
-          userId,
-          capabilityKey,
-          skillKey,
-          status: 'refused',
-          refusedReason: 'provider_unavailable',
-        });
-        return {
-          ok: false as const,
-          message: 'This capability is temporarily unavailable.',
-        };
-      }
-
-      try {
+      // The gateway meters every step itself, so a pipeline that dies halfway
+      // still charges for the work that was actually done.
+      const res = await this._gateway.generate({
+        task: taskForSkill(skillKey) as AiTask,
+        instruction: version.instruction,
         // Every skill sees the DATA block, not just the first one. Previously
         // the loop replaced the input with the previous skill's text, so the
         // Final Reviewer was checking a draft against nothing — it could not
         // see the figures it was supposed to be verifying, nor the brand brief
         // whose rules it was supposed to enforce.
-        const res = await skillProvider.generateText({
-          model: skill.model,
-          instruction: version.instruction,
-          input: [
-            contextBlock,
-            '',
-            `REQUEST FROM THE OPERATOR:\n${input || '(none given)'}`,
-            carried ? `\nDRAFT SO FAR (from a colleague):\n${carried}` : '',
-          ].join('\n'),
-        });
-        carried = res.text || carried;
-        promptTokens += res.promptTokens || 0;
-        outputTokens += res.outputTokens || 0;
-        lastSkill = skillKey;
-        lastVersion = version.version;
-        lastModel = skill.model;
-      } catch (e: any) {
-        await this._repo.logRun({
-          orgId,
-          userId,
-          capabilityKey,
-          skillKey,
-          skillVersion: version.version,
-          provider: skill.provider,
-          model: skill.model,
-          status: 'error',
-          refusedReason: String(e?.message || 'error').slice(0, 300),
-          durationMs: Date.now() - started,
-        });
+        input: [
+          contextBlock,
+          '',
+          `REQUEST FROM THE OPERATOR:\n${input || '(none given)'}`,
+          carried ? `\nDRAFT SO FAR (from a colleague):\n${carried}` : '',
+        ].join('\n'),
+        orgId,
+        userId,
+        capabilityKey,
+      });
+
+      if (!res.ok) {
         return {
           ok: false as const,
           message: 'This capability is temporarily unavailable.',
         };
       }
-    }
 
-    await this._repo.logRun({
-      orgId,
-      userId,
-      capabilityKey,
-      skillKey: lastSkill,
-      skillVersion: lastVersion,
-      provider: 'openai',
-      model: lastModel,
-      status: 'ok',
-      promptTokens: promptTokens || null,
-      outputTokens: outputTokens || null,
-      costMicros: costMicros(lastModel || '', promptTokens, outputTokens),
-      durationMs: Date.now() - started,
-    });
+      carried = res.text || carried;
+    }
 
     // Content only. Never a post id, never a schedule, never an integration.
     // `coverage` travels with it so the operator can see what the answer was

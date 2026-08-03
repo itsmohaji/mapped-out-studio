@@ -16,6 +16,23 @@ import {
   routingTable,
 } from '@gitroom/nestjs-libraries/ai/ai.router';
 
+/**
+ * Flat, NOT a discriminated union.
+ *
+ * The backend tsconfig runs without `strictNullChecks`, which degrades
+ * boolean-literal narrowing: a `{ok:true}|{ok:false,reason}` result fails to
+ * narrow under `if (!res.ok)` and errors at every call site. One flat shape
+ * costs a few optional fields and works.
+ */
+export interface ResolvedProvider {
+  ok: boolean;
+  reason?: string;
+  provider?: string;
+  model?: string | null;
+  apiKey?: string;
+  endpoint?: string | null;
+}
+
 const json = (v: any, f: any) => {
   try {
     return (typeof v === 'string' ? JSON.parse(v) : v) ?? f;
@@ -118,10 +135,7 @@ export class AiProvidersService {
   async resolve(
     task: AiTask,
     override?: { provider?: string; model?: string }
-  ): Promise<
-    | { ok: true; provider: string; model: string | null; apiKey: string; endpoint: string | null }
-    | { ok: false; reason: string }
-  > {
+  ): Promise<ResolvedProvider> {
     const decision = routeTask(task, await this.configured(), override);
     if (!decision.provider) return { ok: false, reason: decision.reason };
 

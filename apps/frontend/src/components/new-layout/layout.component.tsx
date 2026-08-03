@@ -46,6 +46,7 @@ import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-c
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
 import { ClientPortal } from '@gitroom/frontend/components/new-layout/client.portal';
+import { AssistantDock } from '@gitroom/frontend/components/ai-assist/assistant.dock';
 
 const jakartaSans = Plus_Jakarta_Sans({
   weight: ['600', '500', '700'],
@@ -253,6 +254,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       <div className="flex flex-1 gap-[14px] min-h-0">{children}</div>
                     </div>
                   </div>
+                  {/* Every page, one instance. It reads the pathname itself, so
+                      no page has to opt in or pass anything down. */}
+                  <AssistantDock />
                 </>
               )}
             </div>

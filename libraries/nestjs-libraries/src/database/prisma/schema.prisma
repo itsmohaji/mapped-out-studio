@@ -458,6 +458,16 @@ model AiRun {
   costMicros    Int?
   imageCount    Int          @default(0)
   durationMs    Int?
+  /**
+   * Router task, and what the run actually cost in credits.
+   *
+   * Both nullable, and additive on purpose — `prisma db push` runs on every
+   * boot, so a new column has to be safe against the rows already there. Runs
+   * written before task-weighted pricing have neither, and the meter falls back
+   * to the token derivation for those rather than rewriting history.
+   */
+  task          String?
+  credits       Int?
   createdAt     DateTime     @default(now())
   organization  Organization @relation(fields: [orgId], references: [id])
 

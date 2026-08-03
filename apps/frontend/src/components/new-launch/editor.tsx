@@ -68,6 +68,7 @@ import {
   DelayIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { DelayComponent } from '@gitroom/frontend/components/new-launch/delay.component';
+import { CaptionTools } from '@gitroom/frontend/components/ai-assist/caption.tools';
 
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 
@@ -791,6 +792,15 @@ export const Editor: FC<{
                   }
                   toolBar={
                     <div className="flex gap-[5px]">
+                      {/* AI first in the row: it is the action that writes the
+                          thing the rest of the toolbar formats. */}
+                      <CaptionTools
+                        value={props.value!}
+                        onChange={props.onChange}
+                        pictures={props.pictures}
+                        identifier={identifier}
+                        selectedIntegration={props.selectedIntegration}
+                      />
                       <SignatureBox editor={editorRef?.current?.editor} />
                       <HashtagComponent
                         editor={editorRef?.current?.editor}

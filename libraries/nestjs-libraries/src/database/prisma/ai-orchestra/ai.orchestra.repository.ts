@@ -149,15 +149,24 @@ export class AiOrchestraRepository {
         outputTokens: true,
         imageCount: true,
         costMicros: true,
+        credits: true,
       },
     });
 
     let creditsUsed = 0;
     let imagesUsed = 0;
     let costMicros = 0;
-    for (const r of rows) {
-      const total = (r.promptTokens || 0) + (r.outputTokens || 0);
-      creditsUsed += total ? Math.max(1, Math.round(total / 1000)) : 1;
+    for (const r of rows as any[]) {
+      // The stored, task-weighted credit is authoritative. The token derivation
+      // is the fallback for runs written before pricing knew about tasks —
+      // re-deriving those would be the only honest option anyway, since the task
+      // they ran is not recorded on them.
+      if (r.credits != null) {
+        creditsUsed += r.credits;
+      } else {
+        const total = (r.promptTokens || 0) + (r.outputTokens || 0);
+        creditsUsed += total ? Math.max(1, Math.round(total / 1000)) : 1;
+      }
       imagesUsed += r.imageCount || 0;
       costMicros += r.costMicros || 0;
     }
@@ -179,6 +188,8 @@ export class AiOrchestraRepository {
     costMicros?: number | null;
     imageCount?: number;
     durationMs?: number | null;
+    task?: string | null;
+    credits?: number | null;
   }) {
     return this._run.model.aiRun.create({ data: data as any });
   }

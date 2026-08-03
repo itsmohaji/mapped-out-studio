@@ -180,6 +180,28 @@ export const ENABLED_CAPABILITIES: Record<string, string[]> = {
   performance_recos: ['performance_analyst', 'final_reviewer'],
 };
 
+/**
+ * The router TASK each skill asks for.
+ *
+ * A skill never names a provider or a model — it names the kind of thinking it
+ * needs, and the router decides who does it. So a pipeline can run its analyst
+ * on a reasoning provider and its copywriter on a fast one, with no change here
+ * when the owner enables a new provider.
+ *
+ * Anything not listed falls back to 'chat', which every text provider can serve.
+ */
+export const SKILL_TASK: Record<string, string> = {
+  analyst: 'research',
+  strategist: 'strategy',
+  creative_director: 'strategy',
+  art_director: 'image_prompt',
+  copywriter: 'caption',
+  performance_analyst: 'research',
+  final_reviewer: 'summarize',
+};
+
+export const taskForSkill = (key: string): string => SKILL_TASK[key] || 'chat';
+
 export const instructionFor = (key: string): string | null =>
   SKILL_INSTRUCTIONS.find((s) => s.key === key)?.instruction || null;
 

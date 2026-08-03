@@ -75,15 +75,20 @@ export class AiOrchestraController {
   @Get('/admin/overview')
   async overview(@GetOrgFromRequest() org: Organization) {
     this.assertAdmin(org);
-    const [skills, capabilities, usage, runs, entitlement] = await Promise.all([
-      this._ai.skills(),
-      this._ai.capabilities(),
-      this._ai.usage(org.id),
-      this._ai.runs(org.id),
-      this._ai.entitlementFor(org.id),
-    ]);
+    const [providers, skills, capabilities, usage, runs, entitlement] =
+      await Promise.all([
+        // Reads the configured catalogue now, so it must be awaited — returning
+        // the promise would serialise as an empty object and the panel would
+        // silently show no providers at all.
+        this._ai.providers(),
+        this._ai.skills(),
+        this._ai.capabilities(),
+        this._ai.usage(org.id),
+        this._ai.runs(org.id),
+        this._ai.entitlementFor(org.id),
+      ]);
     return {
-      providers: this._ai.providers(),
+      providers,
       skills,
       capabilities,
       usage,

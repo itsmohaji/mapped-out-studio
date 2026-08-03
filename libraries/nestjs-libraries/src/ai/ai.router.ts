@@ -22,7 +22,8 @@ export type AiTask =
   | 'chat'
   | 'translate'
   | 'summarize'
-  | 'qualify';
+  | 'qualify'
+  | 'vision';
 
 export interface ConfiguredProvider {
   key: string;
@@ -98,6 +99,20 @@ const TASKS: Record<AiTask, TaskProfile> = {
     needs: 'image',
     prefer: ['nano_banana', 'gemini', 'openai'],
     description: 'Actually generating the image.',
+  },
+  /**
+   * Writing ABOUT an image or a video poster the model is shown.
+   *
+   * Separate from `caption` on purpose. A caption is a text task and routes to
+   * whatever is fastest; the moment media is attached the caller asks for this
+   * instead, and only a provider that declares `vision` can win it. That is what
+   * lets media understanding light up the day a vision provider is enabled,
+   * with no code change — and fail honestly, in one place, until then.
+   */
+  vision: {
+    needs: 'vision',
+    prefer: ['gemini', 'openai', 'anthropic'],
+    description: 'Reading an attached image before writing about it.',
   },
 };
 
