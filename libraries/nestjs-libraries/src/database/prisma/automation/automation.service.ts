@@ -36,6 +36,7 @@ import {
   templateByKey,
   templatesForChannel,
 } from '@gitroom/nestjs-libraries/automation/automation.templates';
+import { expandBlocks } from '@gitroom/nestjs-libraries/automation/automation.blockgraph';
 import { randomUUID } from 'crypto';
 
 /**
@@ -394,28 +395,13 @@ export class AutomationService {
         : [],
     });
 
-    if (tpl.nodes.length) {
-      // Linear chain: each node's parent is the one before it. Branch children
-      // hang off the nearest preceding branch node instead.
-      const ids = tpl.nodes.map(() => randomUUID());
-      let lastMainId: string | null = null;
-      let lastBranchId: string | null = null;
-
-      const nodes = tpl.nodes.map((n, i) => {
-        const branchKey = n.branchKey ?? null;
-        const parentId = branchKey ? lastBranchId : lastMainId;
-        if (n.kind === 'branch') lastBranchId = ids[i];
-        if (!branchKey) lastMainId = ids[i];
-        return {
-          id: ids[i],
-          parentId,
-          branchKey,
-          kind: n.kind,
-          config: n.config ?? {},
-          position: i,
-        };
-      });
-
+    if (tpl.blocks.length) {
+      // Expand through the SAME function the builder uses, so a templated
+      // workflow and a hand-built one are byte-for-byte the same shape — and a
+      // template reopens as proper cards instead of loose engine steps.
+      const nodes = expandBlocks(
+        tpl.blocks.map((b) => ({ id: randomUUID(), kind: b.kind, config: b.config ?? {} }))
+      );
       await this._repo.replaceNodes(workflow.id, nodes);
     }
 

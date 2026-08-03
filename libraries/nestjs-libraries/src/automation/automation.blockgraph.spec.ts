@@ -201,3 +201,67 @@ describe('block catalogue', () => {
     }
   });
 });
+
+describe('template catalogue', () => {
+  const { TEMPLATES, TEMPLATE_CATEGORIES } = require('./automation.templates');
+
+  it('every template expands to a valid, linear engine graph', () => {
+    for (const t of TEMPLATES) {
+      const nodes = expandBlocks(
+        t.blocks.map((b: any, i: number) => ({ id: `${t.key}-${i}`, kind: b.kind, config: b.config }))
+      );
+      expect(nodes[0]?.parentId ?? null).toBeNull();
+      for (let i = 1; i < nodes.length; i++) {
+        expect(nodes[i].parentId).toBe(nodes[i - 1].id);
+      }
+    }
+  });
+
+  it('every template round-trips back into the same blocks', () => {
+    // A template that reopened as different cards than it created would make
+    // the gallery quietly produce worse workflows than building by hand.
+    for (const t of TEMPLATES) {
+      const blocks = t.blocks.map((b: any, i: number) => ({
+        id: `${t.key}-${i}`,
+        kind: b.kind,
+        config: b.config,
+      }));
+      const back = collapseNodes(expandBlocks(blocks));
+      expect(back.map((b) => b.kind)).toEqual(blocks.map((b: any) => b.kind));
+    }
+  });
+
+  it('every template sits in a declared category', () => {
+    const known = new Set(TEMPLATE_CATEGORIES.map((c: any) => c.key));
+    for (const t of TEMPLATES) {
+      expect(known.has(t.category)).toBe(true);
+    }
+  });
+
+  it('every category has at least one template', () => {
+    for (const c of TEMPLATE_CATEGORIES) {
+      expect(TEMPLATES.some((t: any) => t.category === c.key)).toBe(true);
+    }
+  });
+
+  it('template keys are unique', () => {
+    const keys = TEMPLATES.map((t: any) => t.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('only AI templates are marked coming soon', () => {
+    // A non-AI template flagged "soon" would be offered and then silently do
+    // nothing, with no provider to blame.
+    for (const t of TEMPLATES) {
+      if (t.comingSoon) expect(t.category).toBe('ai');
+    }
+  });
+
+  it('no template quotes a conversion rate', () => {
+    // We have no data for one, and an invented percentage is a number people
+    // would plan budgets around.
+    for (const t of TEMPLATES) {
+      expect(`${t.description} ${t.tagline}`).not.toMatch(/\d+\s*%/);
+    }
+  });
+});

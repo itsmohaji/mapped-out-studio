@@ -16,17 +16,28 @@ export interface Template {
   category: string;
   keywords?: string[];
   requiresMessaging: boolean;
+  difficulty: 'easy' | 'medium' | 'advanced';
   comingSoon?: boolean;
 }
 
+// Mirrors TEMPLATE_CATEGORIES on the server. A test asserts every template
+// lands in a declared category, so the two cannot silently drift.
 const CATEGORIES: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'engagement', label: 'Engagement' },
-  { key: 'lead', label: 'Leads' },
-  { key: 'support', label: 'Support' },
+  { key: 'lead', label: 'Lead Generation' },
+  { key: 'sales', label: 'Sales' },
   { key: 'booking', label: 'Booking' },
-  { key: 'advanced', label: 'Advanced' },
+  { key: 'ecommerce', label: 'E-commerce' },
+  { key: 'ai', label: 'AI' },
+  { key: 'custom', label: 'Custom' },
 ];
+
+const DIFFICULTY: Record<string, { label: string; cls: string }> = {
+  easy: { label: 'Ready to use', cls: 'text-[#47b985]' },
+  medium: { label: 'Some editing', cls: 'text-[#daa646]' },
+  advanced: { label: 'Needs setup', cls: 'text-[#e2685f]' },
+};
 
 const TemplateCard: FC<{ template: Template; onPick: () => void }> = ({ template, onPick }) => (
   <Glass
@@ -75,8 +86,13 @@ const TemplateCard: FC<{ template: Template; onPick: () => void }> = ({ template
     )}
 
     <div className="flex items-center justify-between pt-[12px] border-t border-white/[0.06]">
-      <span className="text-[11.5px] text-textItemBlur">
-        {template.requiresMessaging ? 'Needs DM access' : 'Ready to use'}
+      <span
+        className={clsx(
+          'text-[11.5px]',
+          DIFFICULTY[template.difficulty]?.cls ?? 'text-textItemBlur'
+        )}
+      >
+        {DIFFICULTY[template.difficulty]?.label ?? ''}
       </span>
       <span className="text-[12px] font-[500] text-btnPrimary opacity-0 group-hover:opacity-100 transition-opacity">
         Use this →
@@ -122,6 +138,11 @@ export const TemplatesView: FC<{
             )}
           >
             {c.label}
+            <span className="ml-[6px] opacity-60">
+              {c.key === 'all'
+                ? (templates ?? []).length
+                : (templates ?? []).filter((t) => t.category === c.key).length}
+            </span>
           </button>
         ))}
       </div>
