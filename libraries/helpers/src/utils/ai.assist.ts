@@ -230,21 +230,40 @@ const ALIASES: Record<string, Exclude<AssistPage, 'other'>> = {
 export type CaptionAction =
   | 'suggest'
   | 'improve'
+  | 'rewrite'
   | 'shorten'
+  | 'lengthen'
   | 'professional'
+  | 'luxury'
+  | 'casual'
   | 'engaging'
   | 'cta'
   | 'hashtags'
   | 'translate';
 
+/**
+ * Menu grouping. Eleven flat items is a list you read twice to find anything;
+ * "rewrite it" and "change its voice" are different intents and a writer picks
+ * the group before the item.
+ */
+export type CaptionGroup = 'edit' | 'voice' | 'add';
+
 export interface CaptionActionMeta {
   key: CaptionAction;
   label: string;
+  /** Omitted for `suggest`, which is the primary button rather than a menu row. */
+  group?: CaptionGroup;
   /** False for `suggest` — everything else edits what is already written. */
   needsExisting: boolean;
   /** Appended to the caption instruction. */
   directive: string;
 }
+
+export const CAPTION_GROUPS: { key: CaptionGroup; label: string }[] = [
+  { key: 'edit', label: 'Rewrite' },
+  { key: 'voice', label: 'Change the voice' },
+  { key: 'add', label: 'Add to it' },
+];
 
 export const CAPTION_ACTIONS: CaptionActionMeta[] = [
   {
@@ -256,28 +275,69 @@ export const CAPTION_ACTIONS: CaptionActionMeta[] = [
   },
   {
     key: 'improve',
-    label: 'Improve Caption',
+    label: 'Improve',
+    group: 'edit',
     needsExisting: true,
     directive:
       'Rewrite the existing caption so it reads better. Keep its meaning, its facts and its language. Do not change what it is about.',
   },
   {
+    key: 'rewrite',
+    label: 'Rewrite',
+    group: 'edit',
+    needsExisting: true,
+    // The one action allowed to change the approach. Improve polishes the words
+    // it was given; this is for a caption whose angle is wrong, so it must still
+    // be pinned to the facts or it becomes a licence to invent a new post.
+    directive:
+      'Write the existing caption again from a different angle. Keep every fact, every name and the language it is in, but you are not bound to its structure, its hook or its phrasing. Say the same true thing a different way.',
+  },
+  {
     key: 'shorten',
-    label: 'Shorten',
+    label: 'Shorter',
+    group: 'edit',
     needsExisting: true,
     directive:
       'Cut the existing caption to roughly half its length. Keep the hook and the call to action; drop everything that is not carrying weight.',
   },
   {
+    key: 'lengthen',
+    label: 'Longer',
+    group: 'edit',
+    needsExisting: true,
+    // "Make it longer" is the single most reliable way to make a model invent a
+    // detail, so the directive says where the extra words may come from.
+    directive:
+      'Expand the existing caption to roughly twice its length. The added length must come from developing what is ALREADY there — the same subject in more detail, the hook drawn out, the thought finished. Never add a fact, a feature, a benefit, an offer or a claim that is not already in the caption or the details below. If there is nothing further to say, return it barely longer rather than padding it.',
+  },
+  {
     key: 'professional',
-    label: 'Make More Professional',
+    label: 'Professional',
+    group: 'voice',
     needsExisting: true,
     directive:
       'Rewrite the existing caption in a more professional register. Remove slang and filler. Do not make it stiff or corporate.',
   },
   {
+    key: 'luxury',
+    label: 'Luxury',
+    group: 'voice',
+    needsExisting: true,
+    directive:
+      'Rewrite the existing caption in a luxury register: restrained, confident, unhurried. Short declarative lines. No exclamation marks, no hype words, no emoji, no urgency. Luxury understates — if a line is trying to impress, cut it back. Never add a claim about quality, craft, materials or provenance that you were not given.',
+  },
+  {
+    key: 'casual',
+    label: 'Casual',
+    group: 'voice',
+    needsExisting: true,
+    directive:
+      'Rewrite the existing caption the way a person talks: contractions, shorter sentences, a lighter touch. Keep every fact. Do not force slang or emoji onto an account that does not already use them.',
+  },
+  {
     key: 'engaging',
     label: 'More Engaging',
+    group: 'voice',
     needsExisting: true,
     directive:
       'Rewrite the existing caption to earn attention in the first line. Keep every fact intact — do not add a claim to make it livelier.',
@@ -285,6 +345,7 @@ export const CAPTION_ACTIONS: CaptionActionMeta[] = [
   {
     key: 'cta',
     label: 'Add CTA',
+    group: 'add',
     needsExisting: true,
     directive:
       'Return the existing caption with ONE clear call to action added at the end. Change nothing else. The action must be something this account can actually deliver — never invent a link, a discount, a code or a deadline.',
@@ -292,6 +353,7 @@ export const CAPTION_ACTIONS: CaptionActionMeta[] = [
   {
     key: 'hashtags',
     label: 'Add Hashtags',
+    group: 'add',
     needsExisting: true,
     directive:
       'Return the existing caption unchanged, followed by hashtags on their own line. Match how many this account normally uses; if that is not known, use no more than five. Every hashtag must be about what is actually in the post.',
@@ -299,6 +361,7 @@ export const CAPTION_ACTIONS: CaptionActionMeta[] = [
   {
     key: 'translate',
     label: 'Translate',
+    group: 'add',
     needsExisting: true,
     directive:
       'Translate the existing caption into the target language. Keep the tone, keep the line breaks, and leave brand names, handles and hashtags as they are.',

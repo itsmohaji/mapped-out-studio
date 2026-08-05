@@ -10,6 +10,7 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
 import { AsyncBoundary } from '@gitroom/frontend/components/ui/async.boundary';
+import { CapabilityGrid } from '@gitroom/frontend/components/ai-assist/capability.grid';
 
 interface Capability {
   key: string;
@@ -25,30 +26,6 @@ interface Credits {
   imagesRemaining: number;
 }
 
-const Meter: FC<{ label: string; used: number; left: number }> = ({
-  label,
-  used,
-  left,
-}) => {
-  const total = used + left;
-  const pct = total ? Math.round((used / total) * 100) : 0;
-  return (
-    <div className="glass-surface rounded-[16px] p-[16px] flex flex-col gap-[8px]">
-      <div className="text-[11px] font-[600] text-textItemBlur">{label}</div>
-      <div className="text-[24px] font-[600] tabular-nums leading-none">
-        {left}
-        <span className="text-[13px] text-textItemBlur font-[500]"> / {total}</span>
-      </div>
-      <div className="h-[5px] rounded-full bg-newBgLineColor overflow-hidden">
-        <div
-          className="h-full rounded-full bg-btnPrimary transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
 interface Coverage {
   channelsConnected: number;
   channelsReporting: number;
@@ -56,139 +33,6 @@ interface Coverage {
   timeframeDays: number;
   hasBrief: boolean;
 }
-
-const CapabilityRunner: FC<{
-  capability: Capability;
-  customerId: string;
-  timeframeDays: number;
-  onDone: () => void;
-}> = ({ capability, customerId, timeframeDays, onDone }) => {
-  const t = useT();
-  const fetch = useFetch();
-  const toast = useToaster();
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
-  const [coverage, setCoverage] = useState<Coverage | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const run = useCallback(async () => {
-    if (!input.trim() || busy) return;
-    setBusy(true);
-    setOutput('');
-    setCoverage(null);
-    try {
-      const res = await (
-        await fetch('/ai-orchestra/run', {
-          method: 'POST',
-          body: JSON.stringify({
-            capabilityKey: capability.key,
-            input,
-            customerId: customerId || undefined,
-            timeframeDays,
-          }),
-        })
-      ).json();
-      if (!res?.ok) {
-        toast.show(res?.message || t('action_failed', 'Action failed'), 'warning');
-        return;
-      }
-      setOutput(res.output || '');
-      setCoverage(res.coverage || null);
-      onDone();
-    } finally {
-      setBusy(false);
-    }
-  }, [input, busy, capability.key, customerId, timeframeDays, onDone, t]);
-
-  return (
-    <div
-      className={clsx(
-        'glass-surface rounded-[16px] p-[16px] flex flex-col gap-[10px]',
-        !capability.available && 'opacity-60'
-      )}
-    >
-      <div className="flex items-center gap-[8px]">
-        <div className="text-[13.5px] font-[600] flex-1">{capability.name}</div>
-        {capability.kind === 'image' && (
-          <span className="text-[10px] font-[600] uppercase tracking-wide px-[7px] py-[2px] rounded-full bg-btnPrimary/15 text-btnPrimary">
-            {t('image', 'Image')}
-          </span>
-        )}
-      </div>
-
-      {!capability.available ? (
-        <div className="text-[12px] text-textItemBlur">
-          {capability.unavailableMessage ||
-            t('capability_unavailable', 'Not available yet.')}
-        </div>
-      ) : !open ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="text-[12.5px] text-btnPrimary hover:underline self-start"
-        >
-          {t('use_capability', 'Use')} →
-        </button>
-      ) : (
-        <div className="flex flex-col gap-[10px]">
-          <textarea
-            autoFocus
-            rows={3}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t(
-              'ai_input_ph',
-              'What is this for? Brand, audience, goal…'
-            )}
-            className="w-full bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[12px] py-[9px] text-[13px] outline-none focus:border-btnPrimary resize-none"
-          />
-          <div className="flex items-center gap-[10px]">
-            <Button onClick={run} loading={busy}>
-              {t('generate', 'Generate')}
-            </Button>
-            <button
-              onClick={() => setOpen(false)}
-              className="text-[12.5px] text-textItemBlur hover:underline"
-            >
-              {t('cancel', 'Cancel')}
-            </button>
-          </div>
-          {output && (
-            <div className="flex flex-col gap-[8px]">
-              <div className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
-                {t('draft_output', 'Draft — for your review')}
-              </div>
-              {/* What the answer was based on, shown BEFORE the answer, so a
-                  thin sample is visible rather than buried. */}
-              {coverage && (
-                <div className="text-[11px] text-textItemBlur border-s-2 border-newTableBorder ps-[8px]">
-                  {t('based_on', 'Based on')}{' '}
-                  {coverage.channelsReporting}/{coverage.channelsConnected}{' '}
-                  {t('channels_reporting', 'channels reporting')} ·{' '}
-                  {coverage.postsSampled}{' '}
-                  {t('posts_sampled', 'posts')} ·{' '}
-                  {t('last_n_days', 'last')} {coverage.timeframeDays}{' '}
-                  {t('days', 'days')}
-                  {!coverage.hasBrief &&
-                    ` · ${t('no_brand_brief', 'no brand brief on file')}`}
-                </div>
-              )}
-              <div className="bg-newBgLineColor border border-newTableBorder rounded-[10px] p-[12px] text-[13px] whitespace-pre-wrap max-h-[320px] overflow-y-auto">
-                {output}
-              </div>
-              <div className="text-[11px] text-textItemBlur">
-                {t(
-                  'ai_never_publishes',
-                  'Nothing here is scheduled or published. Copy it into a post when you are happy with it.'
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const AdminConsole: FC = () => {
   const t = useT();
@@ -599,19 +443,6 @@ export const AiOrchestraComponent: FC = () => {
         <AdminConsole />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[12px]">
-            <Meter
-              label={t('credits_remaining', 'AI credits remaining')}
-              used={data?.credits?.creditsUsed ?? 0}
-              left={data?.credits?.creditsRemaining ?? 0}
-            />
-            <Meter
-              label={t('images_remaining', 'Image generations remaining')}
-              used={data?.credits?.imagesUsed ?? 0}
-              left={data?.credits?.imagesRemaining ?? 0}
-            />
-          </div>
-
           <div className="glass-surface rounded-[16px] p-[14px] flex flex-wrap items-end gap-[14px]">
             <div className="flex flex-col gap-[5px] min-w-[190px] flex-1">
               <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
@@ -648,39 +479,28 @@ export const AiOrchestraComponent: FC = () => {
                 ))}
               </select>
             </div>
-            <div className="text-[11.5px] text-textItemBlur flex-1 min-w-[200px]">
-              {t(
-                'ai_context_help',
-                'Drafts are written from this account’s real analytics and its own published posts over this period. Nothing outside it is used.'
+            <div className="flex items-center gap-[14px] text-[11.5px] text-textItemBlur flex-1 min-w-[200px]">
+              <span className="flex-1">
+                {t(
+                  'ai_context_help',
+                  'Drafts are written from this account’s real analytics and its own published posts over this period. Nothing outside it is used.'
+                )}
+              </span>
+              {/* Credits belong here, quietly, not as two large meters at the
+                  top of the page — they are a constraint, not the subject. */}
+              {data?.credits && (
+                <span className="shrink-0 tabular-nums">
+                  {data.credits.creditsRemaining} {t('credits_left', 'credits left')}
+                </span>
               )}
             </div>
           </div>
 
-          {!data?.capabilities?.length ? (
-            <div className="glass-surface rounded-[16px] px-[18px] py-[46px] text-center">
-              <div className="text-[14px] font-[600]">
-                {t('no_capabilities', 'No capabilities yet')}
-              </div>
-              <div className="text-[12.5px] text-textItemBlur mt-[5px]">
-                {t(
-                  'no_capabilities_help',
-                  'An administrator enables these once they are ready.'
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[14px]">
-              {data.capabilities.map((c) => (
-                <CapabilityRunner
-                  key={c.key}
-                  capability={c}
-                  customerId={customerId}
-                  timeframeDays={timeframeDays}
-                  onDone={mutate}
-                />
-              ))}
-            </div>
-          )}
+          <CapabilityGrid
+            customerId={customerId}
+            timeframeDays={timeframeDays}
+          />
+
         </>
       )}
     </div>

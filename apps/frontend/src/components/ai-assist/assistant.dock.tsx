@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, useCallback, useEffect, useRef, useState } from 'react';
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import useSWR from 'swr';
 import { usePathname } from 'next/navigation';
@@ -9,16 +9,21 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { pageContextFor } from '@gitroom/helpers/utils/ai.assist';
 
 /**
- * The AI Assistant, everywhere.
+ * The AI Assistant, as a spotlight.
  *
- * A floating action on every page that opens a drawer in place — the current
- * page is never left, because the question is almost always ABOUT the page. The
- * pathname is read here and sent with every message, so the user never has to
- * explain where they are.
+ * Cmd/Ctrl+K anywhere, or the floating button. It opens small and centred over
+ * the page rather than as a panel down the side, because the thing being asked
+ * about is almost always the page underneath — covering half of it to ask about
+ * it was the old design's mistake.
  *
- * The icon is the same sparkle the sidebar's AI Assistant entry uses. That is
- * deliberate and worth keeping: two different marks for one feature reads as two
- * features.
+ * Three things fill it and nothing else: what you type, what is worth asking
+ * from HERE, and what you asked last. The pathname decides the second, so the
+ * user never types "I am on the analytics screen".
+ *
+ * Deliberately not shown: the credit balance. It is a billing fact, it changes
+ * nothing about the question being asked, and putting a decrementing number in
+ * front of someone at the moment they ask for help teaches them to ask less.
+ * It lives on the AI Assistant page, next to the work that spends it.
  */
 export const SparkIcon: FC<{ size?: number; className?: string }> = ({
   size = 20,
@@ -42,243 +47,355 @@ export const SparkIcon: FC<{ size?: number; className?: string }> = ({
   </svg>
 );
 
-interface Turn {
-  role: 'you' | 'ai';
-  text: string;
+const RECENT_KEY = 'mappedout.ai.recent';
+const RECENT_MAX = 5;
+
+/** Never throws: a corrupt or unavailable store must not stop the panel opening. */
+function loadRecent(): string[] {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]');
+    return (Array.isArray(raw) ? raw : [])
+      .filter((v): v is string => typeof v === 'string' && !!v.trim())
+      .slice(0, RECENT_MAX);
+  } catch {
+    return [];
+  }
 }
+
+function saveRecent(list: string[]) {
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // Private mode, or a full store. Recents are a convenience, not the feature.
+  }
+}
+
+type Row = { kind: 'suggestion' | 'recent'; text: string };
 
 export const AssistantDock: FC = () => {
   const t = useT();
   const fetch = useFetch();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState<{ question: string; text: string } | null>(
+    null
+  );
   const [busy, setBusy] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
   const [customerId, setCustomerId] = useState('');
-  const endRef = useRef<HTMLDivElement>(null);
+  // -1 means "ask exactly what I typed". Arrow keys move into the list; that
+  // way Enter straight after typing never runs some highlighted row instead.
+  const [cursor, setCursor] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const page = pageContextFor(pathname);
 
   const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
-  // Only fetched once the drawer is opened — a floating button must not cost
-  // two requests on every page load for something most visits never use.
+  // Only once opened — a global shortcut must not cost a request on every page
+  // load for something most visits never use.
   const { data: clients } = useSWR(open ? '/ai-orchestra/clients' : null, load, {
     revalidateOnFocus: false,
   });
-  const { data: credits, mutate: refreshCredits } = useSWR(
-    open ? '/ai-assist/credits' : null,
-    load,
-    { revalidateOnFocus: false }
-  );
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [turns, busy]);
+  // Read after mount, never in a state initialiser: there is no localStorage on
+  // the server and reading one during render is a hydration mismatch.
+  //
+  // Writing is done at the point of asking rather than in an effect on `recent`.
+  // An effect would run in the same commit as this one, before the loaded list
+  // had been applied, and persist the empty initial array over what was stored.
+  useEffect(() => setRecent(loadRecent()), []);
 
-  // Esc closes. Bound only while open, so the app's own shortcuts are untouched
-  // the rest of the time.
+  // Cmd/Ctrl+K toggles from anywhere; Esc closes. Bound once, for the lifetime
+  // of the layout, because the point of a spotlight is that it is always there.
   useEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpen((v) => !v);
+        return;
+      }
       if (e.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Opening is always a fresh question. The last answer staying on screen from
+  // three pages ago would be answering something nobody is still asking.
+  useEffect(() => {
+    if (!open) return;
+    setQuery('');
+    setAnswer(null);
+    setCursor(-1);
+    inputRef.current?.focus();
   }, [open]);
 
-  const send = useCallback(
+  const rows = useMemo<Row[]>(() => {
+    const q = query.trim().toLowerCase();
+    const match = (s: string) => !q || s.toLowerCase().includes(q);
+    return [
+      ...page.suggestions.filter(match).map((text): Row => ({ kind: 'suggestion', text })),
+      ...recent
+        .filter((r) => match(r) && !page.suggestions.includes(r))
+        .map((text): Row => ({ kind: 'recent', text })),
+    ];
+  }, [page.suggestions, recent, query]);
+
+  // A filter that shortens the list must not leave the highlight past its end.
+  useEffect(() => setCursor(-1), [query]);
+
+  const ask = useCallback(
     async (text: string) => {
       const question = text.trim();
       if (!question || busy) return;
-      setMessage('');
-      setTurns((s) => [...s, { role: 'you', text: question }]);
+
+      setQuery(question);
       setBusy(true);
+      setAnswer(null);
+      setCursor(-1);
+
+      // Recorded on ask, not on success: a question worth retrying is exactly
+      // the one whose answer failed.
+      const nextRecent = [
+        question,
+        ...recent.filter((r) => r !== question),
+      ].slice(0, RECENT_MAX);
+      setRecent(nextRecent);
+      saveRecent(nextRecent);
+
       try {
         const res = await (
           await fetch('/ai-assist/ask', {
             method: 'POST',
             body: JSON.stringify({
               message: question,
-              // The page the question was asked from. This is the whole point:
-              // the user never types "I am on the analytics screen".
+              // The page the question was asked from — the whole point.
               pathname,
               customerId: customerId || undefined,
             }),
           })
         ).json();
 
-        setTurns((s) => [
-          ...s,
-          {
-            role: 'ai',
-            text:
-              res?.ok && res?.text
-                ? res.text
-                : res?.message ||
-                  t('ai_unavailable', 'The assistant is unavailable right now.'),
-          },
-        ]);
-        refreshCredits();
+        setAnswer({
+          question,
+          text:
+            res?.ok && res?.text
+              ? res.text
+              : res?.message ||
+                t('ai_unavailable', 'The assistant is unavailable right now.'),
+        });
       } catch {
-        setTurns((s) => [
-          ...s,
-          {
-            role: 'ai',
-            text: t('ai_unavailable', 'The assistant is unavailable right now.'),
-          },
-        ]);
+        setAnswer({
+          question,
+          text: t('ai_unavailable', 'The assistant is unavailable right now.'),
+        });
       } finally {
         setBusy(false);
       }
     },
-    [busy, pathname, customerId, refreshCredits, t]
+    [busy, pathname, customerId, recent, t]
   );
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCursor((c) => (rows.length ? Math.min(c + 1, rows.length - 1) : -1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCursor((c) => Math.max(c - 1, -1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      ask(cursor >= 0 && rows[cursor] ? rows[cursor].text : query);
+    }
+  };
 
   return (
     <>
-      {/* The floating action. Sits above everything but below a modal's own
-          overlay, so it never covers a dialog the user is mid-way through. */}
+      {/* Sits above the page but below a modal's own overlay, so it never
+          covers a dialog someone is part-way through. */}
       <button
         type="button"
         aria-label={t('ask_ai', 'Ask AI')}
         data-tooltip-id="tooltip"
-        data-tooltip-content={t('ask_ai', 'Ask AI')}
-        onClick={() => setOpen((v) => !v)}
+        data-tooltip-content={t('ask_ai_shortcut', 'Ask AI  ·  ⌘K')}
+        onClick={() => setOpen(true)}
         className={clsx(
           'fixed bottom-[22px] end-[22px] z-[350] w-[52px] h-[52px] rounded-full',
           'glass-surface flex items-center justify-center',
           'text-btnPrimary hover:text-textItemFocused',
-          'hover:brightness-110 active:scale-95 transition-all',
-          open && 'text-textItemFocused'
+          'hover:brightness-110 active:scale-95 transition-all'
         )}
       >
         <SparkIcon size={22} />
       </button>
 
       {open && (
-        <>
+        // The backdrop also does the centring. Flex rather than a translate off
+        // a logical inset, so RTL needs no special case at all.
+        <div
+          // items-start matters: the default `stretch` would pull the panel
+          // down to the full height of the backdrop, leaving a tall empty box
+          // hanging below the footer.
+          className="fixed inset-0 z-[340] bg-black/45 flex items-start justify-center pt-[12vh] px-[14px]"
+          onClick={() => setOpen(false)}
+        >
           <div
-            className="fixed inset-0 z-[340] bg-black/30"
-            onClick={() => setOpen(false)}
-          />
-          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('ask_ai', 'Ask AI')}
+            onClick={(e) => e.stopPropagation()}
             className={clsx(
-              'fixed z-[345] flex flex-col gap-[10px] glass-surface',
-              'bottom-0 end-0 top-0 w-full sm:w-[420px] sm:top-[12px] sm:bottom-[86px]',
-              'sm:end-[22px] sm:rounded-[20px] p-[16px]'
+              'w-full max-w-[560px] max-h-[76vh]',
+              'glass-surface rounded-[18px] overflow-hidden flex flex-col'
             )}
           >
-            <div className="flex items-center gap-[9px] shrink-0">
-              <SparkIcon size={18} className="text-btnPrimary" />
-              <div className="flex-1 min-w-0">
-                <div className="text-[13.5px] font-[600] leading-tight">
-                  {t('ask_ai', 'Ask AI')}
-                </div>
-                {/* Shows the assistant already knows where you are, so nobody
-                    has to guess whether context was picked up. */}
-                <div className="text-[11px] text-textItemBlur truncate">
-                  {page.label}
-                  {credits
-                    ? ` · ${credits.creditsRemaining} ${t('credits_left', 'credits left')}`
-                    : ''}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label={t('close', 'Close')}
-                className="w-[28px] h-[28px] rounded-[8px] flex items-center justify-center text-textItemBlur hover:text-textItemFocused"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
+            {/* The search field is the whole header. No title bar: the icon and
+                the placeholder already say what this is. */}
+            <div className="flex items-center gap-[10px] px-[15px] h-[52px] shrink-0">
+              <SparkIcon size={18} className="text-btnPrimary shrink-0" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  // Typing a new question puts the suggestions back. Leaving the
+                  // previous answer up while a different one is being typed
+                  // reads as the assistant having answered the new question.
+                  if (answer && e.target.value !== answer.question) setAnswer(null);
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={t('ask_about_page', 'Ask about {page}…').replace(
+                  '{page}',
+                  page.label
+                )}
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[14.5px] placeholder:text-textItemBlur"
+              />
+              {/* Says the assistant already knows where you are, without the
+                  user having to trust that it does. */}
+              <span className="shrink-0 text-[10.5px] font-[600] px-[8px] py-[3px] rounded-full bg-[var(--glass-2)] text-textItemBlur">
+                {page.label}
+              </span>
             </div>
 
-            {(clients || []).length > 0 && (
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                className="shrink-0 bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[10px] py-[7px] text-[12px] outline-none focus:border-btnPrimary"
-              >
-                <option value="">{t('all_clients', 'All clients')}</option>
-                {(clients || []).map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <div className="border-t border-[var(--gline)]" />
 
-            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-[10px] pe-[2px]">
-              {!turns.length && (
-                <div className="flex flex-col gap-[7px]">
-                  <div className="text-[11.5px] text-textItemBlur">
-                    {t('ai_try_asking', 'Try asking')}
-                  </div>
-                  {page.suggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => send(s)}
-                      className="text-start text-[12.5px] rounded-[11px] px-[11px] py-[9px] bg-newBgLineColor hover:brightness-110 transition-all"
-                    >
-                      {s}
-                    </button>
+            <div className="max-h-[min(52vh,420px)] overflow-y-auto">
+              {busy && (
+                <div className="px-[15px] py-[16px] flex flex-col gap-[9px]">
+                  {[88, 70, 80].map((w, i) => (
+                    <div
+                      key={i}
+                      className="h-[10px] rounded-full bg-[var(--glass-2)] animate-pulse"
+                      style={{ width: `${w}%`, animationDelay: `${i * 90}ms` }}
+                    />
                   ))}
                 </div>
               )}
 
-              {turns.map((turn, i) => (
-                <div
-                  key={i}
-                  className={clsx(
-                    'text-[12.5px] leading-[1.55] rounded-[12px] px-[11px] py-[9px] whitespace-pre-wrap',
-                    turn.role === 'you'
-                      ? 'bg-btnPrimary/15 self-end max-w-[85%]'
-                      : 'bg-newBgLineColor'
-                  )}
-                >
-                  {turn.text}
-                </div>
-              ))}
-
-              {busy && (
-                <div className="text-[12px] text-textItemBlur px-[11px]">
-                  {t('thinking', 'Thinking…')}
+              {!busy && answer && (
+                <div className="px-[15px] py-[14px] flex flex-col gap-[8px]">
+                  <div className="text-[11px] font-[600] uppercase tracking-[0.08em] text-textItemBlur">
+                    {answer.question}
+                  </div>
+                  <div className="text-[13px] leading-[1.62] whitespace-pre-wrap">
+                    {answer.text}
+                  </div>
                 </div>
               )}
-              <div ref={endRef} />
+
+              {!busy && !answer && (
+                <div className="py-[6px]">
+                  {!rows.length && (
+                    <div className="px-[15px] py-[14px] text-[12.5px] text-textItemBlur">
+                      {t('ai_press_enter', 'Press Enter to ask.')}
+                    </div>
+                  )}
+                  {rows.map((row, i) => {
+                    // A heading only where the kind changes, so the two lists
+                    // read as one column rather than two stacked panels.
+                    const heading =
+                      i === 0 || rows[i - 1].kind !== row.kind ? row.kind : null;
+                    return (
+                      <React.Fragment key={`${row.kind}-${row.text}`}>
+                        {heading && (
+                          <div className="text-[10px] font-[700] uppercase tracking-[0.08em] text-textItemBlur px-[15px] pt-[9px] pb-[4px]">
+                            {heading === 'suggestion'
+                              ? t('ai_try_asking', 'Try asking')
+                              : t('recent', 'Recent')}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onMouseEnter={() => setCursor(i)}
+                          onClick={() => ask(row.text)}
+                          className={clsx(
+                            'w-full text-start flex items-center gap-[10px] px-[15px] py-[9px]',
+                            'text-[13px] transition-colors',
+                            cursor === i ? 'bg-[var(--glass-2)]' : 'bg-transparent'
+                          )}
+                        >
+                          {row.kind === 'suggestion' ? (
+                            <SparkIcon
+                              size={13}
+                              className="text-btnPrimary shrink-0"
+                            />
+                          ) : (
+                            <svg
+                              width="13"
+                              height="13"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-textItemBlur shrink-0"
+                            >
+                              <path d="M12 8v4l3 2" />
+                              <circle cx="12" cy="12" r="9" />
+                            </svg>
+                          )}
+                          <span className="flex-1 min-w-0 truncate">{row.text}</span>
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            <div className="shrink-0 flex items-end gap-[8px]">
-              <textarea
-                rows={2}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  // Enter sends, Shift+Enter breaks the line — the convention
-                  // everywhere else a message is typed.
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    send(message);
-                  }
-                }}
-                placeholder={page.suggestions[0]}
-                className="flex-1 bg-newBgLineColor border border-newTableBorder rounded-[12px] px-[11px] py-[9px] text-[12.5px] outline-none focus:border-btnPrimary resize-none"
-              />
-              <button
-                type="button"
-                disabled={busy || !message.trim()}
-                onClick={() => send(message)}
-                className="h-[40px] px-[14px] rounded-[12px] bg-btnPrimary text-white text-[12px] font-[600] disabled:opacity-40 hover:brightness-110 transition"
-              >
-                {t('send', 'Send')}
-              </button>
+            <div className="border-t border-[var(--gline)]" />
+
+            <div className="flex items-center gap-[10px] px-[15px] h-[42px] shrink-0">
+              {(clients || []).length > 0 ? (
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  aria-label={t('client', 'Client')}
+                  className="bg-transparent text-[11.5px] text-textItemBlur outline-none max-w-[190px] cursor-pointer hover:text-textItemFocused transition-colors"
+                >
+                  <option value="">{t('all_clients', 'All clients')}</option>
+                  {(clients || []).map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-[11.5px] text-textItemBlur">
+                  {t('ai_draft_only', 'Drafts only — nothing is published.')}
+                </span>
+              )}
+              <div className="flex-1" />
+              <span className="text-[11px] text-textItemBlur tabular-nums">
+                {answer
+                  ? t('ai_ask_another', 'Type to ask another')
+                  : t('ai_enter_to_ask', 'Enter to ask  ·  Esc to close')}
+              </span>
             </div>
-          </aside>
-        </>
+          </div>
+        </div>
       )}
     </>
   );

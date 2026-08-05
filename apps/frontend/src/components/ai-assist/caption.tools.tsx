@@ -5,7 +5,11 @@ import clsx from 'clsx';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
-import { CAPTION_ACTIONS, CaptionAction } from '@gitroom/helpers/utils/ai.assist';
+import {
+  CAPTION_ACTIONS,
+  CAPTION_GROUPS,
+  CaptionAction,
+} from '@gitroom/helpers/utils/ai.assist';
 import { SparkIcon } from '@gitroom/frontend/components/ai-assist/assistant.dock';
 import { SelectedIntegrations } from '@gitroom/frontend/components/new-launch/store';
 
@@ -168,7 +172,12 @@ export const CaptionTools: FC<Props> = ({
     [busy, hasText, language, value, identifier, customerId, media, onChange, t]
   );
 
-  const secondary = CAPTION_ACTIONS.filter((a) => a.key !== 'suggest');
+  // Grouped from the shared list, so a new action appears here by adding one
+  // registry entry. A group with nothing in it is not rendered at all.
+  const groups = CAPTION_GROUPS.map((g) => ({
+    ...g,
+    actions: CAPTION_ACTIONS.filter((a) => a.group === g.key),
+  })).filter((g) => g.actions.length);
 
   return (
     <div className="flex gap-[5px]" ref={wrap}>
@@ -211,24 +220,33 @@ export const CaptionTools: FC<Props> = ({
         </button>
 
         {open && (
-          <div className="absolute z-[500] bottom-[38px] end-0 w-[228px] glass-surface rounded-[13px] p-[5px] flex flex-col">
-            {secondary.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                disabled={!!busy || (a.needsExisting && !hasText)}
-                onClick={() => run(a.key)}
-                className={clsx(
-                  'flex items-center gap-[8px] text-start text-[12.5px] rounded-[9px] px-[9px] py-[8px]',
-                  'hover:bg-[var(--glass-2)] transition-colors',
-                  'disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent'
-                )}
-              >
-                <SparkIcon size={13} className="text-btnPrimary shrink-0" />
-                <span className="flex-1">
-                  {busy === a.key ? t('working', 'Working…') : t(`ai_${a.key}`, a.label)}
-                </span>
-              </button>
+          <div className="absolute z-[500] bottom-[38px] end-0 w-[236px] glass-surface rounded-[13px] p-[5px] flex flex-col max-h-[min(60vh,420px)] overflow-y-auto">
+            {groups.map((group) => (
+              <div key={group.key} className="flex flex-col">
+                <div className="text-[10px] font-[700] uppercase tracking-[0.08em] text-textItemBlur px-[9px] pt-[7px] pb-[3px]">
+                  {t(`ai_group_${group.key}`, group.label)}
+                </div>
+                {group.actions.map((a) => (
+                  <button
+                    key={a.key}
+                    type="button"
+                    disabled={!!busy || (a.needsExisting && !hasText)}
+                    onClick={() => run(a.key)}
+                    className={clsx(
+                      'flex items-center gap-[8px] text-start text-[12.5px] rounded-[9px] px-[9px] py-[7px]',
+                      'hover:bg-[var(--glass-2)] transition-colors',
+                      'disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent'
+                    )}
+                  >
+                    <SparkIcon size={13} className="text-btnPrimary shrink-0" />
+                    <span className="flex-1">
+                      {busy === a.key
+                        ? t('working', 'Working…')
+                        : t(`ai_${a.key}`, a.label)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             ))}
 
             {/* Translate needs one more thing than the rest, so it asks for it
