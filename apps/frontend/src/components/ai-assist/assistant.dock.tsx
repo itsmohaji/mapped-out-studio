@@ -1,12 +1,23 @@
 'use client';
 
-import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import clsx from 'clsx';
 import useSWR from 'swr';
 import { usePathname } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { pageContextFor } from '@gitroom/helpers/utils/ai.assist';
+import {
+  sendMessage,
+  startThread,
+} from '@gitroom/frontend/components/ai-assist/threads.api';
 
 /**
  * The AI Assistant, as a spotlight.
@@ -78,9 +89,10 @@ export const AssistantDock: FC = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [answer, setAnswer] = useState<{ question: string; text: string } | null>(
-    null
-  );
+  const [answer, setAnswer] = useState<{
+    question: string;
+    text: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [customerId, setCustomerId] = useState('');
@@ -91,12 +103,19 @@ export const AssistantDock: FC = () => {
 
   const page = pageContextFor(pathname);
 
-  const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
+  const load = useCallback(
+    async (url: string) => (await fetch(url)).json(),
+    []
+  );
   // Only once opened — a global shortcut must not cost a request on every page
   // load for something most visits never use.
-  const { data: clients } = useSWR(open ? '/ai-orchestra/clients' : null, load, {
-    revalidateOnFocus: false,
-  });
+  const { data: clients } = useSWR(
+    open ? '/ai-orchestra/clients' : null,
+    load,
+    {
+      revalidateOnFocus: false,
+    }
+  );
 
   // Read after mount, never in a state initialiser: there is no localStorage on
   // the server and reading one during render is a hydration mismatch.
@@ -135,7 +154,9 @@ export const AssistantDock: FC = () => {
     const q = query.trim().toLowerCase();
     const match = (s: string) => !q || s.toLowerCase().includes(q);
     return [
-      ...page.suggestions.filter(match).map((text): Row => ({ kind: 'suggestion', text })),
+      ...page.suggestions
+        .filter(match)
+        .map((text): Row => ({ kind: 'suggestion', text })),
       ...recent
         .filter((r) => match(r) && !page.suggestions.includes(r))
         .map((text): Row => ({ kind: 'recent', text })),
@@ -177,14 +198,31 @@ export const AssistantDock: FC = () => {
           })
         ).json();
 
-        setAnswer({
-          question,
-          text:
-            res?.ok && res?.text
-              ? res.text
-              : res?.message ||
-                t('ai_unavailable', 'The assistant is unavailable right now.'),
-        });
+        const answerText =
+          res?.ok && res?.text
+            ? res.text
+            : res?.message ||
+              t('ai_unavailable', 'The assistant is unavailable right now.');
+        setAnswer({ question, text: answerText });
+
+        // Persisted after the answer is shown, and deliberately not awaited into
+        // the user's path: a failure to file the thread must never cost them the
+        // answer they already have.
+        try {
+          const started = await startThread(fetch, {
+            text: question,
+            customerId: customerId || undefined,
+          });
+          const id = started?.thread?.id;
+          if (id) {
+            await sendMessage(fetch, id, {
+              role: 'assistant',
+              text: answerText,
+            });
+          }
+        } catch {
+          // Recents in localStorage remain the fallback.
+        }
       } catch {
         setAnswer({
           question,
@@ -262,7 +300,8 @@ export const AssistantDock: FC = () => {
                   // Typing a new question puts the suggestions back. Leaving the
                   // previous answer up while a different one is being typed
                   // reads as the assistant having answered the new question.
-                  if (answer && e.target.value !== answer.question) setAnswer(null);
+                  if (answer && e.target.value !== answer.question)
+                    setAnswer(null);
                 }}
                 onKeyDown={onKeyDown}
                 placeholder={t('ask_about_page', 'Ask about {page}…').replace(
@@ -315,7 +354,9 @@ export const AssistantDock: FC = () => {
                     // A heading only where the kind changes, so the two lists
                     // read as one column rather than two stacked panels.
                     const heading =
-                      i === 0 || rows[i - 1].kind !== row.kind ? row.kind : null;
+                      i === 0 || rows[i - 1].kind !== row.kind
+                        ? row.kind
+                        : null;
                     return (
                       <React.Fragment key={`${row.kind}-${row.text}`}>
                         {heading && (
@@ -332,7 +373,9 @@ export const AssistantDock: FC = () => {
                           className={clsx(
                             'w-full text-start flex items-center gap-[10px] px-[15px] py-[9px]',
                             'text-[13px] transition-colors',
-                            cursor === i ? 'bg-[var(--glass-2)]' : 'bg-transparent'
+                            cursor === i
+                              ? 'bg-[var(--glass-2)]'
+                              : 'bg-transparent'
                           )}
                         >
                           {row.kind === 'suggestion' ? (
@@ -356,7 +399,9 @@ export const AssistantDock: FC = () => {
                               <circle cx="12" cy="12" r="9" />
                             </svg>
                           )}
-                          <span className="flex-1 min-w-0 truncate">{row.text}</span>
+                          <span className="flex-1 min-w-0 truncate">
+                            {row.text}
+                          </span>
                         </button>
                       </React.Fragment>
                     );
