@@ -17,3 +17,14 @@ Plan: docs/superpowers/plans/2026-07-27-tasks-reminders.md
 
 
 Final review: 2 CRITICAL found (partial-update date wipe; orgId mass-assignment) — both FIXED + verified (commit c12c8356). Deferred (non-blocking): validate assigneeId/customerId org-membership (Important); Query DTO for list (Minor).
+
+---
+
+# AI Assistant Phase A — SDD progress
+Branch: mappedout-branding
+Plan: docs/superpowers/plans/2026-08-05-ai-assistant-phase-a.md
+Started from: 6100501e (plan) / pre-flight fixes committed
+
+Pre-flight: fixed 2 self-authored plan defects (dead `drop` helper in Task 8;
+'you' role comparison in Task 10). No design conflicts requiring owner input.
+

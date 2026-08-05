@@ -22,37 +22,17 @@
 - **Threads are internal only.** No visibility field, no sharing route, no `@ClientAllowed()`.
 - **Production is the only environment.** Do not run the app locally. Verify with `pnpm run build:frontend` AND `pnpm run build:backend`.
 
-### ⚠️ Test runner is broken in this checkout — fix first
+### Test runner — fixed before execution (commit `71d49ede`)
 
-`@nx/*` is not installed, so root `jest.config.ts` (`getJestProjects()` from `@nx/jest`) and `jest.preset.js` both fail to load, and ESLint dies with "Converting circular structure to JSON".
+The suite used to die at config parse: `jest.config.ts` imported `getJestProjects()` from `@nx/jest` and `jest.preset.js` required `@nx/jest/preset`, but this repo is not an Nx workspace and `@nx/*` was never a dependency. Both files were vestigial from the upstream Postiz fork and have been replaced with a plain `jest.config.js`.
 
-**Before Task 1, run:**
-
-```bash
-pnpm install
-```
-
-Then verify:
+**Run tests normally:**
 
 ```bash
-npx jest libraries/helpers/src/utils/ai.capabilities.spec.ts --reporters=default
+npx jest <path-to-spec> --reporters=default
 ```
 
-Expected: PASS. If it still fails with `Cannot find module '@nx/jest'`, fall back to a standalone config for helper specs:
-
-```bash
-cat > /tmp/jest.standalone.js <<'EOF'
-module.exports = {
-  rootDir: process.env.REPO,
-  testEnvironment: 'node',
-  transform: { '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true, diagnostics: false }] },
-  testMatch: ['<rootDir>/libraries/helpers/src/utils/ai.*.spec.ts'],
-};
-EOF
-REPO=$(pwd) npx jest -c /tmp/jest.standalone.js --reporters=default
-```
-
-Report which path worked in the Task 1 commit message so later tasks use the same command.
+Baseline at the start of this plan: **22 suites, 395 tests, all passing.** Any task that ends with fewer passing than it started with has broken something.
 
 ---
 
