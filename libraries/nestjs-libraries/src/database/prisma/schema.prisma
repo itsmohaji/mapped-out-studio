@@ -1288,6 +1288,7 @@ model AiFolder {
   deletedAt    DateTime?
   organization Organization @relation(fields: [orgId], references: [id])
 
+  @@unique([orgId, name])
   @@index([orgId, deletedAt, sortOrder])
 }
 

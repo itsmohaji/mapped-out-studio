@@ -29,4 +29,22 @@ describe('AI threads boundary', () => {
   it('is internal only — no client-allowed surface', () => {
     expect(service).not.toContain('ClientAllowed');
   });
+
+  it('tolerates a concurrent seed race instead of swallowing every error', () => {
+    // A second concurrent `library()` call for a brand-new org hits the
+    // @@unique([orgId, name]) constraint on AiFolder (P2002). That is the
+    // other request having already seeded the same folder — not a failure —
+    // so it must be caught and ignored. Anything else must still surface.
+    expect(service).toMatch(/P2002/);
+    // Guard against a lazy blanket swallow that would also hide real errors.
+    expect(service).not.toMatch(/catch\s*\([^)]*\)\s*{\s*}/);
+    expect(service).not.toMatch(/catch\s*{\s*}/);
+  });
+
+  it('turns a duplicate folder name into a clear conflict, not a 500', () => {
+    // addFolder/renameFolder can hit the same unique constraint when a user
+    // picks a name that already exists — surface it as ConflictException.
+    expect(service).toContain('ConflictException');
+    expect(service).toContain('A folder with that name already exists.');
+  });
 });

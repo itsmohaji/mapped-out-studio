@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import {
   AiThreadsRepository,
   MessageWrite,
@@ -47,7 +51,14 @@ export class AiThreadsService {
     let folders = await this._repo.folders(orgId);
     if (!folders.length) {
       for (let i = 0; i < DEFAULT_FOLDERS.length; i++) {
-        await this._repo.createFolder(orgId, DEFAULT_FOLDERS[i], i);
+        try {
+          await this._repo.createFolder(orgId, DEFAULT_FOLDERS[i], i);
+        } catch (err: any) {
+          // P2002 = unique violation on [orgId, name]: a concurrent first
+          // load already seeded this folder. That is the result we wanted,
+          // so it is not an error.
+          if (err?.code !== 'P2002') throw err;
+        }
       }
       folders = await this._repo.folders(orgId);
     }
@@ -131,19 +142,33 @@ export class AiThreadsService {
 
   async addFolder(orgId: string, name: string) {
     const existing = await this._repo.folders(orgId);
-    return this._repo.createFolder(
-      orgId,
-      name.trim().slice(0, 60) || 'New folder',
-      existing.length
-    );
+    try {
+      return await this._repo.createFolder(
+        orgId,
+        name.trim().slice(0, 60) || 'New folder',
+        existing.length
+      );
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException('A folder with that name already exists.');
+      }
+      throw err;
+    }
   }
 
   async renameFolder(orgId: string, folderId: string, name: string) {
     await this._ownedFolder(orgId, folderId);
-    return this._repo.renameFolder(
-      folderId,
-      name.trim().slice(0, 60) || 'New folder'
-    );
+    try {
+      return await this._repo.renameFolder(
+        folderId,
+        name.trim().slice(0, 60) || 'New folder'
+      );
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException('A folder with that name already exists.');
+      }
+      throw err;
+    }
   }
 
   /** Threads in a removed folder return to Recent — deleting a folder is not
