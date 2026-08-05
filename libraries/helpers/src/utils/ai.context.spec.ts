@@ -8,6 +8,7 @@ import {
   renderCoverage,
   stripHtml,
 } from './ai.context';
+import { CAPABILITIES } from './ai.capabilities';
 
 const channel = (
   name: string,
@@ -191,6 +192,24 @@ describe('sufficiency', () => {
   it('writing capabilities degrade instead of refusing', () => {
     expect(hasEnoughData('write_captions', cov(0, 0)).ok).toBe(true);
     expect(hasEnoughData('content_ideas', cov(0, 0)).ok).toBe(true);
+  });
+
+  // The gate used to keep its own list of keys, which drifted: two capabilities
+  // declared `needsAnalytics` were never actually gated. It is derived now, and
+  // this is what stops a third one from being added and quietly ungated.
+  it('gates every capability the registry declares needsAnalytics', () => {
+    const declared = CAPABILITIES.filter((c) => c.needsAnalytics);
+    expect(declared.length).toBeGreaterThan(0);
+    for (const c of declared) {
+      expect(hasEnoughData(c.key, cov(2, 0)).ok).toBe(false);
+      expect(hasEnoughData(c.key, cov(2, 1)).ok).toBe(true);
+    }
+  });
+
+  it('does not gate capabilities the registry leaves unflagged', () => {
+    for (const c of CAPABILITIES.filter((x) => !x.needsAnalytics)) {
+      expect(hasEnoughData(c.key, cov(0, 0)).ok).toBe(true);
+    }
   });
 
   it('refusal messages never leak internals', () => {

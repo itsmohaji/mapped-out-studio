@@ -17,6 +17,7 @@ import {
   formatHeadline,
   isFollowerMetric,
 } from './analytics.aggregate';
+import { CAPABILITIES } from './ai.capabilities';
 
 export interface BrandBriefLike {
   audience?: string | null;
@@ -92,8 +93,15 @@ export function coverageOf(ctx: ClientContext): Coverage {
  * Capabilities that make claims about performance need something to base them
  * on. Those that write copy degrade instead — they still produce something
  * useful with no analytics, they just say what they were working from.
+ *
+ * Derived from the registry rather than listed again here. A hand-kept copy had
+ * already drifted: `campaign_strategy` and `recommend_budget` are both declared
+ * `needsAnalytics` and neither was gated, so both would happily reason about
+ * performance for an account with nothing reporting.
  */
-const NEEDS_ANALYTICS = new Set(['analyze_account', 'performance_recos']);
+const NEEDS_ANALYTICS = new Set(
+  CAPABILITIES.filter((c) => c.needsAnalytics).map((c) => c.key)
+);
 
 export function hasEnoughData(
   capabilityKey: string,
