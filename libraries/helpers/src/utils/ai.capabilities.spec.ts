@@ -1,6 +1,6 @@
 import {
   CAPABILITIES,
-  capabilitySpec,
+  assistantCapabilities,  capabilitySpec,
   outputContract,
   parseStructured,
 } from './ai.capabilities';
@@ -213,5 +213,22 @@ describe('parseStructured', () => {
       s
     );
     expect(out.sections[0].items).toEqual(['Reach up', 'Saves flat', 'Shares down']);
+  });
+});
+
+describe('capability surface', () => {
+  it('keeps caption writing off the assistant page', () => {
+    expect(assistantCapabilities().map((c) => c.key)).not.toContain('write_captions');
+  });
+
+  it('every capability declares a surface', () => {
+    for (const c of CAPABILITIES) {
+      expect(['assistant', 'composer']).toContain(c.surface || 'assistant');
+    }
+  });
+
+  it('assistant surface is a subset of the registry', () => {
+    const all = CAPABILITIES.map((c) => c.key);
+    for (const c of assistantCapabilities()) expect(all).toContain(c.key);
   });
 });

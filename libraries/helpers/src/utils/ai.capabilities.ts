@@ -31,6 +31,15 @@ export type SectionKind =
   /** Rows with a date and an item; a plan or a schedule. */
   | 'schedule';
 
+/**
+ * Where a capability is offered.
+ *
+ * Declared here rather than filtered in the page, so it cannot drift back onto
+ * the wrong surface later — the same reason the analytics gate is derived from
+ * this registry rather than listed twice (ADR-028).
+ */
+export type CapabilitySurface = 'assistant' | 'composer';
+
 export interface SectionSpec {
   key: string;
   /** Heading shown above the section. */
@@ -61,7 +70,8 @@ export interface CapabilitySpec {
   sections: SectionSpec[];
   /** Placeholder for the free-text box on the card. */
   inputHint: string;
-}
+  /** Defaults to 'assistant' when omitted. */
+  surface?: CapabilitySurface;}
 
 // Section shapes reused across capabilities, so headings stay consistent
 // between one answer and the next — the same information should not be called
@@ -125,7 +135,7 @@ export const CAPABILITIES: CapabilitySpec[] = [
     blurb: 'Captions written from the selected media, in the client’s voice.',
     action: 'Generate Captions',
     skills: ['copywriter', 'final_reviewer'],
-    brief:
+    surface: 'composer',    brief:
       'Write captions for this client. Offer three distinct options with different angles, not three rewordings of one idea. Respect the channel’s length limit and the account’s own hashtag habits.',
     sections: [
       SUMMARY,
@@ -324,6 +334,9 @@ export const CAPABILITIES: CapabilitySpec[] = [
 
 export const capabilitySpec = (key: string): CapabilitySpec | null =>
   CAPABILITIES.find((c) => c.key === key) || null;
+
+export const assistantCapabilities = (): CapabilitySpec[] =>
+  CAPABILITIES.filter((c) => (c.surface || 'assistant') === 'assistant');
 
 /**
  * The JSON contract handed to the model.
