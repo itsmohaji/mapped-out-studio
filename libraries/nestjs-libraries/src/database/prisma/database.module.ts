@@ -1,5 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { PrismaRepository, PrismaService, PrismaTransaction } from './prisma.service';
+import {
+  PrismaRepository,
+  PrismaService,
+  PrismaTransaction,
+} from './prisma.service';
 import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
@@ -53,6 +57,8 @@ import { AiOrchestraService } from '@gitroom/nestjs-libraries/database/prisma/ai
 import { AiOrchestraRepository } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.orchestra.repository';
 import { AiContextService } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.context.service';
 import { AiContextRepository } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.context.repository';
+import { AiThreadsService } from '@gitroom/nestjs-libraries/database/prisma/ai-threads/ai.threads.service';
+import { AiThreadsRepository } from '@gitroom/nestjs-libraries/database/prisma/ai-threads/ai.threads.repository';
 import { AutomationRepository } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.repository';
 import { AutomationService } from '@gitroom/nestjs-libraries/database/prisma/automation/automation.service';
 import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
@@ -120,6 +126,8 @@ import { AiAssistService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai
     AiOrchestraRepository,
     AiContextService,
     AiContextRepository,
+    AiThreadsService,
+    AiThreadsRepository,
     AutomationRepository,
     AutomationService,
     AiProvidersService,
