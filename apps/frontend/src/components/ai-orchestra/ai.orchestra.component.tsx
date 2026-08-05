@@ -14,6 +14,8 @@ import { StarterCards } from '@gitroom/frontend/components/ai-assist/starter.car
 import { ThreadView } from '@gitroom/frontend/components/ai-assist/thread.view';
 import { FolderSidebar } from '@gitroom/frontend/components/ai-assist/folder.sidebar';
 import { useLibrary } from '@gitroom/frontend/components/ai-assist/threads.api';
+import { STARTER_CARDS } from '@gitroom/helpers/utils/ai.threads';
+import { assistantCapabilities } from '@gitroom/helpers/utils/ai.capabilities';
 
 interface Capability {
   key: string;
@@ -416,6 +418,14 @@ const defaultAsk = (card: { capabilityKey: string }) =>
     ? 'What did our recent posts do, and what should we change?'
     : '';
 
+// StarterCards only surfaces three capabilities; everything else still needs a
+// trigger somewhere, hence the "More capabilities" row below it. Filtered
+// against the starter cards' own capabilityKey rather than a hardcoded list,
+// so a future starter card automatically removes its capability from here.
+const STARTER_CAPABILITY_KEYS = new Set(
+  STARTER_CARDS.map((card) => card.capabilityKey)
+);
+
 export const AiOrchestraComponent: FC = () => {
   const t = useT();
   const fetch = useFetch();
@@ -451,6 +461,11 @@ export const AiOrchestraComponent: FC = () => {
   // free-text rather than silently re-running a capability.
   const [capabilityKey, setCapabilityKey] = useState<string | null>(null);
   const { data: library, mutate: libraryMutate } = useLibrary();
+
+  const [showMoreCapabilities, setShowMoreCapabilities] = useState(false);
+  const moreCapabilities = assistantCapabilities().filter(
+    (spec) => !STARTER_CAPABILITY_KEYS.has(spec.key)
+  );
 
   const openThread = useCallback((id: string) => {
     setActiveThreadId(id);
@@ -500,17 +515,77 @@ export const AiOrchestraComponent: FC = () => {
         <div className="flex-1 min-h-0 flex gap-[16px]">
           <div className="flex-1 min-w-0 flex flex-col gap-[14px]">
             {!activeThreadId && (
-              <StarterCards
-                onAssisted={(card) => {
-                  setPrefill(card.prefill);
-                  setCapabilityKey(card.capabilityKey);
-                }}
-                onAutomatic={(card) => {
-                  setPrefill(card.prefill || defaultAsk(card));
-                  setCapabilityKey(card.capabilityKey);
-                }}
-              />
+              <>
+                <StarterCards
+                  onAssisted={(card) => {
+                    setPrefill(card.prefill);
+                    setCapabilityKey(card.capabilityKey);
+                  }}
+                  onAutomatic={(card) => {
+                    setPrefill(card.prefill || defaultAsk(card));
+                    setCapabilityKey(card.capabilityKey);
+                  }}
+                />
+                <div className="flex flex-col gap-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreCapabilities((s) => !s)}
+                    className="self-start text-[11.5px] rounded-[999px] px-[11px] py-[6px] glass-surface hover:brightness-110 transition-all"
+                  >
+                    {showMoreCapabilities
+                      ? t('fewer_capabilities', 'Fewer capabilities')
+                      : t('more_capabilities', 'More capabilities')}
+                  </button>
+                  {showMoreCapabilities && (
+                    <div className="flex flex-wrap gap-[8px]">
+                      {moreCapabilities.map((spec) => (
+                        <button
+                          key={spec.key}
+                          type="button"
+                          onClick={() => {
+                            setPrefill(spec.inputHint);
+                            setCapabilityKey(spec.key);
+                          }}
+                          className="text-[11.5px] rounded-[999px] px-[11px] py-[6px] glass-surface hover:brightness-110 transition-all flex items-center gap-[6px]"
+                        >
+                          <span>{spec.icon}</span>
+                          <span>{t(`capability_${spec.key}`, spec.name)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
+            <div className="flex items-center gap-[10px]">
+              {(clients || []).length > 0 && (
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  aria-label={t('client', 'Client')}
+                  className="bg-transparent text-[11.5px] text-textItemBlur outline-none cursor-pointer hover:text-textItemFocused transition-colors"
+                >
+                  <option value="">{t('all_clients', 'All clients')}</option>
+                  {(clients || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <select
+                value={timeframeDays}
+                onChange={(e) => setTimeframeDays(Number(e.target.value))}
+                aria-label={t('timeframe', 'Timeframe')}
+                className="bg-transparent text-[11.5px] text-textItemBlur outline-none cursor-pointer hover:text-textItemFocused transition-colors"
+              >
+                {[7, 30, 90].map((days) => (
+                  <option key={days} value={days}>
+                    {t('last_n_days', 'last')} {days} {t('days', 'days')}
+                  </option>
+                ))}
+              </select>
+            </div>
             <ThreadView
               threadId={activeThreadId}
               prefill={prefill}
