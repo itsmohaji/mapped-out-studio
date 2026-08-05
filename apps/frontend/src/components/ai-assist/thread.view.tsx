@@ -24,9 +24,25 @@ export const ThreadView: FC<{
   threadId: string | null;
   prefill: string;
   customerId: string;
+  /**
+   * Set when this send came from a starter card. A capability run goes to
+   * `/ai-orchestra/run`, which returns parsed `sections`; a free-text question
+   * goes to `/ai-assist/ask`, which returns prose. Storing the sections is what
+   * lets AiAnswer render the answer as a document instead of a wall of text.
+   */
+  capabilityKey?: string | null;
+  timeframeDays?: number;
   onStarted: (threadId: string) => void;
   onChanged: () => void;
-}> = ({ threadId, prefill, customerId, onStarted, onChanged }) => {
+}> = ({
+  threadId,
+  prefill,
+  customerId,
+  capabilityKey,
+  timeframeDays,
+  onStarted,
+  onChanged,
+}) => {
   const t = useT();
   const fetch = useFetch();
   const [draft, setDraft] = useState('');
@@ -70,31 +86,64 @@ export const ThreadView: FC<{
         await sendMessage(fetch, id, { role: 'user', text });
       }
 
-      const res = await (
-        await fetch('/ai-assist/ask', {
-          method: 'POST',
-          body: JSON.stringify({
-            message: text,
-            pathname: '/ai-assistant',
-            customerId: customerId || undefined,
-          }),
-        })
-      ).json();
+      const res = capabilityKey
+        ? await (
+            await fetch('/ai-orchestra/run', {
+              method: 'POST',
+              body: JSON.stringify({
+                capabilityKey,
+                input: text,
+                customerId: customerId || undefined,
+                timeframeDays: timeframeDays || 30,
+              }),
+            })
+          ).json()
+        : await (
+            await fetch('/ai-assist/ask', {
+              method: 'POST',
+              body: JSON.stringify({
+                message: text,
+                pathname: '/ai-assistant',
+                customerId: customerId || undefined,
+              }),
+            })
+          ).json();
+
+      const failed =
+        !res?.ok ||
+        (!capabilityKey && !res?.text) ||
+        (capabilityKey && !res?.sections?.length && !res?.output);
 
       await sendMessage(fetch, id, {
         role: 'assistant',
-        text:
-          res?.ok && res?.text
-            ? res.text
-            : res?.message ||
-              t('ai_unavailable', 'The assistant is unavailable right now.'),
+        // A capability answer's prose lives in its sections; `output` is the
+        // raw fallback the API returns when a model ignored the contract.
+        text: failed
+          ? res?.message ||
+            t('ai_unavailable', 'The assistant is unavailable right now.')
+          : capabilityKey
+          ? res.output || ''
+          : res.text,
+        sections: capabilityKey && !failed ? res.sections : undefined,
+        capabilityKey: capabilityKey || null,
       });
     } finally {
       setBusy(false);
       mutate();
       onChanged();
     }
-  }, [draft, busy, threadId, customerId, onStarted, onChanged, mutate, t]);
+  }, [
+    draft,
+    busy,
+    threadId,
+    customerId,
+    capabilityKey,
+    timeframeDays,
+    onStarted,
+    onChanged,
+    mutate,
+    t,
+  ]);
 
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-[12px]">

@@ -10,7 +10,10 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
 import { AsyncBoundary } from '@gitroom/frontend/components/ui/async.boundary';
-import { CapabilityGrid } from '@gitroom/frontend/components/ai-assist/capability.grid';
+import { StarterCards } from '@gitroom/frontend/components/ai-assist/starter.cards';
+import { ThreadView } from '@gitroom/frontend/components/ai-assist/thread.view';
+import { FolderSidebar } from '@gitroom/frontend/components/ai-assist/folder.sidebar';
+import { useLibrary } from '@gitroom/frontend/components/ai-assist/threads.api';
 
 interface Capability {
   key: string;
@@ -38,10 +41,17 @@ const AdminConsole: FC = () => {
   const t = useT();
   const fetch = useFetch();
   const toast = useToaster();
-  const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
-  const { data, mutate, error, isLoading } = useSWR('/ai-orchestra/admin/overview', load, {
-    revalidateOnFocus: false,
-  });
+  const load = useCallback(
+    async (url: string) => (await fetch(url)).json(),
+    []
+  );
+  const { data, mutate, error, isLoading } = useSWR(
+    '/ai-orchestra/admin/overview',
+    load,
+    {
+      revalidateOnFocus: false,
+    }
+  );
 
   const toggleCapability = useCallback(
     async (key: string, enabled: boolean) => {
@@ -140,7 +150,9 @@ const AdminConsole: FC = () => {
                     : 'bg-newBgLineColor text-textItemBlur'
                 )}
               >
-                {c.enabled ? t('enabled', 'Enabled') : t('disabled', 'Disabled')}
+                {c.enabled
+                  ? t('enabled', 'Enabled')
+                  : t('disabled', 'Disabled')}
               </button>
             </div>
           ))}
@@ -154,11 +166,15 @@ const AdminConsole: FC = () => {
           </div>
           <div className="divide-y divide-newTableBorder">
             {(data.skills || []).map((s: any) => (
-              <div key={s.key} className="px-[16px] py-[10px] flex items-center gap-[10px]">
+              <div
+                key={s.key}
+                className="px-[16px] py-[10px] flex items-center gap-[10px]"
+              >
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] truncate">{s.name}</div>
                   <div className="text-[11px] text-textItemBlur truncate">
-                    {s.provider} · {s.model} · v{s.versions?.[0]?.version ?? '—'}
+                    {s.provider} · {s.model} · v
+                    {s.versions?.[0]?.version ?? '—'}
                   </div>
                 </div>
                 <span
@@ -232,9 +248,14 @@ const AdminConsole: FC = () => {
         ) : (
           <div className="divide-y divide-newTableBorder max-h-[360px] overflow-y-auto">
             {data.runs.map((r: any) => (
-              <div key={r.id} className="px-[16px] py-[9px] flex items-center gap-[10px]">
+              <div
+                key={r.id}
+                className="px-[16px] py-[9px] flex items-center gap-[10px]"
+              >
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] truncate">{r.capabilityKey}</div>
+                  <div className="text-[12.5px] truncate">
+                    {r.capabilityKey}
+                  </div>
                   <div className="text-[11px] text-textItemBlur truncate">
                     {dayjs(r.createdAt).format('MMM D, HH:mm')}
                     {r.model ? ` · ${r.model}` : ''}
@@ -269,7 +290,11 @@ const BRIEF_FIELDS: Array<{ key: string; label: string; ph: string }> = [
   { key: 'tone', label: 'Tone of voice', ph: 'Warm and direct; never jokey' },
   { key: 'dos', label: 'Always', ph: 'Lead with the guest experience' },
   { key: 'donts', label: 'Never', ph: 'Never discount; never use emojis' },
-  { key: 'products', label: 'Products / services', ph: 'What they actually sell' },
+  {
+    key: 'products',
+    label: 'Products / services',
+    ph: 'What they actually sell',
+  },
   { key: 'notes', label: 'Notes', ph: 'Anything else worth knowing' },
 ];
 
@@ -282,7 +307,10 @@ const BrandBriefsPanel: FC = () => {
   const t = useT();
   const fetch = useFetch();
   const toast = useToaster();
-  const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
+  const load = useCallback(
+    async (url: string) => (await fetch(url)).json(),
+    []
+  );
   const { data, mutate } = useSWR('/ai-orchestra/admin/brand-briefs', load, {
     revalidateOnFocus: false,
   });
@@ -378,6 +406,16 @@ const BrandBriefsPanel: FC = () => {
   );
 };
 
+/**
+ * An automatic card carries no prefill — it is meant to open the finding
+ * directly. Phase A has no proactive finding yet, so it asks the capability's
+ * own question instead of asserting one.
+ */
+const defaultAsk = (card: { capabilityKey: string }) =>
+  card.capabilityKey === 'performance_recos'
+    ? 'What did our recent posts do, and what should we change?'
+    : '';
+
 export const AiOrchestraComponent: FC = () => {
   const t = useT();
   const fetch = useFetch();
@@ -385,7 +423,10 @@ export const AiOrchestraComponent: FC = () => {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const [tab, setTab] = useState<'use' | 'admin'>('use');
 
-  const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
+  const load = useCallback(
+    async (url: string) => (await fetch(url)).json(),
+    []
+  );
   const { data, mutate } = useSWR<{
     capabilities: Capability[];
     credits: Credits;
@@ -402,6 +443,20 @@ export const AiOrchestraComponent: FC = () => {
   // than inside each one.
   const [customerId, setCustomerId] = useState('');
   const [timeframeDays, setTimeframeDays] = useState(30);
+
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState('');
+  // Which capability the next send should run, if it came from a starter card.
+  // Cleared when an existing thread is opened, so continuing a conversation is
+  // free-text rather than silently re-running a capability.
+  const [capabilityKey, setCapabilityKey] = useState<string | null>(null);
+  const { data: library, mutate: libraryMutate } = useLibrary();
+
+  const openThread = useCallback((id: string) => {
+    setActiveThreadId(id);
+    setCapabilityKey(null);
+    setPrefill('');
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col gap-[16px] p-[20px]">
@@ -442,66 +497,38 @@ export const AiOrchestraComponent: FC = () => {
       {tab === 'admin' && isAdmin ? (
         <AdminConsole />
       ) : (
-        <>
-          <div className="glass-surface rounded-[16px] p-[14px] flex flex-wrap items-end gap-[14px]">
-            <div className="flex flex-col gap-[5px] min-w-[190px] flex-1">
-              <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
-                {t('client', 'Client')}
-              </label>
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                className="bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary"
-              >
-                <option value="">
-                  {t('all_channels', 'All channels in this workspace')}
-                </option>
-                {(clients || []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-[5px] min-w-[150px]">
-              <label className="text-[11px] font-[600] uppercase tracking-wider text-textItemBlur">
-                {t('timeframe', 'Timeframe')}
-              </label>
-              <select
-                value={timeframeDays}
-                onChange={(e) => setTimeframeDays(Number(e.target.value))}
-                className="bg-newBgLineColor border border-newTableBorder rounded-[10px] px-[11px] py-[8px] text-[13px] outline-none focus:border-btnPrimary"
-              >
-                {[7, 30, 90].map((d) => (
-                  <option key={d} value={d}>
-                    {t('last_n_days', 'last')} {d} {t('days', 'days')}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-[14px] text-[11.5px] text-textItemBlur flex-1 min-w-[200px]">
-              <span className="flex-1">
-                {t(
-                  'ai_context_help',
-                  'Drafts are written from this account’s real analytics and its own published posts over this period. Nothing outside it is used.'
-                )}
-              </span>
-              {/* Credits belong here, quietly, not as two large meters at the
-                  top of the page — they are a constraint, not the subject. */}
-              {data?.credits && (
-                <span className="shrink-0 tabular-nums">
-                  {data.credits.creditsRemaining} {t('credits_left', 'credits left')}
-                </span>
-              )}
-            </div>
+        <div className="flex-1 min-h-0 flex gap-[16px]">
+          <div className="flex-1 min-w-0 flex flex-col gap-[14px]">
+            {!activeThreadId && (
+              <StarterCards
+                onAssisted={(card) => {
+                  setPrefill(card.prefill);
+                  setCapabilityKey(card.capabilityKey);
+                }}
+                onAutomatic={(card) => {
+                  setPrefill(card.prefill || defaultAsk(card));
+                  setCapabilityKey(card.capabilityKey);
+                }}
+              />
+            )}
+            <ThreadView
+              threadId={activeThreadId}
+              prefill={prefill}
+              customerId={customerId}
+              capabilityKey={capabilityKey}
+              timeframeDays={timeframeDays}
+              onStarted={setActiveThreadId}
+              onChanged={() => libraryMutate()}
+            />
           </div>
-
-          <CapabilityGrid
-            customerId={customerId}
-            timeframeDays={timeframeDays}
+          <FolderSidebar
+            folders={library?.folders || []}
+            threads={library?.threads || []}
+            activeThreadId={activeThreadId}
+            onSelect={openThread}
+            onChanged={() => libraryMutate()}
           />
-
-        </>
+        </div>
       )}
     </div>
   );
