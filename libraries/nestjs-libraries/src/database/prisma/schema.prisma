@@ -48,6 +48,8 @@ model Organization {
   aiRuns              AiRun[]
   aiEntitlement       AiEntitlement?
   aiBrandBriefs       AiBrandBrief[]
+  aiThreads           AiThread[]
+  aiFolders           AiFolder[]
   automationWorkflows AutomationWorkflow[]
   automationContacts  AutomationContact[]
   automationEvents    AutomationEvent[]
@@ -1239,6 +1241,54 @@ model AiBrandBrief {
   organization Organization @relation(fields: [orgId], references: [id])
 
   @@index([orgId, customerId, deletedAt])
+}
+
+/**
+ * AI Assistant threads. Internal only — there is deliberately no visibility
+ * field and no client-facing route (see the Phase A design doc).
+ * Additive only: `prisma db push` runs on every boot.
+ */
+model AiThread {
+  id           String       @id @default(uuid())
+  orgId        String
+  userId       String?
+  customerId   String?
+  title        String
+  folderId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  organization Organization @relation(fields: [orgId], references: [id])
+  messages     AiMessage[]
+
+  @@index([orgId, deletedAt, updatedAt])
+  @@index([orgId, folderId, deletedAt])
+}
+
+model AiMessage {
+  id            String   @id @default(uuid())
+  threadId      String
+  role          String
+  text          String
+  sections      Json?
+  capabilityKey String?
+  createdAt     DateTime @default(now())
+  thread        AiThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}
+
+model AiFolder {
+  id           String       @id @default(uuid())
+  orgId        String
+  name         String
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId, deletedAt, sortOrder])
 }
 
 /**
