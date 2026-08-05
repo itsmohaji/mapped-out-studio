@@ -1178,12 +1178,6 @@ export const FolderSidebar: FC<{
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
 
-  const drop = async (folderId: string | null) => {
-    const threadId = dragOver && null;
-    setDragOver(null);
-    return threadId;
-  };
-
   const onDropThread = async (e: React.DragEvent, folderId: string | null) => {
     e.preventDefault();
     setDragOver(null);
@@ -1318,19 +1312,12 @@ export const FolderSidebar: FC<{
 };
 ```
 
-- [ ] **Step 2: Remove the unused stub**
-
-The `drop` function above is dead — delete it. It is included here only because a partially-written helper is the most common thing left behind in this kind of component; confirm it is gone before committing.
-
-Run: `grep -n "const drop = async" apps/frontend/src/components/ai-assist/folder.sidebar.tsx`
-Expected: no output.
-
-- [ ] **Step 3: Typecheck**
+- [ ] **Step 2: Typecheck**
 
 Run: `npx tsc --noEmit -p apps/frontend/tsconfig.json`
 Expected: exit 0.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add apps/frontend/src/components/ai-assist/folder.sidebar.tsx
@@ -1579,7 +1566,7 @@ export const ThreadView: FC<{
             key={m.id}
             className={clsx(
               'rounded-[13px] px-[13px] py-[11px]',
-              m.role === 'you' || m.role === 'user'
+              m.role === 'user'
                 ? 'bg-btnPrimary/15 self-end max-w-[80%]'
                 : 'glass-surface'
             )}
@@ -1847,7 +1834,7 @@ remain the fallback."
 
 **Open question still open:** whether `analyze_account` moves to the Accounts page. Not blocking Phase A — it keeps its default `assistant` surface and continues to work. Resolve before Phase B.
 
-**Type consistency checked:** `onChanged` is used with the same signature in Tasks 8, 10 and 11. `StarterCard.mode` values match between Tasks 3, 9 and 11. `MessageRow.role` is `'user' | 'assistant'` throughout — note Task 10's render guards on both `'user'` and the legacy `'you'` string for safety.
+**Type consistency checked:** `onChanged` is used with the same signature in Tasks 8, 10 and 11. `StarterCard.mode` values match between Tasks 3, 9 and 11. `MessageRow.role` is `'user' | 'assistant'` throughout, and Task 10 compares against exactly those two — the spotlight's separate `Turn` type uses `'you'`, which never reaches this component.
 
 ---
 
