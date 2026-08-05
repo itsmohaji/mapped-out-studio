@@ -1634,14 +1634,86 @@ credit ring is silent until clicked (ADR-030)."
 
 ---
 
-### Task 11: Assemble the page
+### Task 11: Assemble the page, and keep the capabilities reachable
 
 **Files:**
+- Modify: `apps/frontend/src/components/ai-assist/thread.view.tsx`
 - Modify: `apps/frontend/src/components/ai-orchestra/ai.orchestra.component.tsx`
 
 **Interfaces:**
 - Consumes: everything from Tasks 7–10.
 - Produces: the redesigned `/ai-assistant` page.
+
+> **Plan correction (found in review of Task 10).** `/ai-assist/ask` returns
+> `{ ok, text, page, credits }` and never `sections`. The only endpoint that runs a
+> capability and returns `sections` is `/ai-orchestra/run`, and its only caller is
+> `capability.grid.tsx` — which Step 2 below deletes. Without the change in Step 0,
+> deleting the grid would make all eight capabilities unreachable, leave `sections`
+> permanently null, and turn `AiAnswer` into dead code. The starter cards already
+> carry a `capabilityKey`; Step 0 is what consumes it.
+
+- [ ] **Step 0: Route capability-backed sends to `/ai-orchestra/run`**
+
+In `apps/frontend/src/components/ai-assist/thread.view.tsx`, add an optional prop:
+
+```tsx
+  /**
+   * Set when this send came from a starter card. A capability run goes to
+   * `/ai-orchestra/run`, which returns parsed `sections`; a free-text question
+   * goes to `/ai-assist/ask`, which returns prose. Storing the sections is what
+   * lets AiAnswer render the answer as a document instead of a wall of text.
+   */
+  capabilityKey?: string | null;
+  timeframeDays?: number;
+```
+
+Then, inside `send()`, replace the single `/ai-assist/ask` call with the branch:
+
+```tsx
+      const res = capabilityKey
+        ? await (
+            await fetch('/ai-orchestra/run', {
+              method: 'POST',
+              body: JSON.stringify({
+                capabilityKey,
+                input: text,
+                customerId: customerId || undefined,
+                timeframeDays: timeframeDays || 30,
+              }),
+            })
+          ).json()
+        : await (
+            await fetch('/ai-assist/ask', {
+              method: 'POST',
+              body: JSON.stringify({
+                message: text,
+                pathname: '/ai-assistant',
+                customerId: customerId || undefined,
+              }),
+            })
+          ).json();
+
+      const failed =
+        !res?.ok ||
+        (!capabilityKey && !res?.text) ||
+        (capabilityKey && !res?.sections?.length && !res?.output);
+
+      await sendMessage(fetch, id, {
+        role: 'assistant',
+        // A capability answer's prose lives in its sections; `output` is the
+        // raw fallback the API returns when a model ignored the contract.
+        text: failed
+          ? res?.message ||
+            t('ai_unavailable', 'The assistant is unavailable right now.')
+          : capabilityKey
+          ? res.output || ''
+          : res.text,
+        sections: capabilityKey && !failed ? res.sections : undefined,
+        capabilityKey: capabilityKey || null,
+      });
+```
+
+- [ ] **Step 1: Replace the capabilities tab body**
 
 - [ ] **Step 1: Replace the capabilities tab body**
 
@@ -1652,14 +1724,22 @@ In `ai.orchestra.component.tsx`, replace the `<>…</>` block currently renderin
           <div className="flex-1 min-w-0 flex flex-col gap-[14px]">
             {!activeThreadId && (
               <StarterCards
-                onAssisted={(card) => setPrefill(card.prefill)}
-                onAutomatic={(card) => setPrefill(card.prefill || defaultAsk(card))}
+                onAssisted={(card) => {
+                  setPrefill(card.prefill);
+                  setCapabilityKey(card.capabilityKey);
+                }}
+                onAutomatic={(card) => {
+                  setPrefill(card.prefill || defaultAsk(card));
+                  setCapabilityKey(card.capabilityKey);
+                }}
               />
             )}
             <ThreadView
               threadId={activeThreadId}
               prefill={prefill}
               customerId={customerId}
+              capabilityKey={capabilityKey}
+              timeframeDays={timeframeDays}
               onStarted={setActiveThreadId}
               onChanged={() => libraryMutate()}
             />
@@ -1668,7 +1748,7 @@ In `ai.orchestra.component.tsx`, replace the `<>…</>` block currently renderin
             folders={library?.folders || []}
             threads={library?.threads || []}
             activeThreadId={activeThreadId}
-            onSelect={setActiveThreadId}
+            onSelect={openThread}
             onChanged={() => libraryMutate()}
           />
         </div>
@@ -1679,8 +1759,20 @@ Add the state and the library hook near the existing `customerId` state (around 
 ```tsx
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [prefill, setPrefill] = useState('');
+  // Which capability the next send should run, if it came from a starter card.
+  // Cleared when an existing thread is opened, so continuing a conversation is
+  // free-text rather than silently re-running a capability.
+  const [capabilityKey, setCapabilityKey] = useState<string | null>(null);
   const { data: library, mutate: libraryMutate } = useLibrary();
+
+  const openThread = useCallback((id: string) => {
+    setActiveThreadId(id);
+    setCapabilityKey(null);
+    setPrefill('');
+  }, []);
 ```
+
+Use `openThread` — not the bare `setActiveThreadId` — for `FolderSidebar`'s `onSelect`, so picking a thread from the sidebar clears any pending capability. Keep `onStarted={setActiveThreadId}` on `ThreadView`, because that fires mid-send and must not clear the capability the send is still using.
 
 Add above the component:
 
