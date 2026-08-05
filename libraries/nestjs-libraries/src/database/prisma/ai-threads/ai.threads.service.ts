@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   AiThreadsRepository,
   MessageWrite,
@@ -50,15 +46,17 @@ export class AiThreadsService {
   async library(orgId: string) {
     let folders = await this._repo.folders(orgId);
     if (!folders.length) {
+      // Check-then-act, deliberately. Two concurrent first-ever loads for one
+      // organisation can both seed, leaving a duplicate folder the user can
+      // delete. A unique index on (orgId, name) would prevent that, and was
+      // tried — but it also applies to soft-deleted rows, so deleting a folder
+      // permanently reserves its name, and deleting all three defaults leaves
+      // library() reseeding into P2002 forever and returning nothing. The
+      // correct constraint is a partial index over deletedAt IS NULL, which
+      // `prisma db push` cannot express. A cosmetic duplicate beats a silent
+      // permanent empty list.
       for (let i = 0; i < DEFAULT_FOLDERS.length; i++) {
-        try {
-          await this._repo.createFolder(orgId, DEFAULT_FOLDERS[i], i);
-        } catch (err: any) {
-          // P2002 = unique violation on [orgId, name]: a concurrent first
-          // load already seeded this folder. That is the result we wanted,
-          // so it is not an error.
-          if (err?.code !== 'P2002') throw err;
-        }
+        await this._repo.createFolder(orgId, DEFAULT_FOLDERS[i], i);
       }
       folders = await this._repo.folders(orgId);
     }
@@ -142,33 +140,19 @@ export class AiThreadsService {
 
   async addFolder(orgId: string, name: string) {
     const existing = await this._repo.folders(orgId);
-    try {
-      return await this._repo.createFolder(
-        orgId,
-        name.trim().slice(0, 60) || 'New folder',
-        existing.length
-      );
-    } catch (err: any) {
-      if (err?.code === 'P2002') {
-        throw new ConflictException('A folder with that name already exists.');
-      }
-      throw err;
-    }
+    return this._repo.createFolder(
+      orgId,
+      name.trim().slice(0, 60) || 'New folder',
+      existing.length
+    );
   }
 
   async renameFolder(orgId: string, folderId: string, name: string) {
     await this._ownedFolder(orgId, folderId);
-    try {
-      return await this._repo.renameFolder(
-        folderId,
-        name.trim().slice(0, 60) || 'New folder'
-      );
-    } catch (err: any) {
-      if (err?.code === 'P2002') {
-        throw new ConflictException('A folder with that name already exists.');
-      }
-      throw err;
-    }
+    return this._repo.renameFolder(
+      folderId,
+      name.trim().slice(0, 60) || 'New folder'
+    );
   }
 
   /** Threads in a removed folder return to Recent — deleting a folder is not
