@@ -60,7 +60,11 @@ export class AiThreadsController {
       threadId: id,
       role: body?.role === 'assistant' ? 'assistant' : 'user',
       text: String(body?.text || '').slice(0, 20000),
-      sections: body?.sections,
+      // A non-array (e.g. a plain string) passes AiAnswer's old `.length`
+      // guard and then crashes `.map` on every future render of this thread.
+      // Only an array is a valid `sections` payload — anything else is dropped
+      // at the boundary rather than persisted and re-rendered forever.
+      sections: Array.isArray(body?.sections) ? body.sections : undefined,
       capabilityKey: body?.capabilityKey ? String(body.capabilityKey) : null,
     });
   }

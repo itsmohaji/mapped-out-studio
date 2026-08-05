@@ -3,6 +3,7 @@ import {
   AiThreadsRepository,
   MessageWrite,
 } from '@gitroom/nestjs-libraries/database/prisma/ai-threads/ai.threads.repository';
+import { AiContextService } from '@gitroom/nestjs-libraries/database/prisma/ai-orchestra/ai.context.service';
 import {
   threadTitleFrom,
   DEFAULT_FOLDERS,
@@ -21,7 +22,10 @@ import {
  */
 @Injectable()
 export class AiThreadsService {
-  constructor(private _repo: AiThreadsRepository) {}
+  constructor(
+    private _repo: AiThreadsRepository,
+    private _context: AiContextService
+  ) {}
 
   private async _ownedThread(orgId: string, threadId: string) {
     const thread = await this._repo.threadById(threadId);
@@ -82,10 +86,19 @@ export class AiThreadsService {
   }) {
     if (params.folderId) await this._ownedFolder(params.orgId, params.folderId);
 
+    // An id from another workspace is dropped rather than trusted — the same
+    // rule Orchestra and the caption tools enforce (`resolveClient` in
+    // ai.assist.service.ts), so a customerId from the browser can never widen
+    // what a thread is allowed to see or be attributed to.
+    const resolvedCustomerId = params.customerId
+      ? (await this._context.resolveCustomer(params.orgId, params.customerId))
+          .customer?.id ?? null
+      : null;
+
     const thread = await this._repo.createThread({
       orgId: params.orgId,
       userId: params.userId ?? null,
-      customerId: params.customerId ?? null,
+      customerId: resolvedCustomerId,
       title: threadTitleFrom(params.text),
       folderId: params.folderId ?? null,
     });

@@ -463,8 +463,18 @@ export const AiOrchestraComponent: FC = () => {
   const { data: library, mutate: libraryMutate } = useLibrary();
 
   const [showMoreCapabilities, setShowMoreCapabilities] = useState(false);
+  // The registry drives order/presentation; the server response is the source
+  // of truth for what is actually available (plan, provider, admin toggle).
+  // Intersect the two rather than replacing either — a capability missing from
+  // the server response is not offered at all, and one it marks unavailable is
+  // shown but disabled with its reason.
+  const serverCapabilityByKey = new Map(
+    (data?.capabilities || []).map((c) => [c.key, c])
+  );
   const moreCapabilities = assistantCapabilities().filter(
-    (spec) => !STARTER_CAPABILITY_KEYS.has(spec.key)
+    (spec) =>
+      !STARTER_CAPABILITY_KEYS.has(spec.key) &&
+      serverCapabilityByKey.has(spec.key)
   );
 
   const openThread = useCallback((id: string) => {
@@ -538,20 +548,33 @@ export const AiOrchestraComponent: FC = () => {
                   </button>
                   {showMoreCapabilities && (
                     <div className="flex flex-wrap gap-[8px]">
-                      {moreCapabilities.map((spec) => (
-                        <button
-                          key={spec.key}
-                          type="button"
-                          onClick={() => {
-                            setPrefill(spec.inputHint);
-                            setCapabilityKey(spec.key);
-                          }}
-                          className="text-[11.5px] rounded-[999px] px-[11px] py-[6px] glass-surface hover:brightness-110 transition-all flex items-center gap-[6px]"
-                        >
-                          <span>{spec.icon}</span>
-                          <span>{t(`capability_${spec.key}`, spec.name)}</span>
-                        </button>
-                      ))}
+                      {moreCapabilities.map((spec) => {
+                        const server = serverCapabilityByKey.get(spec.key);
+                        const available = server?.available !== false;
+                        return (
+                          <button
+                            key={spec.key}
+                            type="button"
+                            disabled={!available}
+                            title={
+                              available ? undefined : server?.unavailableMessage
+                            }
+                            onClick={() => {
+                              setPrefill(spec.inputHint);
+                              setCapabilityKey(spec.key);
+                            }}
+                            className={clsx(
+                              'text-[11.5px] rounded-[999px] px-[11px] py-[6px] glass-surface hover:brightness-110 transition-all flex items-center gap-[6px]',
+                              !available && 'opacity-50 cursor-default'
+                            )}
+                          >
+                            <span>{spec.icon}</span>
+                            <span>
+                              {t(`capability_${spec.key}`, spec.name)}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -586,6 +609,19 @@ export const AiOrchestraComponent: FC = () => {
                 ))}
               </select>
             </div>
+            {activeThreadId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveThreadId(null);
+                  setCapabilityKey(null);
+                  setPrefill('');
+                }}
+                className="self-start text-[11.5px] text-textItemBlur hover:text-textItemFocused transition-colors"
+              >
+                {t('new_chat', 'New chat')}
+              </button>
+            )}
             <ThreadView
               threadId={activeThreadId}
               prefill={prefill}
@@ -593,6 +629,7 @@ export const AiOrchestraComponent: FC = () => {
               capabilityKey={capabilityKey}
               timeframeDays={timeframeDays}
               onStarted={setActiveThreadId}
+              onCapabilityConsumed={() => setCapabilityKey(null)}
               onChanged={() => libraryMutate()}
             />
           </div>

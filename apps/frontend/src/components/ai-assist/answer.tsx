@@ -2,9 +2,7 @@
 
 import React, { FC } from 'react';
 import clsx from 'clsx';
-import type {
-  RenderedSection,
-} from '@gitroom/helpers/utils/ai.capabilities';
+import type { RenderedSection } from '@gitroom/helpers/utils/ai.capabilities';
 
 /**
  * An AI answer, rendered as a document rather than a wall of text.
@@ -47,7 +45,9 @@ const Bullets: FC<{ items: string[]; ordered?: boolean }> = ({
   </div>
 );
 
-const Metrics: FC<{ items: { label: string; value: string }[] }> = ({ items }) => (
+const Metrics: FC<{ items: { label: string; value: string }[] }> = ({
+  items,
+}) => (
   <div className="grid grid-cols-2 lg:grid-cols-3 gap-[8px]">
     {items.map((m, i) => (
       <div
@@ -66,7 +66,9 @@ const Metrics: FC<{ items: { label: string; value: string }[] }> = ({ items }) =
   </div>
 );
 
-const Schedule: FC<{ items: { when: string; what: string }[] }> = ({ items }) => (
+const Schedule: FC<{ items: { when: string; what: string }[] }> = ({
+  items,
+}) => (
   <div className="flex flex-col">
     {items.map((row, i) => (
       <div
@@ -79,17 +81,22 @@ const Schedule: FC<{ items: { when: string; what: string }[] }> = ({ items }) =>
         <div className="shrink-0 w-[104px] text-[11.5px] font-[600] text-btnPrimary">
           {row.when || '—'}
         </div>
-        <div className="text-[13px] leading-[1.55] flex-1 min-w-0">{row.what}</div>
+        <div className="text-[13px] leading-[1.55] flex-1 min-w-0">
+          {row.what}
+        </div>
       </div>
     ))}
   </div>
 );
 
-export const AiAnswer: FC<{ sections: RenderedSection[]; className?: string }> = ({
-  sections,
-  className,
-}) => {
-  if (!sections?.length) return null;
+export const AiAnswer: FC<{
+  sections: RenderedSection[];
+  className?: string;
+}> = ({ sections, className }) => {
+  // A boundary can only be trusted so far: rows written before the controller
+  // validated `sections` can still hold a non-array. `.length` alone lets a
+  // string through (`'x'.length` is truthy), which then crashes on `.map`.
+  if (!Array.isArray(sections) || !sections.length) return null;
 
   return (
     <div className={clsx('flex flex-col gap-[20px]', className)}>
@@ -106,7 +113,9 @@ export const AiAnswer: FC<{ sections: RenderedSection[]; className?: string }> =
           {section.kind === 'steps' && (
             <Bullets items={section.items || []} ordered />
           )}
-          {section.kind === 'metrics' && <Metrics items={section.metrics || []} />}
+          {section.kind === 'metrics' && (
+            <Metrics items={section.metrics || []} />
+          )}
           {section.kind === 'schedule' && (
             <Schedule items={section.schedule || []} />
           )}

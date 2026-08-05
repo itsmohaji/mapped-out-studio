@@ -19,17 +19,23 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
-      { isolatedModules: true, diagnostics: false, tsconfig: { jsx: 'react-jsx' } },
+      {
+        isolatedModules: true,
+        diagnostics: false,
+        tsconfig: { jsx: 'react-jsx' },
+      },
     ],
   },
   moduleNameMapper: {
     '^@gitroom/helpers/(.*)$': '<rootDir>/libraries/helpers/src/$1',
-    '^@gitroom/nestjs-libraries/(.*)$': '<rootDir>/libraries/nestjs-libraries/src/$1',
-    '^@gitroom/react/(.*)$': '<rootDir>/libraries/react-shared-libraries/src/$1',
+    '^@gitroom/nestjs-libraries/(.*)$':
+      '<rootDir>/libraries/nestjs-libraries/src/$1',
+    '^@gitroom/react/(.*)$':
+      '<rootDir>/libraries/react-shared-libraries/src/$1',
   },
   testMatch: [
-    '<rootDir>/libraries/**/*.spec.ts',
-    '<rootDir>/apps/**/*.spec.ts',
+    '<rootDir>/libraries/**/*.spec.ts?(x)',
+    '<rootDir>/apps/**/*.spec.ts?(x)',
   ],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.next/'],
 };

@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 import { AiAnswer } from '@gitroom/frontend/components/ai-assist/answer';
 import {
   MessageRow,
@@ -33,6 +34,14 @@ export const ThreadView: FC<{
   capabilityKey?: string | null;
   timeframeDays?: number;
   onStarted: (threadId: string) => void;
+  /**
+   * Fired once the first assistant turn of a capability run is persisted.
+   * NOT fired from `onStarted` — that lands mid-send, while the capability is
+   * still in use for the run in flight. Firing here is what stops the 2nd,
+   * 3rd, Nth message in a card-started thread from silently re-running the
+   * same multi-skill pipeline (and re-billing credits) on free-text follow-ups.
+   */
+  onCapabilityConsumed?: () => void;
   onChanged: () => void;
 }> = ({
   threadId,
@@ -41,10 +50,12 @@ export const ThreadView: FC<{
   capabilityKey,
   timeframeDays,
   onStarted,
+  onCapabilityConsumed,
   onChanged,
 }) => {
   const t = useT();
   const fetch = useFetch();
+  const toast = useToaster();
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
@@ -80,7 +91,17 @@ export const ThreadView: FC<{
           customerId: customerId || undefined,
         });
         id = started?.thread?.id;
-        if (!id) return;
+        if (!id) {
+          // customFetch does not throw on non-2xx — a 403/500 lands here as a
+          // body with no thread id. The draft was already cleared optimistically;
+          // put it back rather than silently eating what the user typed.
+          setDraft(text);
+          toast.show(
+            t('ai_unavailable', 'The assistant is unavailable right now.'),
+            'warning'
+          );
+          return;
+        }
         onStarted(id);
       } else {
         await sendMessage(fetch, id, { role: 'user', text });
@@ -127,6 +148,10 @@ export const ThreadView: FC<{
         sections: capabilityKey && !failed ? res.sections : undefined,
         capabilityKey: capabilityKey || null,
       });
+      // Cleared here, not in `onStarted` — that fires mid-send, while this run
+      // still needs the key. Once the assistant turn lands, the capability has
+      // done its one job; the next message in this thread is free-text.
+      onCapabilityConsumed?.();
     } finally {
       setBusy(false);
       mutate();
@@ -140,9 +165,11 @@ export const ThreadView: FC<{
     capabilityKey,
     timeframeDays,
     onStarted,
+    onCapabilityConsumed,
     onChanged,
     mutate,
     t,
+    toast,
   ]);
 
   return (
