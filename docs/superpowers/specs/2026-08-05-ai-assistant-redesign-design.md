@@ -206,11 +206,17 @@ Phase B is not designed here. It needs its own spec.
 - ⚠️ **`@nx/*` is not installed**, so `pnpm test` and ESLint cannot run in this checkout.
   Run `pnpm install` before relying on them. See `MappedOut — Known Issues`.
 
+## Decided
+
+**Threads are internal only** (owner, 2026-08-05). No visibility field on `AiThread`, no
+sharing surface, no client-facing route. This follows the existing posture rather than
+softening it: neither AI controller carries `@ClientAllowed()`, so a CLIENT-role request
+for a thread is refused by default. Should sharing ever be wanted, it is a new spec —
+adding a visibility field then is a nullable column, which ADR-008 permits.
+
 ## Open questions
 
 1. Does `analyze_account` move to the Accounts page in this work, or stay put with a
    `surface` value until that page can host it?
-2. Should a thread be shareable with a client, or is it strictly internal? Affects whether
-   `AiThread` needs a visibility field now (cheaper to add than to retrofit).
-3. Folder deletion when non-empty — confirm threads return to Recent rather than being
+2. Folder deletion when non-empty — confirm threads return to Recent rather than being
    deleted.
