@@ -71,7 +71,8 @@ export interface CapabilitySpec {
   /** Placeholder for the free-text box on the card. */
   inputHint: string;
   /** Defaults to 'assistant' when omitted. */
-  surface?: CapabilitySurface;}
+  surface?: CapabilitySurface;
+}
 
 // Section shapes reused across capabilities, so headings stay consistent
 // between one answer and the next — the same information should not be called
@@ -119,7 +120,8 @@ export const CAPABILITIES: CapabilitySpec[] = [
     key: 'analyze_account',
     name: 'Account Health',
     icon: '📊',
-    blurb: 'Strengths, weaknesses, growth score and where the opportunities are.',
+    blurb:
+      'Strengths, weaknesses, growth score and where the opportunities are.',
     action: 'Analyze',
     skills: ['analyst'],
     needsAnalytics: true,
@@ -135,7 +137,8 @@ export const CAPABILITIES: CapabilitySpec[] = [
     blurb: 'Captions written from the selected media, in the client’s voice.',
     action: 'Generate Captions',
     skills: ['copywriter', 'final_reviewer'],
-    surface: 'composer',    brief:
+    surface: 'composer',
+    brief:
       'Write captions for this client. Offer three distinct options with different angles, not three rewordings of one idea. Respect the channel’s length limit and the account’s own hashtag habits.',
     sections: [
       SUMMARY,
@@ -305,7 +308,14 @@ export const CAPABILITIES: CapabilitySpec[] = [
     needsAnalytics: true,
     brief:
       'Explain this account’s performance and what to do about it. Every recommendation must name the figure that motivated it. A recommendation with no number behind it is a hypothesis — label it as one or drop it.',
-    sections: [SUMMARY, FINDINGS, PROBLEMS, RECOMMENDATIONS, NEXT_ACTIONS, KPIS],
+    sections: [
+      SUMMARY,
+      FINDINGS,
+      PROBLEMS,
+      RECOMMENDATIONS,
+      NEXT_ACTIONS,
+      KPIS,
+    ],
     inputHint: 'A post, a channel, or a period to focus on',
   },
   {
@@ -356,7 +366,9 @@ export function outputContract(spec: CapabilitySpec): string {
           : s.kind === 'schedule'
           ? '[{ "when": "...", "what": "..." }]'
           : '["point", "point"]';
-      return `  "${s.key}": ${value}${s.optional ? '   // may be omitted' : ''}  // ${s.hint}`;
+      return `  "${s.key}": ${value}${
+        s.optional ? '   // may be omitted' : ''
+      }  // ${s.hint}`;
     })
     .join('\n');
 
@@ -473,7 +485,10 @@ function asMetrics(v: any): MetricItem[] {
     return v
       .map((m) =>
         m && typeof m === 'object'
-          ? { label: asText(m.label ?? m.name ?? m.key), value: asText(m.value ?? m.target ?? m.amount) }
+          ? {
+              label: asText(m.label ?? m.name ?? m.key),
+              value: asText(m.value ?? m.target ?? m.amount),
+            }
           : { label: asText(m), value: '' }
       )
       .filter((m) => m.label || m.value);
@@ -559,7 +574,9 @@ export function parseStructured(
     const text = (raw || '').trim();
     return {
       degraded: true,
-      sections: text ? [{ key: 'answer', title: spec.name, kind: 'summary', text }] : [],
+      sections: text
+        ? [{ key: 'answer', title: spec.name, kind: 'summary', text }]
+        : [],
     };
   }
 

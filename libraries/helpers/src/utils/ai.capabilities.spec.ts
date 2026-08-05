@@ -1,6 +1,7 @@
 import {
   CAPABILITIES,
-  assistantCapabilities,  capabilitySpec,
+  assistantCapabilities,
+  capabilitySpec,
   outputContract,
   parseStructured,
 } from './ai.capabilities';
@@ -111,7 +112,11 @@ describe('parseStructured', () => {
       s
     );
     expect(out.degraded).toBe(false);
-    expect(out.sections.map((x) => x.key)).toEqual(['summary', 'findings', 'kpis']);
+    expect(out.sections.map((x) => x.key)).toEqual([
+      'summary',
+      'findings',
+      'kpis',
+    ]);
     expect(out.sections[0].text).toBe('Engagement is up.');
     expect(out.sections[1].items).toEqual(['Reach +12%', 'Saves flat']);
     expect(out.sections[2].metrics).toEqual([
@@ -120,10 +125,7 @@ describe('parseStructured', () => {
   });
 
   it('survives a model that fences the JSON', () => {
-    const out = parseStructured(
-      '```json\n{"summary":"All good"}\n```',
-      s
-    );
+    const out = parseStructured('```json\n{"summary":"All good"}\n```', s);
     expect(out.degraded).toBe(false);
     expect(out.sections[0].text).toBe('All good');
   });
@@ -189,7 +191,9 @@ describe('parseStructured', () => {
   it('reads a schedule, which the planner depends on', () => {
     const out = parseStructured(
       JSON.stringify({
-        schedule: [{ when: 'Mon 3 Mar', what: 'Instagram Reel — behind the scenes' }],
+        schedule: [
+          { when: 'Mon 3 Mar', what: 'Instagram Reel — behind the scenes' },
+        ],
       }),
       spec('monthly_plan')
     );
@@ -209,16 +213,24 @@ describe('parseStructured', () => {
 
   it('strips bullet characters the model adds anyway', () => {
     const out = parseStructured(
-      JSON.stringify({ findings: ['• Reach up', '- Saves flat', '* Shares down'] }),
+      JSON.stringify({
+        findings: ['• Reach up', '- Saves flat', '* Shares down'],
+      }),
       s
     );
-    expect(out.sections[0].items).toEqual(['Reach up', 'Saves flat', 'Shares down']);
+    expect(out.sections[0].items).toEqual([
+      'Reach up',
+      'Saves flat',
+      'Shares down',
+    ]);
   });
 });
 
 describe('capability surface', () => {
   it('keeps caption writing off the assistant page', () => {
-    expect(assistantCapabilities().map((c) => c.key)).not.toContain('write_captions');
+    expect(assistantCapabilities().map((c) => c.key)).not.toContain(
+      'write_captions'
+    );
   });
 
   it('every capability declares a surface', () => {
@@ -227,8 +239,11 @@ describe('capability surface', () => {
     }
   });
 
-  it('assistant surface is a subset of the registry', () => {
-    const all = CAPABILITIES.map((c) => c.key);
-    for (const c of assistantCapabilities()) expect(all).toContain(c.key);
+  it('returns every capability that is not composer-only', () => {
+    const expected = CAPABILITIES.filter((c) => c.surface !== 'composer').map(
+      (c) => c.key
+    );
+    expect(assistantCapabilities().map((c) => c.key)).toEqual(expected);
+    expect(expected.length).toBe(CAPABILITIES.length - 1);
   });
 });
