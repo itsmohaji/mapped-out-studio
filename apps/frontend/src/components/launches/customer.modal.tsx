@@ -1,4 +1,5 @@
 'use client';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 
 import React, { FC, useCallback, useEffect, useState } from 'react';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
@@ -9,7 +10,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Button } from '@gitroom/react/form/button';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 export const CustomerModal: FC<{
-  integration: Integration & {
+  integration: NormalizedIntegration & {
     customer?: {
       id: string;
       name: string;

@@ -26,6 +26,7 @@ import utc from 'dayjs/plugin/utc';
 import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.repository';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { TemporalService } from 'nestjs-temporal-core';
+import { parsePostingTimes } from '@gitroom/helpers/utils/integration.contract';
 
 dayjs.extend(utc);
 
@@ -751,12 +752,13 @@ export class IntegrationService {
       integrationsId
     );
     return uniq(
-      findTimes.reduce((all: any, current: any) => {
+      findTimes.reduce((all: number[], current: any) => {
+        // Same raw JSON string column as the list endpoint. A bare JSON.parse
+        // here 500s /posts/find-slot for the whole organisation because one row
+        // is unreadable; the normaliser repairs that row instead.
         return [
           ...all,
-          ...JSON.parse(current.postingTimes).map(
-            (p: { time: number }) => p.time
-          ),
+          ...parsePostingTimes(current.postingTimes).map((p) => p.time),
         ];
       }, [] as number[])
     );

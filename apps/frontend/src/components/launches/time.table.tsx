@@ -40,7 +40,11 @@ export const TimeTable: FC<{
     integration: { time },
     mutate,
   } = props;
-  const [currentTimes, setCurrentTimes] = useState([...time]);
+  // Spreading a non-array throws "is not iterable" and takes the posting-times
+  // editor down for that channel. Same raw JSON column as the Calendar crash.
+  const [currentTimes, setCurrentTimes] = useState(
+    Array.isArray(time) ? [...time] : []
+  );
   const [hour, setHour] = useState(0);
   const [minute, setMinute] = useState(0);
   const fetch = useFetch();

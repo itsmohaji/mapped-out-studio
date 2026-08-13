@@ -285,8 +285,11 @@ export const DayView = () => {
         groupBy(
           [
             ...createdPosts,
+            // `time` is guaranteed an array by the integration contract, but this
+            // memo also runs against whatever SWR had cached before a deploy, so
+            // the guard stays. It is the line that took the Calendar down.
             ...integrations.flatMap((p) =>
-              p.time.flatMap((t) => ({
+              (Array.isArray(p.time) ? p.time : []).flatMap((t) => ({
                 integration: p,
                 identifier: p?.identifier,
                 name: p?.name,

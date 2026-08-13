@@ -1,4 +1,5 @@
 'use client';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 
 import React, {
   FC,
@@ -38,7 +39,7 @@ export const Menu: FC<{
   canChangeProfilePicture: boolean;
   canChangeNickName: boolean;
   refreshChannel: (
-    integration: Integration & {
+    integration: NormalizedIntegration & {
       identifier: string;
     }
   ) => () => void;

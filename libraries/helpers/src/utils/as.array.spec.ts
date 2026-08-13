@@ -103,9 +103,14 @@ describe('calendar data boundaries are guaranteed', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '');
 
-  it('useIntegrationList always returns an array', () => {
+  it('useIntegrationList always returns an array of usable channels', () => {
     const code = read('components/launches/helpers/use.integration.list.tsx');
-    expect(code).toContain('pluckArray');
+    // Was `pluckArray`, which guaranteed the OUTER array only. That was not
+    // enough: the envelope could be perfectly well-formed while one item's
+    // `time` was `{}`, and the Calendar's `p.time.flatMap()` still threw. The
+    // normaliser repairs each item too, so this now asserts the stronger
+    // guarantee rather than the weaker one it replaced.
+    expect(code).toContain('normalizeIntegrationList');
     // The old shape: `(await res.json()).integrations` straight out.
     expect(code).not.toMatch(/\)\.json\(\)\)\.integrations/);
   });

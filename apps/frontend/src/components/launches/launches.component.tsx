@@ -26,6 +26,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import useCookie from 'react-use-cookie';
 import { Onboarding } from '@gitroom/frontend/components/onboarding/onboarding';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 
 export const SVGLine = () => {
   return (
@@ -74,12 +75,12 @@ export const SVGLine = () => {
 };
 interface MenuComponentInterface {
   refreshChannel: (
-    integration: Integration & {
+    integration: NormalizedIntegration & {
       identifier: string;
     }
   ) => () => void;
   collapsed: boolean;
-  continueIntegration: (integration: Integration) => () => void;
+  continueIntegration: (integration: NormalizedIntegration) => () => void;
   totalNonDisabledChannels: number;
   // SWR's revalidate trigger. It was typed as `(shouldReload?: boolean)`,
   // which is `update`'s signature, not this one — nothing ever passed it a
@@ -117,13 +118,13 @@ export const MenuGroupComponent: FC<
     group: {
       id: string;
       name: string;
-      values: Array<
-        Integration & {
-          identifier: string;
-          changeProfilePicture: boolean;
-          changeNickName: boolean;
-        }
-      >;
+      // Was the PRISMA `Integration` model, which claims `token`,
+      // `organizationId`, `createdAt` and a dozen other columns that
+      // `/integrations/list` has never sent (it hand-builds an 18-field
+      // whitelist). That type was fiction: it would let a caller read
+      // `.token` and get `undefined` while TypeScript insisted it was a
+      // string. `NormalizedIntegration` is what the endpoint actually returns.
+      values: NormalizedIntegration[];
     };
   }
 > = (props) => {
@@ -218,7 +219,7 @@ export const MenuGroupComponent: FC<
 };
 export const MenuComponent: FC<
   MenuComponentInterface & {
-    integration: Integration & {
+    integration: NormalizedIntegration & {
       identifier: string;
       changeProfilePicture: boolean;
       changeNickName: boolean;
@@ -451,7 +452,7 @@ export const LaunchesComponent = () => {
   );
   const refreshChannel = useCallback(
     (
-        integration: Integration & {
+        integration: NormalizedIntegration & {
           identifier: string;
         }
       ) =>

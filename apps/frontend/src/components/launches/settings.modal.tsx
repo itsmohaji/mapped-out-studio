@@ -1,4 +1,5 @@
 import { TopTitle } from '@gitroom/frontend/components/launches/helpers/top.title.component';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 import React, { FC, useCallback, useState } from 'react';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { Integration } from '@prisma/client';
@@ -29,7 +30,7 @@ export const Element: FC<{
   );
 };
 export const SettingsModal: FC<{
-  integration: Integration & {
+  integration: NormalizedIntegration & {
     customer?: {
       id: string;
       name: string;

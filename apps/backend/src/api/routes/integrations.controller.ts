@@ -18,6 +18,10 @@ import { IntegrationFunctionDto } from '@gitroom/nestjs-libraries/dtos/integrati
 import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
 import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { ApiTags } from '@nestjs/swagger';
+import {
+  parseAdditionalSettings,
+  parsePostingTimes,
+} from '@gitroom/helpers/utils/integration.contract';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { IntegrationTimeDto } from '@gitroom/nestjs-libraries/dtos/integrations/integration.time.dto';
@@ -146,11 +150,24 @@ export class IntegrationsController {
               : {}),
             display: p.profile,
             type: p.type,
-            time: JSON.parse(p.postingTimes),
+            // `postingTimes` and `additionalSettings` are raw JSON string columns.
+            // A bare JSON.parse here was the root cause of the Calendar crash: a
+            // row holding valid-but-non-array JSON ('{}', 'null') parsed fine, so
+            // this endpoint returned 200 with a well-formed envelope whose nested
+            // `time` was not an array, and the UI's `.flatMap()` threw. Repaired
+            // at the boundary so no consumer has to know that.
+            time: parsePostingTimes(p.postingTimes),
             changeProfilePicture: !!findIntegration?.changeProfilePicture,
             changeNickName: !!findIntegration?.changeNickname,
             customer: p.customer,
-            additionalSettings: p.additionalSettings || '[]',
+            // Deliberately still a STRING: the frontend types this as `string`
+            // and several consumers JSON.parse it (settings.modal, every provider
+            // panel). Changing the wire type would fix one page and break four.
+            // Re-serialising the normalised value keeps the contract and
+            // guarantees it parses to an array on the other side.
+            additionalSettings: JSON.stringify(
+              parseAdditionalSettings(p.additionalSettings)
+            ),
           };
         })
       ),

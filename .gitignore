@@ -64,3 +64,5 @@ apps/frontend/public/g.js
 
 # Jest junit output (jest-junit reporter)
 reports/
+.env.local
+.env*.local
