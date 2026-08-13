@@ -378,8 +378,17 @@ export const LaunchesComponent = () => {
   // the `?.` chain that used to be here is not just unnecessary — it was
   // actively misleading, because it never protected against the shape that
   // actually crashed this page.
+  // This exact line is what threw in production: `_.filter is not a function`,
+  // inside this useMemo, with `_` being SWR's `data`. `useIntegrationList`
+  // guarantees an array — but SWR can also hand back whatever it had cached
+  // from a build that predates that guarantee, and this memo runs on the first
+  // render, before any revalidation. The guard costs nothing and is the
+  // difference between a stale cache and a dead page.
   const totalNonDisabledChannels = useMemo(
-    () => integrations.filter((integration: any) => !integration.disabled).length,
+    () =>
+      (Array.isArray(integrations) ? integrations : []).filter(
+        (integration: any) => !integration?.disabled
+      ).length,
     [integrations]
   );
   const changeItemGroup = useCallback(

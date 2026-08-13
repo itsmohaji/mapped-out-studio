@@ -17,6 +17,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import useCookie from 'react-use-cookie';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 export const Plugs = () => {
   const fetch = useFetch();
   const router = useRouter();
@@ -24,7 +25,7 @@ export const Plugs = () => {
   const [refresh, setRefresh] = useState(false);
   const toaster = useToaster();
   const load = useCallback(async () => {
-    return (await (await fetch('/integrations/list')).json()).integrations;
+    return await fetchIntegrationList(fetch);
   }, []);
   const load2 = useCallback(async (path: string) => {
     return await (await fetch(path)).json();

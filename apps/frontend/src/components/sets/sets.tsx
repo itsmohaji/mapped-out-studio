@@ -15,6 +15,7 @@ import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.m
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 const SaveSetModal: FC<{
   postData: any;
   initialValue?: string;
@@ -64,7 +65,7 @@ export const Sets: FC = () => {
   const toaster = useToaster();
 
   const load = useCallback(async (path: string) => {
-    return (await (await fetch(path)).json()).integrations;
+    return await fetchIntegrationList(fetch, path);
   }, []);
 
   const { isLoading, data: integrations } = useSWR('/integrations/list', load, {

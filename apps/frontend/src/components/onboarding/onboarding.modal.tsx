@@ -10,6 +10,7 @@ import { AddProviderComponent } from '@gitroom/frontend/components/launches/add.
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 interface OnboardingModalProps {
   onClose: () => void;
 }
@@ -121,7 +122,7 @@ const OnboardingStep1: FC<{ onNext: () => void; onSkip: () => void }> = ({
   }, []);
 
   const load = useCallback(async (path: string) => {
-    const list = (await (await fetch(path)).json()).integrations;
+    const list = await fetchIntegrationList(fetch, path);
     return list;
   }, []);
 

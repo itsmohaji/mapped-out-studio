@@ -183,6 +183,28 @@ export function normalizeIntegration(raw: unknown): NormalizedIntegration | null
   };
 }
 
+/**
+ * The ONE way to read `/integrations/list`.
+ *
+ * Nine components were each doing `(await res.json()).integrations` by hand.
+ * A single fix to the shared hook left the other eight untouched, so the same
+ * crash stayed reachable from Onboarding, Reports, Plugs, Sets, Teams, Agents,
+ * the standalone modal and the provider-continue flow. Duplicated logic is the
+ * bug; this is the deduplication.
+ */
+export async function fetchIntegrationList(
+  fetcher: (url: string) => Promise<{ json: () => Promise<unknown> }>,
+  path = '/integrations/list'
+): Promise<NormalizedIntegration[]> {
+  try {
+    const body = await (await fetcher(path)).json();
+    return normalizeIntegrationList(body).integrations;
+  } catch {
+    // A network failure or a non-JSON error page must not take a page down.
+    return [];
+  }
+}
+
 export interface NormalizedIntegrationList {
   integrations: NormalizedIntegration[];
   /** Entries too broken to use. Non-zero means log it — it is never expected. */

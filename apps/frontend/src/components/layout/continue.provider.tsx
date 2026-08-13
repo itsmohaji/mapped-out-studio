@@ -8,6 +8,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { continueProviderList } from '@gitroom/frontend/components/new-launch/providers/continue-provider/list';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 export const Null: FC<{
   onSave: (data: any) => Promise<void>;
   existingId: string[];
@@ -20,7 +21,7 @@ export const ContinueProvider: FC = () => {
   const continueId = searchParams.get('continue');
   const router = useRouter();
   const load = useCallback(async (path: string) => {
-    const list = (await (await fetch(path)).json()).integrations;
+    const list = await fetchIntegrationList(fetch, path);
     return list;
   }, []);
   const { data: integrations } = useSWR('/integrations/list', load, {

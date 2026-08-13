@@ -13,6 +13,7 @@ import SafeImage from '@gitroom/react/helpers/safe.image';
 import { ChartSocial } from '@gitroom/frontend/components/analytics/chart-social';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { bestSlots, confidence } from '@gitroom/helpers/utils/best.times';
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 import {
   Aggregate,
   ChannelBlock,
@@ -177,9 +178,9 @@ export const ReportsComponent: FC = () => {
   const [date, setDate] = useState(30);
 
   const load = useCallback(async (): Promise<ChannelBlock[]> => {
-    const list = (await (await fetch('/integrations/list')).json()).integrations
-      .filter((f: any) => !(f.identifier === 'x' && disableXAnalytics))
-      .filter((f: any) => ANALYTICS_PLATFORMS.includes(f.identifier));
+    const list = (await fetchIntegrationList(fetch))
+      .filter((f) => !(f.identifier === 'x' && disableXAnalytics))
+      .filter((f) => ANALYTICS_PLATFORMS.includes(f.identifier));
 
     return Promise.all(
       orderBy(list, ['disabled'], ['asc']).map(async (integration: any) => {

@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 
+import { fetchIntegrationList, NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 export const MediaPortal: FC<{
   media: { path: string; id: string }[];
   value: string;
@@ -68,7 +69,7 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
   const [selected, setSelected] = useState([]);
 
   const load = useCallback(async () => {
-    return (await (await fetch('/integrations/list')).json()).integrations;
+    return await fetchIntegrationList(fetch);
   }, []);
 
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
@@ -84,7 +85,7 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
   });
 
   const setIntegration = useCallback(
-    (integration: Integration) => () => {
+    (integration: NormalizedIntegration) => () => {
       if (selected.some((p) => p.id === integration.id)) {
         onChange(selected.filter((p) => p.id !== integration.id));
         setSelected(selected.filter((p) => p.id !== integration.id));

@@ -19,6 +19,7 @@ import copy from 'copy-to-clipboard';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { productRoleLabel } from '@gitroom/nestjs-libraries/security/roles';
 
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 // Mapped Out staff roles (Option B). AGENCY_ADMIN=ADMIN (agency-wide access),
 // ACCOUNT_MANAGER=USER (scoped to explicitly assigned clients + channels).
 // CLIENT is intentionally NOT offered here — client accounts are owned by the
@@ -46,7 +47,7 @@ export const AssignmentSelector = (props: {
 
   const { data: channels } = useSWR('assign-channels', async () => {
     return (
-      (await (await fetch('/integrations/list')).json()).integrations || []
+      await fetchIntegrationList(fetch)
     ) as Array<{
       id: string;
       name: string;

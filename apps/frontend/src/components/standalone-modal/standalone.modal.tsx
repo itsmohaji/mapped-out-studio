@@ -8,12 +8,13 @@ import dayjs from 'dayjs';
 import { useParams } from 'next/navigation';
 import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
 export const StandaloneModal: FC = () => {
   const fetch = useFetch();
   const params = useParams<{ platform: string }>();
 
   const load = useCallback(async (path: string) => {
-    return (await (await fetch(path)).json()).integrations;
+    return await fetchIntegrationList(fetch, path);
   }, []);
 
   const loadDate = useCallback(async () => {
