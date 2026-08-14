@@ -10,7 +10,11 @@ jest.mock('bcrypt', () => ({
 }));
 
 import { sign } from 'jsonwebtoken';
-import { AuthService, passwordVersion } from './auth.service';
+import {
+  AuthService,
+  encryptionSecret,
+  passwordVersion,
+} from './auth.service';
 
 const SECRET = process.env.JWT_SECRET!;
 
@@ -162,6 +166,61 @@ describe('token purposes', () => {
       });
 
       expect(AuthService.verifyPurposeJWT(reset, 'session', () => true)).toBeNull();
+    });
+  });
+
+  describe('encryption secret', () => {
+    const withEncryptionKey = (value: string | undefined, run: () => void) => {
+      const previous = process.env.ENCRYPTION_KEY;
+      if (value === undefined) {
+        delete process.env.ENCRYPTION_KEY;
+      } else {
+        process.env.ENCRYPTION_KEY = value;
+      }
+      try {
+        run();
+      } finally {
+        if (previous === undefined) {
+          delete process.env.ENCRYPTION_KEY;
+        } else {
+          process.env.ENCRYPTION_KEY = previous;
+        }
+      }
+    };
+
+    it('falls back to JWT_SECRET, so nothing already stored becomes unreadable', () => {
+      withEncryptionKey(undefined, () => {
+        expect(encryptionSecret()).toBe(SECRET);
+      });
+    });
+
+    it('lets JWT_SECRET be rotated without touching stored ciphertext', () => {
+      // The point of the seam. Encrypt under today's shared secret...
+      const ciphertext = AuthService.fixedEncryption('social-access-token');
+
+      withEncryptionKey(SECRET, () => {
+        // ...then pin ENCRYPTION_KEY to that value and change JWT_SECRET. The
+        // credential still decrypts, which is what makes rotating the session
+        // secret survivable instead of a mass channel disconnection.
+        const previousJwt = process.env.JWT_SECRET;
+        process.env.JWT_SECRET = 'rotated-session-secret';
+        try {
+          expect(AuthService.fixedDecryption(ciphertext)).toBe(
+            'social-access-token'
+          );
+        } finally {
+          process.env.JWT_SECRET = previousJwt;
+        }
+      });
+    });
+
+    it('uses ENCRYPTION_KEY when set', () => {
+      withEncryptionKey('a-separate-encryption-key', () => {
+        expect(encryptionSecret()).toBe('a-separate-encryption-key');
+        expect(AuthService.fixedDecryption(AuthService.fixedEncryption('x'))).toBe(
+          'x'
+        );
+      });
     });
   });
 

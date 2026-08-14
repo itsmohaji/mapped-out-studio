@@ -6,6 +6,25 @@ import EVP_BytesToKey from 'evp_bytestokey';
 const algorithm = 'aes-256-cbc';
 const { keyLength, ivLength } = crypto.getCipherInfo(algorithm);
 
+/**
+ * The secret that protects data AT REST: every social access token, every
+ * third-party API key, every org API key, every OAuth client secret.
+ *
+ * It used to be `JWT_SECRET` itself, which also signs sessions, password-reset
+ * links and invites. That single fact made the session secret unrotatable: the
+ * one response you need after a leaked or shared secret — rotate it — would
+ * have left every stored credential on the install undecryptable, disconnecting
+ * every channel. A key you cannot rotate is a key you have already lost.
+ *
+ * Defaulting to `JWT_SECRET` keeps every existing ciphertext readable, so this
+ * changes nothing until `ENCRYPTION_KEY` is set. Setting it to the CURRENT
+ * `JWT_SECRET` value is the whole migration: from then on the two can move
+ * independently, and `JWT_SECRET` can be rotated on its own.
+ */
+export function encryptionSecret(): string {
+  return process.env.ENCRYPTION_KEY || process.env.JWT_SECRET!;
+}
+
 function deriveLegacyKeyIv(secret: string) {
   const { keyLength, ivLength } = crypto.getCipherInfo(algorithm); // 32, 16
   const pass = Buffer.isBuffer(secret) ? secret : Buffer.from(secret ?? '', 'utf8');
@@ -20,14 +39,14 @@ function deriveLegacyKeyIv(secret: string) {
 }
 
 export function decrypt_legacy_using_IV(hexCiphertext: string) {
-  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET);
+  const { key, iv } = deriveLegacyKeyIv(encryptionSecret());
   const decipher = crypto.createDecipheriv(algorithm, key, iv);
   const out = Buffer.concat([decipher.update(hexCiphertext, 'hex'), decipher.final()]);
   return out.toString('utf8');
 }
 
 export function encrypt_legacy_using_IV(utf8Plaintext: string) {
-  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET);
+  const { key, iv } = deriveLegacyKeyIv(encryptionSecret());
   const cipher = crypto.createCipheriv(algorithm, key, iv);
   const out = Buffer.concat([cipher.update(utf8Plaintext, 'utf8'), cipher.final()]);
   return out.toString('hex');
