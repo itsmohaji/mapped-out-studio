@@ -1,7 +1,14 @@
 'use client';
 
 import { uniqBy } from 'lodash';
-import React, { FC, useCallback, useMemo, useRef, useState } from 'react';
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import clsx from 'clsx';
@@ -25,6 +32,13 @@ export const SelectCustomer: FC<{
   const toaster = useToaster();
   const t = useT();
   const [customer, setCustomer] = useState(currentCustomer || '');
+
+  // Seeding from the prop once was not enough: the composer clears this when the
+  // DBU panel takes over the channel selection, and without following the prop
+  // the dropdown kept naming a client whose channels were no longer selected.
+  useEffect(() => {
+    setCustomer(currentCustomer || '');
+  }, [currentCustomer]);
   const [pos, setPos] = useState<any>({});
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => {

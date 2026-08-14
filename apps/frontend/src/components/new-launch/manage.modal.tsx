@@ -59,6 +59,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const toaster = useToaster();
   // DBU System association (client/project/cycle) selected in the composer.
   const [dbuAssoc, setDbuAssoc] = useState<DbuValue | null>(null);
+  // Which client the CURRENT channel selection came from, so the two pickers can
+  // never both claim to describe it. A post belongs to one client.
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   // Campaign this post joins. Independent of the DBU association.
   const [campaignId, setCampaignId] = useState('');
   const modal = useModals();
@@ -149,6 +152,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setSelectedIntegrations(
         autoSelect.map((p) => ({ settings: {}, selectedIntegrations: p }))
       );
+      // The other picker no longer describes what is selected, so stop it
+      // claiming it does. Without this it kept showing the previous client while
+      // the channels underneath had already been replaced by this one.
+      setSelectedCustomerId('');
     },
     [integrations, setSelectedIntegrations, existingData]
   );
@@ -204,8 +211,28 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           selectedIntegrations: p,
         }))
       );
+      setSelectedCustomerId(customer);
+
+      // Two pickers, one channel selection. This one and the DBU panel both
+      // REPLACE `selectedIntegrations` wholesale, so whichever the operator
+      // touched last silently discarded the other's choice — and worse, the post
+      // could go out to this client's channels while still carrying the other
+      // client's DBU association.
+      //
+      // A post belongs to ONE client, so choosing here drops the DBU
+      // association, and says so rather than doing it behind their back.
+      if (dbuAssoc?.clientId) {
+        setDbuAssoc(null);
+        toaster.show(
+          t(
+            'client_association_replaced',
+            'Client association cleared — this post now targets the selected client’s channels.'
+          ),
+          'warning'
+        );
+      }
     },
-    [integrations]
+    [integrations, dbuAssoc, setSelectedIntegrations, toaster, t]
   );
 
   const askClose = useCallback(async () => {
@@ -622,6 +649,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       {!dummy && (
                         <SelectCustomer
                           onChange={changeCustomer}
+                          customer={selectedCustomerId}
                           integrations={integrations}
                         />
                       )}
