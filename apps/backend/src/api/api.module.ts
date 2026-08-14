@@ -31,7 +31,8 @@ import { SetsController } from '@gitroom/backend/api/routes/sets.controller';
 import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.controller';
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
 import { NoAuthIntegrationsController } from '@gitroom/backend/api/routes/no.auth.integrations.controller';
-import { EnterpriseController } from '@gitroom/backend/api/routes/enterprise.controller';
+// Deliberately not imported — see the controllers array below.
+// import { EnterpriseController } from '@gitroom/backend/api/routes/enterprise.controller';
 import { OAuthAppController } from '@gitroom/backend/api/routes/oauth-app.controller';
 import { ApprovedAppsController } from '@gitroom/backend/api/routes/approved-apps.controller';
 import {
@@ -95,7 +96,11 @@ const authenticatedController = [
     AuthController,
     PublicController,
     MonitorController,
-    EnterpriseController,
+    // EnterpriseController is NOT registered. See the note on the class: it is
+    // upstream's hosted-offering glue, it is unauthenticated apart from a JWT
+    // signed with the one shared secret, `/enterprise/delete-channel` deletes a
+    // channel AND every post on it, and nothing in this product has ever called
+    // it. An endpoint that cannot be reached is better than one that is guarded.
     NoAuthIntegrationsController,
     AutomationWebhookController,
     OAuthController,

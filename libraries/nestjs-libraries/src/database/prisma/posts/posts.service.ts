@@ -181,10 +181,30 @@ export class PostsService {
     orgId: string,
     postId: string,
     date: number,
-    forceRefresh = false
+    forceRefresh = false,
+    // The channels the CALLER may see, or null for "no per-user restriction".
+    // The session route must pass this: an Account Manager is scoped to the
+    // clients they are assigned to, and every sibling analytics route enforced
+    // that while this one did not — so a manager could read the numbers for any
+    // post in the organisation, including other clients', by id.
+    //
+    // Checked here rather than in the controller because this is where the post
+    // is already loaded: no second query, and any future caller inherits it.
+    // The public API passes null on purpose — an API key is org-scoped by
+    // design and has no user to scope to.
+    allowedIntegrationIds: string[] | null = null
   ): Promise<AnalyticsData[] | { missing: true }> {
     const post = await this._postRepository.getPostById(postId, orgId);
     if (!post || !post.releaseId) {
+      return [];
+    }
+
+    if (
+      allowedIntegrationIds &&
+      !allowedIntegrationIds.includes(post.integrationId)
+    ) {
+      // Indistinguishable from "no such post", which is the point: the reply
+      // must not confirm that a post the caller cannot see exists.
       return [];
     }
 
@@ -253,7 +273,17 @@ export class PostsService {
     } catch (e) {
       console.log(e);
       if (e instanceof RefreshToken) {
-        return this.checkPostAnalytics(orgId, postId, date, true);
+        // Carry the allow-list into the retry. The check above has already
+        // passed by this point, so dropping it was not exploitable — but a
+        // re-entry that silently widens its own permissions is the shape of the
+        // next bug, not this one.
+        return this.checkPostAnalytics(
+          orgId,
+          postId,
+          date,
+          true,
+          allowedIntegrationIds
+        );
       }
     }
 

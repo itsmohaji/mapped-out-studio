@@ -7,6 +7,24 @@ import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/o
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 
+/**
+ * ⛔ NOT REGISTERED. Left in the tree to keep the upstream diff small, but
+ * removed from `api.module.ts`, so none of these routes exist at runtime.
+ *
+ * Every route here authenticates by nothing but a JWT signed with the single
+ * shared `JWT_SECRET` — no session, no organisation membership, no user. The
+ * payload then names its own organisation, by `apiKey`, and
+ * `/enterprise/delete-channel` deletes that channel and every post on it.
+ *
+ * This is upstream's glue for their hosted offering, where a second Gitroom
+ * service holds the same secret. Nothing in Mapped Out has ever called it: no
+ * reference in the frontend, in DBU, or in the infra repo. Keeping it mounted
+ * meant carrying an unauthenticated destructive endpoint for a feature we do
+ * not run.
+ *
+ * If it is ever needed, re-register it AND give it its own purpose claim plus a
+ * dedicated secret — never the session secret.
+ */
 @ApiTags('Enterprise')
 @Controller('/enterprise')
 export class EnterpriseController {

@@ -52,9 +52,20 @@ export class AnalyticsController {
   @Get('/post/:postId')
   async getPostAnalytics(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Param('postId') postId: string,
     @Query('date') date: string
   ) {
-    return this._postsService.checkPostAnalytics(org.id, postId, +date);
+    // This route took no `user` at all and did no scope check, while both of
+    // its siblings above did — so a Manager scoped to one client could read
+    // another client's post analytics by id, inside the same organisation.
+    const scope = await this._integrationService.getScope(user, org.id);
+    return this._postsService.checkPostAnalytics(
+      org.id,
+      postId,
+      +date,
+      false,
+      scope.all ? null : scope.integrationIds
+    );
   }
 }
