@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { FC, useCallback, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
@@ -85,6 +85,148 @@ const AddClientModal = ({ onCreated }: { onCreated: () => void }) => {
         <Button onClick={save} disabled={saving || !name.trim()}>
           {saving ? t('creating', 'Creating…') : t('create_client', 'Create client')}
         </Button>
+      </div>
+    </div>
+  );
+};
+
+interface DbuLinkPlan {
+  links: {
+    customerId: string;
+    customerName: string;
+    dbuClientId: string;
+    dbuClientName: string;
+    channelCount: number;
+  }[];
+  creates: {
+    dbuClientId: string;
+    dbuClientName: string;
+    channelIds: string[];
+    channelNames: string[];
+  }[];
+  conflicts: { reason: string; detail: string }[];
+  alreadyLinked: number;
+  channelsWithoutDbuClient: number;
+}
+
+const useDbuLinkPreview = () => {
+  const fetch = useFetch();
+  const load = useCallback(
+    async (url: string) => (await fetch(url)).json(),
+    [fetch]
+  );
+
+  return useSWR<DbuLinkPlan>('/integrations/customers/dbu-link-preview', load, {
+    revalidateOnFocus: false,
+  });
+};
+
+/**
+ * DRY RUN of linking each Mapped Out client to its DBU client.
+ *
+ * Nothing is written. Channels already carry both ids, so the mapping is read
+ * out of the agreement between them rather than invented; anything ambiguous is
+ * shown here instead of guessed. Hidden entirely when there is nothing to say,
+ * so it never becomes furniture on a page that is otherwise about clients.
+ */
+const DbuLinkPreview: FC = () => {
+  const t = useT();
+  const { data } = useDbuLinkPreview();
+
+  if (!data) {
+    return null;
+  }
+
+  const nothingToDo =
+    !data.links?.length && !data.creates?.length && !data.conflicts?.length;
+  if (nothingToDo) {
+    return null;
+  }
+
+  return (
+    <div className="bg-newBgColorInner border border-newTableBorder rounded-[16px] p-[18px] flex flex-col gap-[14px]">
+      <div className="flex items-baseline gap-[10px] flex-wrap">
+        <h2 className="text-[15px] font-[600]">
+          {t('dbu_link_title', 'Link your clients to DBU')}
+        </h2>
+        <span className="text-[12px] text-textItemBlur">
+          {t(
+            'dbu_link_dry_run',
+            'Preview only — nothing has been changed yet.'
+          )}
+        </span>
+      </div>
+
+      {data.links?.length > 0 && (
+        <div className="flex flex-col gap-[6px]">
+          <div className="text-[12px] font-[600] text-[#47b985]">
+            {data.links.length}{' '}
+            {t('dbu_link_ready', 'already match and would simply be linked')}
+          </div>
+          {data.links.map((link) => (
+            <div
+              key={link.customerId}
+              className="text-[12.5px] text-textItemBlur"
+            >
+              <span className="text-newTextColor font-[500]">
+                {link.customerName}
+              </span>{' '}
+              → {link.dbuClientName} ({link.channelCount}{' '}
+              {t('channels_lower', 'channels')})
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.creates?.length > 0 && (
+        <div className="flex flex-col gap-[6px]">
+          <div className="text-[12px] font-[600] text-btnPrimary">
+            {data.creates.length}{' '}
+            {t(
+              'dbu_link_creates',
+              'DBU clients have channels in no Mapped Out client — these would be created'
+            )}
+          </div>
+          {data.creates.map((create) => (
+            <div
+              key={create.dbuClientId}
+              className="text-[12.5px] text-textItemBlur"
+            >
+              <span className="text-newTextColor font-[500]">
+                {create.dbuClientName}
+              </span>{' '}
+              — {create.channelNames.join(', ')}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.conflicts?.length > 0 && (
+        <div className="flex flex-col gap-[6px]">
+          <div className="text-[12px] font-[600] text-[#daa646]">
+            {data.conflicts.length}{' '}
+            {t('dbu_link_conflicts', 'need you to decide — nothing was linked')}
+          </div>
+          {data.conflicts.map((conflict, index) => (
+            <div key={index} className="text-[12.5px] text-[#daa646]">
+              {conflict.detail}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="text-[11.5px] text-textItemBlur">
+        {data.alreadyLinked > 0 && (
+          <>
+            {data.alreadyLinked}{' '}
+            {t('dbu_link_already', 'already linked.')}{' '}
+          </>
+        )}
+        {data.channelsWithoutDbuClient}{' '}
+        {t(
+          'dbu_link_untouched',
+          'channels have no DBU client and are untouched.'
+        )}
       </div>
     </div>
   );
@@ -219,6 +361,8 @@ export const ClientsComponent = () => {
           ))}
         </div>
       </div>
+
+      <DbuLinkPreview />
 
       {/* Table */}
       <div className="bg-newBgColorInner border border-newTableBorder rounded-[16px] overflow-hidden">

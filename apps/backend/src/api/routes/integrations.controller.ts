@@ -77,6 +77,19 @@ export class IntegrationsController {
     return customers.filter((c) => allowed.has(c.id));
   }
 
+  /**
+   * DRY RUN. What linking this org's clients to their DBU clients would do.
+   *
+   * Writes nothing. Channels already carry both a Mapped Out client and a DBU
+   * client, so the mapping is derived from agreement between them rather than
+   * invented — and anything ambiguous is reported instead of guessed.
+   */
+  @Get('/customers/dbu-link-preview')
+  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  async previewDbuCustomerLinks(@GetOrgFromRequest() org: Organization) {
+    return this._integrationService.previewDbuCustomerLinks(org.id);
+  }
+
   // Create a client (customer) directly from the Clients page. Agency-wide roles
   // only — Account Managers are assigned to clients, they don't create them.
   @Post('/customer')

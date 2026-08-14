@@ -27,6 +27,7 @@ import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/au
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { TemporalService } from 'nestjs-temporal-core';
 import { parsePostingTimes } from '@gitroom/helpers/utils/integration.contract';
+import { deriveDbuCustomerLinks } from '@gitroom/helpers/utils/dbu.customer.link';
 
 dayjs.extend(utc);
 
@@ -598,6 +599,35 @@ export class IntegrationService {
 
   customers(orgId: string) {
     return this._integrationRepository.customers(orgId);
+  }
+
+  /**
+   * What linking the Mapped Out clients to their DBU clients WOULD do.
+   *
+   * Read-only, and the derivation is a pure function, so this can be shown to a
+   * human before anything is written. `Customer` stays canonical; the DBU id is
+   * recorded as an attribute of it. See dbu.customer.link.ts.
+   */
+  async previewDbuCustomerLinks(orgId: string) {
+    const [integrations, customers] = await Promise.all([
+      this._integrationRepository.getIntegrationsList(orgId),
+      this._integrationRepository.customers(orgId),
+    ]);
+
+    return deriveDbuCustomerLinks(
+      integrations.map((i: any) => ({
+        id: i.id,
+        name: i.name,
+        customerId: i.customerId,
+        dbuClientId: i.dbuClientId,
+        dbuClientName: i.dbuClientName,
+      })),
+      customers.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        dbuClientId: c.dbuClientId,
+      }))
+    );
   }
 
   createCustomer(orgId: string, name: string) {
