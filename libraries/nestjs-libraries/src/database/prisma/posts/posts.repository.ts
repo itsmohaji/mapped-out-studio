@@ -1,5 +1,5 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { Post as PostBody } from '@gitroom/nestjs-libraries/dtos/posts/create.post.dto';
 import {
   APPROVED_SUBMIT_FOR_ORDER,
@@ -33,7 +33,8 @@ export class PostsRepository {
     private _tags: PrismaRepository<'tags'>,
     private _tagsPosts: PrismaRepository<'tagsPosts'>,
     private _errors: PrismaRepository<'errors'>,
-    private _postApproval: PrismaRepository<'postApproval'>
+    private _postApproval: PrismaRepository<'postApproval'>,
+    private _campaigns: PrismaRepository<'campaign'>
   ) {}
 
   // --- Mapped Out client portal / approvals (Phase 2B) ----------------------
@@ -692,6 +693,25 @@ export class PostsRepository {
   ) {
     const posts: Post[] = [];
     const uuid = uuidv4();
+
+    // `campaign: { connect: { id } }` below takes the id straight from the
+    // request body, and a bare id is unique across the WHOLE table — so an id
+    // belonging to another organisation connected just as happily as one of
+    // this org's. Reads of a campaign's posts are org-filtered, so nothing
+    // leaked across tenants, but the row still ended up pointing at a campaign
+    // its organisation does not own, which corrupts the per-campaign counts.
+    //
+    // Checked here rather than in the controller because this is the single
+    // point every writer goes through, including the public API.
+    if (campaignId) {
+      const campaign = await this._campaigns.model.campaign.findFirst({
+        where: { id: campaignId, orgId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!campaign) {
+        throw new HttpException('Campaign not found', 400);
+      }
+    }
 
     for (const value of body.value) {
       const updateData = (type: 'create' | 'update') => ({

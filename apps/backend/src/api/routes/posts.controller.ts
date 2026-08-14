@@ -59,6 +59,43 @@ export class PostsController {
   }
 
   /**
+   * The same check for a post that does not exist yet.
+   *
+   * Six by-id handlers on this controller resolve the caller's scope; the two
+   * routes that accept a whole post BODY did not, and `mapTypeToPost` only
+   * verifies each integration belongs to the ORGANISATION. So a Manager
+   * assigned to one client could publish to another client's channel by putting
+   * its id in the request — write access across the boundary the read routes
+   * already defend.
+   *
+   * Channel ids arrive from the browser, so they are checked against the
+   * caller's assignments and never taken on trust.
+   */
+  private async assertBodyInScope(user: User, orgId: string, rawBody: any) {
+    const integrationIds = [
+      ...new Set(
+        (rawBody?.posts || [])
+          .map((post: any) => post?.integration?.id)
+          .filter(Boolean) as string[]
+      ),
+    ];
+
+    if (!integrationIds.length) {
+      return;
+    }
+
+    const scope = await this._integrationService.getScope(user, orgId);
+    if (scope.all) {
+      return;
+    }
+
+    const allowed = new Set(scope.integrationIds);
+    if (integrationIds.some((id) => !allowed.has(id))) {
+      throw new ForbiddenException();
+    }
+  }
+
+  /**
    * Group-level equivalent for /group and /:group routes. Every post in the
    * group must be in the caller's org AND assignment scope (a group spanning an
    * unassigned channel is denied — no cross-client group read/delete/export).
@@ -227,8 +264,13 @@ export class PostsController {
   @Post('/valid')
   async validatePosts(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Body() rawBody: any
   ) {
+    // Validation answers questions about a channel's settings and limits, so it
+    // is scoped like everything else rather than confirming facts about
+    // channels the caller may not see.
+    await this.assertBodyInScope(user, org.id, rawBody);
     return this._postsService.validatePosts(org.id, rawBody?.posts || []);
   }
 
@@ -236,8 +278,13 @@ export class PostsController {
   @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
   async createPost(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Body() rawBody: any
   ) {
+    // BEFORE validation, and before anything is written: a Manager may only
+    // post to the channels they are assigned to.
+    await this.assertBodyInScope(user, org.id, rawBody);
+
     // Server-side validation — never trust the client to have validated.
     const validation = await this._postsService.validatePosts(
       org.id,
