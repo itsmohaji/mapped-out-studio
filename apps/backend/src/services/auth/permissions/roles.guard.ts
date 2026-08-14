@@ -8,6 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { Role } from '@prisma/client';
+import { isPlatformOwner } from '@gitroom/nestjs-libraries/security/platform.owner';
 
 /**
  * Mapped Out role-based access control (Phase 2A).
@@ -30,9 +31,19 @@ import { Role } from '@prisma/client';
 
 export const ORG_ROLES_KEY = 'orgRoles';
 export const CLIENT_ALLOWED_KEY = 'clientAllowed';
+export const PLATFORM_OWNER_KEY = 'platformOwner';
 
 export const OrgRoles = (...roles: Role[]) => SetMetadata(ORG_ROLES_KEY, roles);
 export const ClientAllowed = () => SetMetadata(CLIENT_ALLOWED_KEY, true);
+
+/**
+ * For routes that change PLATFORM-wide state rather than one workspace's.
+ *
+ * `@OrgRoles(Role.SUPERADMIN)` cannot express this: every org owner holds that
+ * role in their own org, so it authorises the second agency you onboard to edit
+ * the first agency's platform configuration. See `isPlatformOwner`.
+ */
+export const PlatformOwnerOnly = () => SetMetadata(PLATFORM_OWNER_KEY, true);
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -51,6 +62,16 @@ export class RolesGuard implements CanActivate {
     const user = request.user;
     if (!org || !user) {
       return true;
+    }
+
+    // Platform-wide routes are settled here, BEFORE the org-role logic below —
+    // an org role must never satisfy a platform-level requirement.
+    const platformOwnerOnly = this._reflector.getAllAndOverride<boolean>(
+      PLATFORM_OWNER_KEY,
+      [context.getHandler(), context.getClass()]
+    );
+    if (platformOwnerOnly && !isPlatformOwner(user)) {
+      throw new ForbiddenException();
     }
 
     // Super Admin can do anything, in any workspace.

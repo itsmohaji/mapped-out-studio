@@ -11,7 +11,10 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { Role, User } from '@prisma/client';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
-import { OrgRoles } from '@gitroom/backend/services/auth/permissions/roles.guard';
+import {
+  OrgRoles,
+  PlatformOwnerOnly,
+} from '@gitroom/backend/services/auth/permissions/roles.guard';
 import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai/ai.providers.service';
 
 /**
@@ -27,6 +30,7 @@ import { AiProvidersService } from '@gitroom/nestjs-libraries/database/prisma/ai
  * CLIENT are still excluded, so agency staff and clients never see keys.
  */
 @ApiTags('AI Providers')
+@PlatformOwnerOnly()
 @OrgRoles(Role.SUPERADMIN)
 @Controller('/ai-providers')
 export class AiProvidersController {

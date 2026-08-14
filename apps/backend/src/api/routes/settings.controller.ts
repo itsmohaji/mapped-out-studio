@@ -3,7 +3,10 @@ import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.reque
 import { Organization, Role, User } from '@prisma/client';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
-import { OrgRoles } from '@gitroom/backend/services/auth/permissions/roles.guard';
+import {
+  OrgRoles,
+  PlatformOwnerOnly,
+} from '@gitroom/backend/services/auth/permissions/roles.guard';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { AddTeamMemberDto } from '@gitroom/nestjs-libraries/dtos/settings/add.team.member.dto';
@@ -23,20 +26,25 @@ export class SettingsController {
     private _aiKeysService: AiKeysService
   ) {}
 
+  // Platform-wide, not per-workspace. `AiKeysService` writes `SystemSetting`
+  // rows keyed only by provider name — no org anywhere in the identity — and
+  // pushes the plaintext key into the in-process store every tenant's AI calls
+  // read from. At org ADMIN this let any agency manager on the install replace
+  // the platform's AI key for everybody.
   @Get('/ai-keys')
-  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  @PlatformOwnerOnly()
   async getAiKeys() {
     return this._aiKeysService.getStatus();
   }
 
   @Post('/ai-keys')
-  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  @PlatformOwnerOnly()
   async setAiKey(@Body() body: AiKeyDto) {
     return this._aiKeysService.setKey(body.provider, body.apiKey || '');
   }
 
   @Post('/ai-keys/test')
-  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  @PlatformOwnerOnly()
   async testAiKey(@Body() body: AiKeyDto) {
     return this._aiKeysService.testKey(body.provider, body.apiKey);
   }
