@@ -15,7 +15,7 @@ import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.m
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 
-import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 const SaveSetModal: FC<{
   postData: any;
   initialValue?: string;
@@ -64,19 +64,8 @@ export const Sets: FC = () => {
   const modal = useModals();
   const toaster = useToaster();
 
-  const load = useCallback(async (path: string) => {
-    return await fetchIntegrationList(fetch, path);
-  }, []);
-
-  const { isLoading, data: integrations } = useSWR('/integrations/list', load, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-    fallbackData: [],
-  });
+  // Shared hook — this was a verbatim copy of it. See continue.provider.tsx.
+  const { isLoading, data: integrations } = useIntegrationList();
 
   const list = useCallback(async () => {
     return (await fetch('/sets')).json();

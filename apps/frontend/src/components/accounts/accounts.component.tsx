@@ -9,6 +9,8 @@ import React, {
   useState,
 } from 'react';
 import useSWR from 'swr';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -17,17 +19,9 @@ interface Customer {
   id: string;
   name: string;
 }
-interface Integration {
-  id: string;
-  internalId: string;
-  name: string;
-  picture?: string;
-  identifier: string;
-  disabled?: boolean;
-  refreshNeeded?: boolean;
-  inBetweenSteps?: boolean;
-  customer?: { id: string; name: string } | null;
-}
+// Was a hand-copy of the `/integrations/list` DTO that had already drifted from
+// it (`customer.name` required here, optional on the wire). One definition.
+type Integration = NormalizedIntegration;
 
 type Health = 'active' | 'reconnect' | 'setup' | 'disabled';
 type FilterKey = 'all' | 'active' | 'attention' | 'unassigned';
@@ -391,19 +385,16 @@ export const AccountsComponent: FC = () => {
     []
   );
 
-  const { data: integrationsRaw, mutate: mutateList } = useSWR(
-    '/integrations/list',
-    load
-  );
+  // Shared hook, not a second fetcher on the same SWR key — see clients.component.tsx.
+  const {
+    data: integrations,
+    mutate: mutateList,
+    isLoading: integrationsLoading,
+  } = useIntegrationList();
   const { data: customers } = useSWR<Customer[]>('/integrations/customers', load);
   const { data: lastPublished } = useSWR<Record<string, string>>(
     '/integrations/last-published',
     load
-  );
-
-  const integrations: Integration[] = useMemo(
-    () => integrationsRaw?.integrations || integrationsRaw || [],
-    [integrationsRaw]
   );
 
   const stats = useMemo(() => {
@@ -438,7 +429,7 @@ export const AccountsComponent: FC = () => {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [integrations, search, filter]);
 
-  const loading = !integrationsRaw;
+  const loading = integrationsLoading;
 
   const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'all', label: t('all', 'All') },

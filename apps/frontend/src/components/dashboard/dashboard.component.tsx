@@ -10,22 +10,15 @@ import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { TaskRow } from '@gitroom/frontend/components/tasks/task.api';
 import { AudiencePerformance } from '@gitroom/frontend/components/dashboard/audience.performance';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 
 interface Customer {
   id: string;
   name: string;
 }
-interface Integration {
-  id: string;
-  internalId: string;
-  name: string;
-  picture?: string;
-  identifier: string;
-  disabled?: boolean;
-  refreshNeeded?: boolean;
-  inBetweenSteps?: boolean;
-  customer?: { id: string; name: string } | null;
-}
+// The fourth hand-copy of the `/integrations/list` DTO. One definition.
+type Integration = NormalizedIntegration;
 interface PostItem {
   id: string;
   content: string;
@@ -183,7 +176,13 @@ export const DashboardComponent: FC = () => {
     []
   );
 
-  const { data: integrationsRaw } = useSWR('/integrations/list', load);
+  // MUST go through the shared hook. Registering `useSWR('/integrations/list', …)`
+  // with a local fetcher here put a SECOND shape under a cache key SWR treats as
+  // one entry, and SWR dedupes in-flight requests by key regardless of which
+  // fetcher asked — so whichever page loaded first decided whether the Calendar
+  // got an array or the `{integrations: […]}` envelope. That is what broke the
+  // Calendar when you navigated Dashboard → Calendar. One key, one fetcher.
+  const { data: channels, isLoading: channelsLoading } = useIntegrationList();
   const { data: customers } = useSWR<Customer[]>('/integrations/customers', load);
   const { data: lastPublished } = useSWR<Record<string, string>>(
     '/integrations/last-published',
@@ -210,10 +209,6 @@ export const DashboardComponent: FC = () => {
     [myTasksRaw]
   );
 
-  const channels: Integration[] = useMemo(
-    () => integrationsRaw?.integrations || integrationsRaw || [],
-    [integrationsRaw]
-  );
   const scheduledPosts: PostItem[] = scheduled?.posts || [];
   const publishedPosts: PostItem[] = published?.posts || [];
 
@@ -547,7 +542,7 @@ export const DashboardComponent: FC = () => {
               </button>
             }
           >
-            {!integrationsRaw ? (
+            {channelsLoading ? (
               <div className="px-[16px] py-[24px] text-center text-textItemBlur text-[12.5px]">
                 {t('loading', 'Loading…')}
               </div>

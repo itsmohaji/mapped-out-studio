@@ -2,6 +2,8 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Button } from '@gitroom/react/form/button';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
@@ -15,15 +17,11 @@ interface Customer {
   name: string;
   dbuClientName?: string | null;
 }
-interface Integration {
-  id: string;
-  name: string;
-  picture?: string;
-  providerIdentifier: string;
-  disabled?: boolean;
-  refreshNeeded?: boolean;
-  customer?: { id: string; name: string } | null;
-}
+// A hand-copy of the `/integrations/list` DTO that claimed `providerIdentifier`,
+// which this endpoint has never sent (it sends `identifier`). Nothing read it,
+// so it was harmless fiction — but it is exactly the drift that hid the shape
+// mismatch behind this bug. One definition.
+type Integration = NormalizedIntegration;
 type Status = 'active' | 'attention' | 'empty';
 interface Client extends Customer {
   accounts: Integration[];
@@ -108,11 +106,11 @@ export const ClientsComponent = () => {
     '/integrations/customers',
     load
   );
-  const { data: integrationsRaw, mutate: mutateIntegrations } = useSWR('/integrations/list', load);
-  const integrations: Integration[] = useMemo(
-    () => integrationsRaw?.integrations || integrationsRaw || [],
-    [integrationsRaw]
-  );
+  // One key, one fetcher. A local `useSWR('/integrations/list', …)` here shared a
+  // cache entry with the Calendar's hook while returning a different shape, and
+  // SWR dedupes by key, not by fetcher — so this page silently decided what the
+  // Calendar rendered. See use.integration.list.tsx.
+  const { data: integrations, mutate: mutateIntegrations } = useIntegrationList();
 
   const clients: Client[] = useMemo(() => {
     return (customers || []).map((c) => {

@@ -66,3 +66,4 @@ apps/frontend/public/g.js
 reports/
 .env.local
 .env*.local
+.gstack/

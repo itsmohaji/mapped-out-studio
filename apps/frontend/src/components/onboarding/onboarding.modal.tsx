@@ -10,7 +10,7 @@ import { AddProviderComponent } from '@gitroom/frontend/components/launches/add.
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 
-import { fetchIntegrationList } from '@gitroom/helpers/utils/integration.contract';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 interface OnboardingModalProps {
   onClose: () => void;
 }
@@ -121,20 +121,9 @@ const OnboardingStep1: FC<{ onNext: () => void; onSkip: () => void }> = ({
     return (await fetch('/integrations')).json();
   }, []);
 
-  const load = useCallback(async (path: string) => {
-    const list = await fetchIntegrationList(fetch, path);
-    return list;
-  }, []);
-
-  const { data: integrations } = useSWR('/integrations/list', load, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-    fallbackData: [],
-  });
+  // Shared hook — this was a verbatim copy of it. It matters most here: Onboarding
+  // renders ON the calendar page, so its copy sat on the same key as the Calendar's.
+  const { data: integrations } = useIntegrationList();
 
   const sortedIntegrations = useMemo(() => {
     return orderBy(

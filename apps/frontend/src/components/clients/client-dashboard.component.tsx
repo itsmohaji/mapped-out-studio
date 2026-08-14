@@ -2,6 +2,8 @@
 
 import React, { FC, useCallback, useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 import { useParams, useRouter } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -13,17 +15,8 @@ interface Customer {
   name: string;
   dbuClientName?: string | null;
 }
-interface Integration {
-  id: string;
-  internalId: string;
-  name: string;
-  picture?: string;
-  identifier: string;
-  disabled?: boolean;
-  refreshNeeded?: boolean;
-  inBetweenSteps?: boolean;
-  customer?: { id: string; name: string } | null;
-}
+// Another hand-copy of the `/integrations/list` DTO. One definition.
+type Integration = NormalizedIntegration;
 interface PostItem {
   id: string;
   content: string;
@@ -357,7 +350,8 @@ export const ClientDashboardComponent: FC = () => {
   );
 
   const { data: customers } = useSWR<Customer[]>('/integrations/customers', load);
-  const { data: integrationsRaw } = useSWR('/integrations/list', load);
+  // Shared hook, not a second fetcher on the same SWR key — see clients.component.tsx.
+  const { data: allChannels } = useIntegrationList();
   const { data: lastPublished } = useSWR<Record<string, string>>(
     '/integrations/last-published',
     load
@@ -367,10 +361,10 @@ export const ClientDashboardComponent: FC = () => {
     () => (customers || []).find((c) => c.id === clientId),
     [customers, clientId]
   );
-  const channels: Integration[] = useMemo(() => {
-    const all: Integration[] = integrationsRaw?.integrations || integrationsRaw || [];
-    return all.filter((i) => i.customer?.id === clientId);
-  }, [integrationsRaw, clientId]);
+  const channels = useMemo(
+    () => allChannels.filter((i) => i.customer?.id === clientId),
+    [allChannels, clientId]
+  );
 
   const q = `customer=${clientId}&page=0`;
   const { data: scheduled } = useSWR(
