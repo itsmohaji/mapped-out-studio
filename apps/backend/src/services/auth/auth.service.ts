@@ -4,7 +4,10 @@ import { CreateOrgUserDto } from '@gitroom/nestjs-libraries/dtos/auth/create.org
 import { LoginUserDto } from '@gitroom/nestjs-libraries/dtos/auth/login.user.dto';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
-import { AuthService as AuthChecker } from '@gitroom/helpers/auth/auth.service';
+import {
+  AuthService as AuthChecker,
+  passwordVersion,
+} from '@gitroom/helpers/auth/auth.service';
 import { AuthProviderManager } from '@gitroom/backend/services/auth/providers/providers.manager';
 import dayjs from 'dayjs';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
@@ -162,7 +165,21 @@ export class AuthService {
     }
 
     try {
-      const getOrg: any = AuthChecker.verifyJWT(cookie);
+      // Only an invite may be spent here. Passing a session token used to reach
+      // this code with `timeLimit` undefined — `dayjs(undefined)` is NOW, so the
+      // expiry test was a coin flip — and it would then be read as an invite
+      // whose `role` was whatever the payload happened to contain.
+      const getOrg: any = AuthChecker.verifyPurposeJWT(
+        cookie,
+        'invite',
+        // Invites issued before purposes existed. `timeLimit` is theirs alone;
+        // no session or reset payload has ever carried it. They self-expire
+        // within two days of the deploy.
+        (payload) => typeof payload.timeLimit === 'string' && !!payload.orgId
+      );
+      if (!getOrg) {
+        return false;
+      }
       if (dayjs(getOrg.timeLimit).isBefore(dayjs())) {
         return false;
       }
@@ -267,10 +284,25 @@ export class AuthService {
       return false;
     }
 
-    const resetValues = AuthChecker.signJWT({
-      id: user.id,
-      expires: dayjs().add(20, 'minutes').format('YYYY-MM-DD HH:mm:ss'),
-    });
+    // `purpose` stops this token being spent as a session cookie, which is what
+    // it used to be: `AuthMiddleware` asked only for `.id`, so a leaked reset
+    // link was a permanent login and the 20-minute limit below never applied.
+    //
+    // The expiry is now the JWT's own `exp`, enforced by the library at verify
+    // time, instead of a formatted string only the reset route remembered to
+    // read.
+    //
+    // `pv` binds the token to the password it was issued against, which makes it
+    // single-use: the moment the password changes, this and every other
+    // outstanding link for the account stop verifying. No new column needed.
+    const resetValues = AuthChecker.signJWT(
+      {
+        id: user.id,
+        purpose: 'reset',
+        pv: passwordVersion(user.password),
+      },
+      { expiresIn: '20m' }
+    );
 
     await this._notificationService.sendEmail(
       user.email,
@@ -279,12 +311,28 @@ export class AuthService {
     );
   }
 
-  forgotReturn(body: ForgotReturnPasswordDto) {
-    const user = AuthChecker.verifyJWT(body.token) as {
-      id: string;
-      expires: string;
-    };
-    if (dayjs(user.expires).isBefore(dayjs())) {
+  async forgotReturn(body: ForgotReturnPasswordDto) {
+    // No `allowLegacy`: reset links issued before this deploy are refused. They
+    // live for 20 minutes, so the blast radius is anyone mid-reset at deploy
+    // time, and the alternative is honouring exactly the tokens this change
+    // exists to neutralise. Requesting a new link costs one click.
+    const payload = AuthChecker.verifyPurposeJWT<{ id: string; pv?: string }>(
+      body.token,
+      'reset'
+    );
+    if (!payload?.id) {
+      return false;
+    }
+
+    const user = await this._userService.getUserById(payload.id);
+    if (!user || user.providerName !== Provider.LOCAL || !user.password) {
+      return false;
+    }
+
+    // Single use. A link is valid only against the password it was minted for,
+    // so redeeming it (or any other password change) retires every link
+    // outstanding for this account.
+    if (payload.pv !== passwordVersion(user.password)) {
       return false;
     }
 
@@ -362,6 +410,12 @@ export class AuthService {
     if (user.password) {
       delete user.password;
     }
-    return AuthChecker.signJWT(user);
+    // `expiresIn` matches the `auth` cookie's own one-year lifetime, so nobody
+    // is logged out by this and a stolen token stops being useful eventually
+    // instead of never. Tokens already issued carry no `exp` and keep working.
+    return AuthChecker.signJWT(
+      { ...user, purpose: 'session' },
+      { expiresIn: '365d' }
+    );
   }
 }

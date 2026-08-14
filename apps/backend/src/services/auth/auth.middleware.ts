@@ -36,10 +36,27 @@ export class AuthMiddleware implements NestMiddleware {
       throw new HttpForbiddenException();
     }
     try {
-      // Verify the JWT signature only. Never trust authorization-relevant
-      // claims (id, isSuperAdmin, activated) from the token body — always
-      // re-resolve the user from the database using the id.
-      const payload = AuthService.verifyJWT(auth) as User | null;
+      // Verify the signature AND that this token was minted as a session.
+      // Never trust authorization-relevant claims (id, isSuperAdmin, activated)
+      // from the token body — always re-resolve the user from the database.
+      //
+      // Signature alone was not enough. One secret signs every token this system
+      // issues, so a password-reset token — `{ id, expires }` — satisfied the
+      // old `payload?.id` test and became a permanent login for that account,
+      // with the 20-minute limit never consulted on this path.
+      const payload = AuthService.verifyPurposeJWT<User>(
+        auth as string,
+        'session',
+        // Sessions issued before purposes existed. A session payload is a User
+        // row, so it carries `email`; a reset payload is `{ id, expires }` and
+        // an invite carries `timeLimit` — neither has ever had `email` without
+        // also having the other two, so this readmits real sessions and nothing
+        // else. Drop this predicate once existing cookies have turned over.
+        (p) =>
+          typeof p.email === 'string' &&
+          p.expires === undefined &&
+          p.timeLimit === undefined
+      );
       const orgHeader = req.cookies.showorg || req.headers.showorg;
 
       if (!payload?.id) {

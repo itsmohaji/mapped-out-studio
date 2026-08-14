@@ -93,7 +93,13 @@ export class OrganizationService {
     const id = makeId(5);
     const url =
       process.env.FRONTEND_URL +
-      `/?org=${AuthService.signJWT({ ...body, orgId, timeLimit, id })}`;
+      `/?org=${AuthService.signJWT({
+        ...body,
+        orgId,
+        timeLimit,
+        id,
+        purpose: 'invite',
+      })}`;
     if (body.sendEmail) {
       await this._notificationsService.sendEmail(
         body.email,
