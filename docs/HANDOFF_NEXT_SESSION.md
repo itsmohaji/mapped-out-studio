@@ -1,114 +1,154 @@
-# Mapped Out — Handoff for the next session
+# Mapped Out — Handoff
 
-> Read this first. It's the single source of truth for continuing the upgrade.
-> When the owner says "go on", continue from **What's next**, module by module.
-> **Hard rule from the owner (non-negotiable):** everything shipped is the REAL,
-> functional app — every button/card/filter works against live data. **No mockups,
-> no demos, no fake numbers.** Each module: schema → API → UI → wired → build-verified
-> → deployed to social.mappedout.co → owner reviews → next.
+> **Read this first.** Written 2026-08-14. It is self-contained: you can work from this file
+> alone if the Obsidian vault is not on this machine.
+>
+> The owner is **not a developer**. Explain in plain language. Do not hand him diagnostics to run
+> unless there is genuinely no alternative. Decide small things yourself; stop only for
+> destructive or high-impact actions.
 
 ---
 
-## Where things live (critical)
+## ⏭️ START HERE
 
-- **App code = the FORK, cloned locally at `/Users/mohamedhaji/Desktop/postiz-app`.**
-  Work branch: **`mappedout-upgrade`**. Production branch: **`mappedout-branding`**.
-  (The dir the owner opens, `~/Desktop/Postiz`, is the INFRA repo — no app code there.)
-- **Deploy pipeline (proven, reusable):**
-  1. `git checkout mappedout-branding && git merge --ff-only mappedout-upgrade && git push origin mappedout-branding` → GH Actions `mappedout-build.yml` builds `ghcr.io/itsmohaji/postiz-app:mappedout` (~10–12 min).
-  2. Trigger Coolify redeploy: `curl -H "Authorization: Bearer $TOKEN" 'https://coolify.dbugroup.net/api/v1/deploy?uuid=pu53f10y6ml47hc3t88mdrs7&force=false'` → poll `/api/v1/deployments/<uuid>` until `finished`.
-  3. Verify: `curl -sSL https://social.mappedout.co` = 200; backend `curl .../api/public/v1/groups` = 401.
-- **Coolify API token:** in macOS Keychain — `security find-generic-password -s mappedout-coolify -a deploy -w`. Scopes: read + deploy. (The old token in `.claude/settings.local.json` is REVOKED/401 — don't use it.)
-- **VPS SSH (read logs / DB / verify container):** `ssh -i ~/.ssh/claude_ed25519 root@187.127.100.103`. Find the app container: `docker ps --filter name=postiz --format '{{.Names}}' | grep -viE 'postgres|redis'`. DB: `docker exec <c> printenv POSTGRES_USER/DB` then `psql`.
-- **Verify a deploy actually landed** (avoids "it's cached" confusion): SSH → `docker exec <container> sh -lc 'grep -rl "<marker>" /app/apps/frontend/.next | head'` (e.g. marker `glass-surface`, or a token hex). Owner must **hard-refresh / private window**.
-- **Env constraints:** cannot render the Next.js app locally → verify by `pnpm run build:frontend` (compiles) + owner's live review. Schema deploys via `prisma db push --accept-data-loss` on every boot → **additive/nullable only**. No `timeout` cmd on macOS. Shell-safety classifier can briefly go down — retry.
+1. **Ask whether he clicked "Link them" on <https://social.mappedout.co/clients>.**
+   Most of Phase 3 is blocked on it. If that panel is gone from the page, it was applied.
+2. **If applied** → next task is `Post.customerId` (needs a Prisma migration + backfill —
+   plan it WITH him, never run it as a side effect).
+3. **If not applied** → do not nag. Pick up the unblocked items in "Phase 3 remaining" below.
 
-## Live state (as of this handoff, 2026-07-26)
+## 🔴 Two things wait on the owner
 
-- ✅ **Phase 0** (audit) + **Phase 2** (auth: per-client IDOR fix on posts by-id + group routes; 3-role model `SUPER_ADMIN`/`AGENCY_ADMIN`/`ACCOUNT_MANAGER` via **Option B** = keep the Prisma enum `SUPERADMIN/ADMIN/USER/CLIENT`, map on top; team-management gated `@OrgRoles(SUPERADMIN,ADMIN)`; 22 security unit tests) — **LIVE**.
-- ✅ **Phase 1 theme** — dark blue-glass tokens (`colors.scss` `.dark`/`.light` `--new-*`: killed purple `#612bd3`→`#5c9ad6`, grounds→`#0a0c11`), dreamy body gradient (`global.scss`), real Mapped Out logo (already in `logo.tsx`) — **LIVE**.
-- ✅ **Clients module** — `/clients` page (`components/clients/clients.component.tsx` + route + nav in `top.menu.tsx`): real customers list w/ accounts, health, active/total, status, search/filter, real "Add Client" (`POST /integrations/customer` → `createCustomer` service+repo, admin-gated). Rows now NAVIGATE to the per-client dashboard (inline expand removed). **LIVE**.
-- ✅ **Glass shell** — wide 232px glass sidebar (`layout.component.tsx`) + horizontal nav items (`menu-item.tsx`) + glass top bar + theme-aware `--glass-surface/border/hover` tokens — **LIVE** (verified in container, marker `glass-surface`). NOTE: this is the WIDE glass sidebar, NOT yet the full "separate floating pieces / collapsible" spec — that refinement is still pending (see Honest Visual Scope §1 below).
-- ✅ **Accounts module** (session 2026-07-26) — `/accounts` (`components/accounts/accounts.component.tsx` + route + nav): every connected channel as a card w/ platform-logo overlay, owning client, connection health (active / reconnect / finish-setup / disabled) and **last publish**. New additive endpoint `GET /integrations/last-published` (repo `getLastPublishedDates` groupBy PUBLISHED posts + service; scoped like `/list`, no schema change). Real actions: **Reconnect** (`GET /integrations/social/:identifier?refresh=:internalId` → redirect), **Assign/Unassign client** (`PUT /integrations/:id/customer-name`), **Enable/Disable** (`POST /integrations/enable|disable`). Search + status filters + summary counts. **LIVE** (commit `ef2c1ada`; verified route + marker + endpoint→401 in container). ⚠️ Reconnect/Disable are wired but were NOT exercised against the live Époque IG (owner rule).
-- ✅ **Client Dashboard** (session 2026-07-26) — per-client `/clients/[id]` (`components/clients/client-dashboard.component.tsx` + `clients/[id]/page.tsx`; Clients rows navigate here). 4 tabs, all real data via EXISTING endpoints (no schema change): **Overview** (active/total accounts, scheduled/published/attention stats, next scheduled post, connected-accounts summary, recent activity), **Accounts** (client's channels + health + real Reconnect), **Content** (`GET /posts/list?customer=<id>&state=scheduled|published|draft` → `expandPostsList`; All/Scheduled/Published/Drafts filter), **Analytics** — (a) DB-derived volume (published-per-6-months bar, published-by-channel, counts) AND (b) **REAL live per-channel platform metrics** (followers/reach/impressions/engagement) via `GET /analytics/:integration?date=` (channel chips + 7/30/90d, load-on-demand, sparkline + trend, handles `available:false`). **LIVE** (dashboard commit `f2564ef7`; analytics upgrade commit `7f778bb4`; markers verified in container). Live metrics are **READ-ONLY** (never post/delete) → safe per the clarified client-account rule; the owner explicitly cleared analytics reads. **One deliberate omission:** the **Campaigns tab** is left out until the Campaigns module (#6) exists — no fake tab.
-- ✅ **Calendar + Composer restyle (pass 1)** (session 2026-07-26, commit `621cfd75`) — **the glass is now REAL.** ROOT CAUSE fixed: `glass-surface` was only CSS TOKENS (`--glass-*` in colors.scss), never a class, so every `glass-surface` className (incl. my Accounts/Dashboard cards) rendered NO glass. Defined the actual **`.glass-surface`** utility in `global.scss` (background `var(--glass-surface)` + `1px var(--glass-border)` + `backdrop-filter: blur(22px) saturate(140%)`, `!important` to beat stacked Tailwind `bg-*`/`border-*`). Now Accounts, Client Dashboard, calendar headers + composer are genuinely glassy. Applied: calendar **day/week/month header cells → glass** (`calendar.tsx`), **post pills → soft elevation + hover-lift + rounded**, **shared composer/modal frame** (`new-launch/modal.wrapper.component.tsx`) → glass + depth shadow + bolder title. **Surface-only — no layout/drag/handler/scheduling changes.** Verified `.glass-surface{…backdrop-filter:blur(22px)…}` in the LIVE container CSS. **STILL PENDING (pass 2):** composer INTERNALS (`manage.modal.tsx` body + `editor.tsx`) still stock; calendar **toolbar** (`filters.tsx`) not yet glassed; making the **dreamy body gradient visible behind the two `bg-newBgColorInner` panels** (Honest-Scope §2) not done (that's a layout-risk change — do carefully).
+| What | Why it matters |
+|---|---|
+| **The "Link them" button on `/clients`** | Records `Customer.dbuClientId`. His dry run read **2 links** (Mapped Out, Époque), **0 creates**, **0 conflicts**, 2 channels untouched. Clicking writes two id values, creates nothing. Safe to click twice. |
+| **`ENCRYPTION_KEY` in Coolify** | Still unset. Harmless today (falls back to `JWT_SECRET`), **but `JWT_SECRET` must NOT be rotated until it is set** — rotating would make every stored social token undecryptable and disconnect every channel. He must copy `JWT_SECRET`'s value into a new `ENCRYPTION_KEY` variable. **The Coolify API returns env metadata only, never values, so you cannot read the secret to copy it yourself. Never invent a value.** |
 
-- ✅ **Theme polish + Dashboard home** (session 2026-07-26, commit `2f04a788`) — owner asked to pause modules and do theme+dashboard. **Scope chosen: visual polish (NOT the shell restructure).** (1) **Dreamy background now VISIBLE** (Honest-Scope §2 DONE): main content panel in `layout.component.tsx` switched from opaque `bg-newBgLineColor` → glass (`var(--glass-surface)`+`backdrop-blur-xl`), so the body gradient shows through behind every page; body glows strengthened + blue-shifted. (2) **Remaining hardcoded purple killed** (§4 DONE): `#612bd3→#5c9ad6`, `#5023b8→#4a86c4` in `loading.tsx`/`statistics.tsx`/`render.analytics.tsx` — ALL app source now 612bd3-free (only residual is third-party dep CSS, out of scope). (3) **New premium Dashboard as home**: `/dashboard` (`components/dashboard/dashboard.component.tsx`) + first nav item; `/` redirects to it. Real-data widgets (IG-safe, no live-analytics): greeting+date, 6 clickable stat cards, Up-next (scheduled), Recent activity (published), Accounts health (+Reconnect), Your clients. Transparent page bg so glass cards float over the dreamy bg. **Deferred (not faked):** top-performing + audience heatmap (need live analytics), Campaigns widget (module unbuilt). Spec: `docs/superpowers/specs/2026-07-26-theme-polish-dashboard-home-design.md`.
-- ✅ **Theme-visibility fix + nav/settings cleanup + SHELL RESTRUCTURE** (session 2026-07-26, commits `bd4b12b2` + `bc102de0`) — owner said dreamy/glass wasn't visible. ROOT CAUSE: body glows were ~12% over near-black AND in the corners (off-screen). FIXED: strong on-screen blue blooms (`global.scss`) + more-translucent glass tokens (`colors.scss` dark surface .55→.42, border .08→.12, hover .05→.10; light surface .62→.55) → glass + dark-mode hover now clearly visible. Removed **Media** from nav (Media Library replaces it). Moved **Theme toggle + Language** into Settings → new **Appearance** tab; decluttered top bar. **Shell restructure DONE (Honest-Scope §1)**: sidebar is now **4 separate floating glass pieces** (logo · hamburger · menu · settings), **collapsible** icon-rail (76px) ↔ labels (232px) via `navCollapsed` cookie (MenuItem/TopMenu gained `collapsed`+`group` props; Logo gained `withText`/`collapsed`). New top-right **AccountMenu** (`components/new-layout/account.menu.tsx`: avatar → name/email, Settings, Sign out); no profile in sidebar. All LIVE + verified. ⚠️ GH image build got stuck ~30min on a bad runner once — `gh run cancel <id>` + `gh workflow run mappedout-build.yml --ref mappedout-branding` gave a fresh 5-min runner (reusable fix).
+## Where things actually live
 
-## Design direction (APPROVED by owner — build to this)
+| Thing | Path / URL |
+|---|---|
+| **App code** (all of it) | `~/Desktop/mapped-out-studio` · GitHub `itsmohaji/mapped-out-studio` · branch **`mappedout-branding`** |
+| **Infra** (compose only, no app code) | `~/Desktop/mapped-out-infra` · GitHub `itsmohaji/postiz-production` · branch **`main`** |
+| **Docs / knowledge base** | `~/Documents/Obsidian Vault` · GitHub `itsmohaji/dbu-knowledge-base` · folder `30-MappedOut/` |
+| **Production** | <https://social.mappedout.co> — health check is `/api/` **with the trailing slash** |
+| **Coolify token** | `~/.coolify_token` (app uuid `pu53f10y6ml47hc3t88mdrs7`) |
 
-Preview artifact (the agreed look): https://claude.ai/code/artifact/0e20c13e-a77f-4be0-80f0-e2ff42f591f7
-- **Dark dreamy-glass, Apple-TV restraint** — near-black ground, glassmorphism (translucent + blur), soft dreamy glow, **blue accent, NO purple**. Dark is the default; theme toggle lives in **Settings** (not the sidebar).
-- **Sidebar = separate floating glass pieces** (owner's explicit ask): logo alone (mark only; "Mapped Out" text only when expanded) · hamburger alone · the menu in its own floating glass container · Settings alone at the bottom. **Collapsible**: default slim icon-rail, hamburger expands to labels. Icons **centered** when collapsed; each nav icon **unique** (AI = sparkle).
-- **No profile in the sidebar** (it's top-right). **No emoji** in greetings.
-- Dashboard is content-forward + feature-dense (6 stat cards, Scheduled Today, Connected Accounts w/ health, Top Performing, Campaigns, Audience heatmap, Approvals).
+⛔ **There is no local environment.** Production is the only environment. `:3000` belongs
+permanently to the AIM project; Mapped Out's backend wants the same port. Do not try to run it.
+Verify with `pnpm run build:frontend` + `pnpm run build:backend` + `pnpm test`, then deploy and
+look at the live site.
 
-### ⚠️ HONEST VISUAL SCOPE — read this, it's the crux of the owner's frustration
-So far only **tokens (colors) + the sidebar** were changed. Verified live: the served CSS DOES have
-`#0a0c11`/`#5c9ad6`/`glass-surface` — the theme deployed. BUT the app still "looks like the old one"
-because **the bespoke demo look ≠ reskinned Postiz**. Every page/card/table/panel still uses Postiz's
-ORIGINAL component styling. Making it look like the artifact
-(https://claude.ai/code/artifact/0e20c13e-a77f-4be0-80f0-e2ff42f591f7) is a **systematic surface-by-surface
-restyle**, NOT a token swap. Do NOT keep tweaking tokens and calling it transformed — the owner sees through it.
+## Deploy — the procedure that actually works
 
-**The real restyle plan (do this deliberately next session):**
-1. **Shell, properly** — the sidebar as **separate floating glass pieces** (logo / hamburger / menu / settings),
-   **collapsible** (default icon-rail → hamburger expands), centered icons when collapsed, unique nav icons
-   (AI=sparkle), theme toggle moved to **Settings**, no profile in sidebar. (Owner's exact spec + artifact.)
-2. **Make the dreamy background actually VISIBLE** — right now it's on `body` but the content wrapper
-   (`bg-newBgLineColor`) covers it and the glows are too faint over near-black. Strengthen the glows and/or
-   make the content wrapper translucent so depth shows. This is a big part of the "wow" that's currently invisible.
-3. **Glass the content surfaces** — the panels/cards/tables inside pages (Postiz components) need the glass
-   treatment (translucent + blur + `--glass-border`), restyled page by page as each module is built.
-4. Clean remaining hardcoded purple `#612bd3` in `components/launches/statistics.tsx`,
-   `platform-analytics/render.analytics.tsx`, `layout/loading.tsx` (the `--color-forth` button purple + light
-   focus tokens are already fixed).
+```
+1. push to mappedout-branding
+2. WAIT for "Build Mapped Out Image" to go green (~5-6 min):  gh run list --branch mappedout-branding
+3. FORCE deploy:  POST https://coolify.dbugroup.net/api/v1/deploy?uuid=pu53f10y6ml47hc3t88mdrs7&force=true
+   (Bearer token from ~/.coolify_token)
+4. poll /api/v1/deployments/{deployment_uuid} until "finished"
+5. if /api/ returns 502 that is the known zombie:
+   POST /api/v1/applications/pu53f10y6ml47hc3t88mdrs7/restart   (~90s, then 200)
+```
 
-Set expectations with the owner: the app becomes the demo **progressively** (shell first, then each page),
-not in one deploy. Best approach: do a focused "shell + dreamy-bg + one flagship page" deploy so he SEES a
-real transformation on at least one screen, then roll the same treatment across pages as modules ship.
+- **`force=true` matters.** A plain redeploy reuses the cached image and changes nothing.
+- The `:mappedout` image tag is mutable — without a redeploy the container keeps the old image.
+- **The image build fails sometimes for reasons that are not your code.** `next/font/google`
+  downloads Plus Jakarta Sans from `fonts.gstatic.com` at build time; on 2026-08-14 it 404'd and
+  failed the build. `gh run rerun <id> --failed` passed. Fixing it properly = `next/font/local`.
 
-## What's next — module by module (owner's phase order). Each REAL + functional + LIVE.
+## Verifying a deploy landed (traps that cost a full day)
 
-1. ✅ **Accounts** — DONE + LIVE (see Live state above).
-2. ✅ **Client Dashboard** — DONE + LIVE (see Live state; Campaigns tab deferred to module #6; analytics is DB-derived, IG-safe).
-3. ✅ **Calendar + Composer premium pass (pass 1)** — DONE + LIVE (real `.glass-surface`, calendar headers/pills, composer frame). Pass 2 (composer internals, toolbar, dreamy-bg-behind-panels) still pending — see Live state.
-4. ✅ **Post Library** — DONE + LIVE (`/post-library`, commit `e5b6dab1`): `components/library/post-library.component.tsx` + route + nav. Pick a client → lazy-fetch its full history (published paginated + scheduled + draft merged via `/posts/list`+`expandPostsList`; `state=all` is future-only so published fetched separately) → **Client → Year → Month** folder tree w/ counts + per-folder post list + search; post click → `/p/:id` preview. No schema change. NOTE: click-to-EDIT uses the calendar (editPost needs `useCalendar` context); library click opens preview instead — fine for browse. Groups per-client (posts carry no customer field).
-5. ✅ **Media Library** — DONE + LIVE (`/media-library`, commit `92bbe479`): real folders over existing media. **First additive SCHEMA change of the upgrade** — `MediaFolder` table + nullable `Media.folderId` (plain scalar, no relation); verified live in the DB (`MediaFolder`=1, `Media.folderId`=1). Backend: media controller/service/repo folder CRUD (+ counts) + `GET /media?folderId=` filter + `POST /media/:id/folder` assign (folder routes declared BEFORE the generic `POST /:endpoint` R2 handler; injected `PrismaRepository<'mediaFolder'>`). Frontend: folder sidebar (All/Unfiled/folders, create/rename/delete, live counts) + grid filtered by folder + per-item move-to-folder + search + pagination. Uploading unchanged (stays on `/media`). **Schema-deploy is safe:** build `postinstall→prisma-generate`, boot `prisma-db-push --accept-data-loss` (additive). NOTE: **tags** deferred (v2) — folders shipped first. Marketing/DBU rule note: this is org-level media (no per-client media); folders are org-wide.
-6. **Campaigns** — NEW module (schema `Campaign` additive + API + UI + link posts). **← NEXT (owner says "go on")**
-7. **Tasks** — NEW module (schema `Task` additive + API + UI: detail drawer, assignee, comments, reminders).
-8. **Analytics + Reports** — extend existing analytics; Reports = export.
+- ✅ **Take the failing chunk URL from the browser console stack → `curl` it → read the code at the
+  reported `line:column`.** That is the real deployed source. Chunks are public, no auth needed.
+- ✅ **Route existence:** a removed route returns **404** while a live one returns **401**. That
+  contrast proved the Phase 2 backend was live without any session.
+- ❌ **Do NOT fingerprint `/auth` chunk hashes to detect a change elsewhere.** The login page
+  imports no dashboard code, so its hashes are identical before and after. This produced a false
+  "it's deployed" claim once already.
+- ❌ **Dashboard chunk filenames are not discoverable without a session**, so the curl trick only
+  verifies public routes.
+- ⚠️ **There is no usable browser session for automated checks.** His Chrome holds only 4 non-auth
+  cookies for the domain, so `browse cookie-import-browser` cannot borrow one, and `browse handoff`
+  times out (the headed Chromium does spawn; `browse resume` then works). In practice: ask him, or
+  ask for a screenshot.
 
-## The big INSTAGRAM item (deferred by owner, do NOT touch without go-ahead)
-Root cause found (docs/MAPPED_OUT_UPGRADE_AUDIT.md §6): a token-refresh failure sets `Integration.refreshNeeded=true` but not `disabled`, so the account shows "Connected" while the publish workflow silently early-returns (no ERROR).
+## State as of 2026-08-14 — HEAD `be2c4861`, deployed, 496 tests green
 
-**CLARIFIED RULE (owner, 2026-07-26):** the prohibition is specifically about **NOT accidentally POSTING or DELETING** on a CLIENT's account (e.g. Époque IG). **Reads are FINE** — pulling analytics / followers / impressions / post history does not post or delete, so it's allowed on client accounts (incl. the live-provider `/analytics/:integration` endpoints + OAuth token refresh they do). **DBU Group is the owner's OWN account → free to use/test.** So: never trigger publish/delete on a client channel by mistake; read-only actions (analytics, lists) are OK; test write flows only on DBU Group. (This supersedes the earlier "do no IG anything" note — that was over-cautious.)
+**Calendar — closed.** Two bugs, both owner-confirmed fixed:
+- The crash (`_.filter is not a function`): nine components each read `/integrations/list` by hand.
+- Channels/clients vanishing when navigating between sections: **eight components registered the
+  same SWR key `/integrations/list` with different fetchers.** SWR keeps one cache entry per key and
+  dedupes by key regardless of fetcher, so whichever page loaded first decided the shape everyone
+  got. Guarded by `apps/frontend/src/components/launches/helpers/integration.list.key.spec.ts`,
+  which fails the build if a second module ever registers that key.
 
-## Social connect (OAuth) failures — ROOT CAUSE (proven 2026-07-26, commit `c98effa1`)
-Symptom: "LinkedIn (and sometimes Instagram) won't connect" even with correct client-id/secret/redirect.
-**Proven via the container nginx access log** — LinkedIn's authorize-step redirect returned
-`error=unauthorized_scope_error&error_description=Scope "w_organization_social" is not authorized for your
-application`. LinkedIn rejects the ENTIRE auth request if ANY requested scope isn't approved for the app, so
-no `code` is issued → the `/api/integrations/social-connect/:p` callback POSTs with `error` → 400 →
-`authenticate()`/`checkScopes` never even run (that's why provider-level logging showed nothing).
-**Root cause:** the providers hard-code elevated, approval-gated scopes.
-- **Personal `linkedin`** was requesting org scopes (`rw_organization_admin`/`w_organization_social`/
-  `r_organization_social`) + `r_basicprofile` it does NOT need → **CODE FIX shipped**: reduced to
-  `['openid','profile','w_member_social']` (self-serve "Sign In w/ OIDC" + "Share on LinkedIn"). Personal
-  LinkedIn now connects with NO special approval. (`checkScopes` uses the same set, so it stays consistent.)
-- **`linkedin-page`** genuinely needs the org scopes → requires the LinkedIn **"Community Management API"**
-  product to be approved on the app (owner action; dropped `r_basicprofile` so CMA is the only approval).
-- **`instagram`** scopes (`business_management`/`instagram_content_publish`/`instagram_manage_insights`/…)
-  need Meta **App Review / Advanced Access**, or the connecting FB user must be an app **tester/admin** (why
-  it "sometimes" works). Left unchanged — they're required for IG features; the fix is approval/tester, not code.
-**DEBUG TECHNIQUE that worked (reuse):** provider `authenticate()` logging is useless for authorize-step
-rejections (they never reach it). Read the **container nginx access log** instead:
-`docker exec <postiz> tail -300 /var/log/nginx/access.log | grep -iE "social/|social-connect"` — the
-`?error=...&error_description=...` on the callback redirect is LinkedIn/Meta telling you the exact reason.
+**Phase 2 (security) — closed and deployed.**
+| Commit | Fix |
+|---|---|
+| `54ae0cd2` | Every JWT carries a `purpose`; a password-reset token was previously a permanent session. Reset links are single-use and expire for real. HS256 pinned. |
+| `19cdd339` | Platform-wide AI settings need a **platform** owner (`SUPERADMIN_EMAILS`), not an org role. Fails closed. |
+| `32a59292` | `/analytics/post/:postId` scoped per user; `/enterprise/*` unmounted (unauthenticated, and one route deleted a channel plus all its posts). |
+| `859a2f94` | `ENCRYPTION_KEY` separated from `JWT_SECRET` so the session secret is rotatable. |
 
-## DBU integration — preserve, don't rebuild
-DBU System ⇄ DBU Portal ⇄ Mapped Out. Only fix/strengthen sync (outbound is fire-and-forget → durability gap, §8). Contract: `itsmohaji/dbu-group-system/docs/integration/*`. Never bake DBU into the core (keep it an optional module — matters for the future SaaS: same codebase becomes SaaS by enabling signup + Stripe billing + org-per-customer; DBU stays an agency-only add-on).
+⚠️ **Legacy predicates in `auth.middleware.ts` and `getOrgFromCookie` readmit purpose-less tokens
+by shape, so nobody was logged out. Delete them once existing cookies have turned over.**
 
-## Full docs
-`docs/MAPPED_OUT_UPGRADE_AUDIT.md` (15-section audit + IG diagnosis + authz inventory), `docs/REFERENCE_REPOSITORY_ASSESSMENT.md`, `docs/MAPPED_OUT_UPGRADE_PROGRESS.md` (journal).
+**Phase 3 (composer + client model) — part done, deployed.**
+- 🧭 **The canonical client model is `Customer` (Mapped Out's own client). DBU is an OPTIONAL LINK
+  on top, via `Customer.dbuClientId`.** Owner's reasoning, 2026-08-14: today it is internal and
+  DBU-connected, but **it becomes a SaaS where each agency has its own clients and DBU is not
+  involved at all** — so DBU cannot be the source of truth. It also matches authorization, which
+  already keys `UserAssignment` on `Customer`. (This reversed the recommendation first put to him.)
+- `e49fd05d` — **`POST /posts` ran no scope check at all** while six by-id handlers on the same
+  controller did: a Manager could publish to another client's channel by id. Also stopped
+  `campaignId` connecting to a campaign in any other organisation.
+- `40fc486a` — the composer's two client pickers no longer silently overwrite each other. The
+  dangerous case was a post publishing to one client's channels while filed in DBU against another.
+- `31eeba42` + `be2c4861` — dry run and apply for the client↔DBU link, on `/clients`.
+
+### Phase 3 remaining
+| Task | Blocked on the link? |
+|---|---|
+| **`Post.customerId`** — client association is derivable only via `post.integration.customerId` OR `post.dbuClientId`, two unreconciled paths. Upstream cause of fuzzy campaign/report association. **Needs a migration + backfill; plan it with him.** | yes |
+| `Campaign.customerId` exists (`schema.prisma:503`) and the list query ignores it (`campaigns.service.ts:16`) — every client's campaigns are offered. | yes |
+| `CaptionTools` derives its own `customerId` from the channel's Customer (`ai-assist/caption.tools.tsx:74-80`). This becomes **correct on its own** once the link is applied — re-check, do not "fix" it now. | yes |
+| Media has **no** client scoping at any layer; `Media` has no client column. | **no** |
+| Timezone is `localStorage` only (`set.timezone.tsx:11-16`) and its settings UI is **commented out** (`metric.component.tsx:49-58`) — two devices produce different UTC instants for the same typed time. Self-contained; good pick-up-anytime task. | **no** |
+
+### Also noticed, not yet work
+`Époque` shows **0 of 1** channels connected and `DBU Group` **1 of 2** — channels needing
+reconnection, so posts to them would fail. Offered; he had not answered when he stopped.
+
+## Phases 4+ — read this before planning them
+
+From the Phase 0 audit (`docs/audit/2026-08-11-phase-0-architecture-map.md`):
+**no platform metric is persisted anywhere** (all 74 models checked). Analytics are fetched live and
+cached to Redis for 15–60 minutes. So Parts 4–7 are "build the missing storage layer", NOT "fix the
+queries". Also: `topPosts` is Instagram-only, and there is 30 MB of client JS across 166 chunks
+(the design editor alone is a 2.5 MB chunk) — the measured cause of "feels heavy".
+
+## House rules that keep being relearned
+
+- Fix **root causes**, not symptoms. If a shared helper is wrong, fix the helper, not the callers.
+- **Never claim something works because tests pass.** Close the loop on the real page.
+- Both builds must pass: `pnpm run build:frontend` AND `pnpm run build:backend`, plus `pnpm test`.
+- Only **pnpm**. Never add a frontend component from npm — write it natively.
+- Backend layering: Controller → Service → Repository, no shortcuts.
+- Schema deploys via `prisma db push` on boot → **additive / nullable changes only.**
+- The upstream product name must never appear in any user-facing surface.
+- Update the Obsidian vault as part of finishing work — he should never have to ask.
+
+## Getting the knowledge base on this machine
+
+The vault has the full detail (ADRs, known issues, security posture, technical debt):
+
+```bash
+git clone https://github.com/itsmohaji/dbu-knowledge-base.git ~/Documents/Obsidian\ Vault
+# already cloned? just:
+git -C ~/Documents/Obsidian\ Vault pull
+```
+
+Start with `30-MappedOut/MappedOut — Project Overview.md` → its **Current Status** section is the
+same handoff as this file. Then `Architecture`, `Business Rules`, `Known Issues`, `TODO`.
+**The vault is more current than any other doc in this repo.**
