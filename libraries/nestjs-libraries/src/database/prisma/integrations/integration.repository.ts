@@ -519,6 +519,49 @@ export class IntegrationRepository {
     });
   }
 
+  /**
+   * Record the DBU client on an existing Mapped Out client.
+   *
+   * `updateMany` with the org in the WHERE, not `update` by id: the id comes
+   * from a derived plan, and a plain `update` would happily write to another
+   * organisation's customer if that plan were ever wrong.
+   */
+  linkCustomerToDbu(
+    orgId: string,
+    customerId: string,
+    dbuClientId: string,
+    dbuClientName: string
+  ) {
+    return this._customers.model.customer.updateMany({
+      where: { id: customerId, orgId, deletedAt: null },
+      data: { dbuClientId, dbuClientName },
+    });
+  }
+
+  /** A Mapped Out client for a DBU client that had none. */
+  createCustomerForDbu(
+    orgId: string,
+    name: string,
+    dbuClientId: string,
+    dbuClientName: string
+  ) {
+    return this._customers.model.customer.create({
+      data: { orgId, name, dbuClientId, dbuClientName },
+    });
+  }
+
+  /** Move channels into a client. Org-scoped for the same reason as above. */
+  assignChannelsToCustomer(
+    orgId: string,
+    integrationIds: string[],
+    customerId: string
+  ) {
+    return this._integration.model.integration.updateMany({
+      where: { id: { in: integrationIds }, organizationId: orgId },
+      data: { customerId },
+    });
+  }
+
   customers(orgId: string) {
     return this._customers.model.customer.findMany({
       where: {

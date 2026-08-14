@@ -90,6 +90,17 @@ export class IntegrationsController {
     return this._integrationService.previewDbuCustomerLinks(org.id);
   }
 
+  /**
+   * Apply the plan above. Re-derives from live rows rather than accepting a
+   * list of ids from the browser, so what is written is what the server itself
+   * concludes at that moment.
+   */
+  @Post('/customers/dbu-link-apply')
+  @OrgRoles(Role.SUPERADMIN, Role.ADMIN)
+  async applyDbuCustomerLinks(@GetOrgFromRequest() org: Organization) {
+    return this._integrationService.applyDbuCustomerLinks(org.id);
+  }
+
   // Create a client (customer) directly from the Clients page. Agency-wide roles
   // only — Account Managers are assigned to clients, they don't create them.
   @Post('/customer')

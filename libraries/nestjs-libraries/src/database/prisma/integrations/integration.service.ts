@@ -630,6 +630,50 @@ export class IntegrationService {
     );
   }
 
+  /**
+   * Apply the plan.
+   *
+   * Re-derives from live rows instead of trusting a plan the browser sends
+   * back: what was previewed may be minutes old, and the browser is not a
+   * trustworthy carrier for a list of ids to write. Conflicts are skipped here
+   * exactly as they were in the preview, because the same pure function decides
+   * both.
+   *
+   * Idempotent — a second run derives an empty plan and writes nothing.
+   */
+  async applyDbuCustomerLinks(orgId: string) {
+    const plan = await this.previewDbuCustomerLinks(orgId);
+
+    for (const link of plan.links) {
+      await this._integrationRepository.linkCustomerToDbu(
+        orgId,
+        link.customerId,
+        link.dbuClientId,
+        link.dbuClientName
+      );
+    }
+
+    for (const create of plan.creates) {
+      const customer = await this._integrationRepository.createCustomerForDbu(
+        orgId,
+        create.dbuClientName,
+        create.dbuClientId,
+        create.dbuClientName
+      );
+      await this._integrationRepository.assignChannelsToCustomer(
+        orgId,
+        create.channelIds,
+        customer.id
+      );
+    }
+
+    return {
+      linked: plan.links.length,
+      created: plan.creates.length,
+      skipped: plan.conflicts.length,
+    };
+  }
+
   createCustomer(orgId: string, name: string) {
     return this._integrationRepository.createCustomer(orgId, name);
   }

@@ -129,9 +129,38 @@ const useDbuLinkPreview = () => {
  * shown here instead of guessed. Hidden entirely when there is nothing to say,
  * so it never becomes furniture on a page that is otherwise about clients.
  */
-const DbuLinkPreview: FC = () => {
+const DbuLinkPreview: FC<{ onApplied: () => void }> = ({ onApplied }) => {
   const t = useT();
-  const { data } = useDbuLinkPreview();
+  const fetch = useFetch();
+  const toaster = useToaster();
+  const { data, mutate } = useDbuLinkPreview();
+  const [applying, setApplying] = useState(false);
+
+  const apply = useCallback(async () => {
+    if (applying) return;
+    setApplying(true);
+    try {
+      const res = await (
+        await fetch('/integrations/customers/dbu-link-apply', { method: 'POST' })
+      ).json();
+      toaster.show(
+        t('dbu_link_applied', 'Linked {{linked}} client(s).').replace(
+          '{{linked}}',
+          String(res?.linked ?? 0)
+        ),
+        'success'
+      );
+      // Both this panel and the client list below it now describe stale data.
+      await Promise.all([mutate(), onApplied()]);
+    } catch {
+      toaster.show(
+        t('dbu_link_failed', 'Could not link the clients. Nothing was changed.'),
+        'warning'
+      );
+    } finally {
+      setApplying(false);
+    }
+  }, [applying, fetch, mutate, onApplied, toaster, t]);
 
   if (!data) {
     return null;
@@ -215,18 +244,26 @@ const DbuLinkPreview: FC = () => {
         </div>
       )}
 
-      <div className="text-[11.5px] text-textItemBlur">
-        {data.alreadyLinked > 0 && (
-          <>
-            {data.alreadyLinked}{' '}
-            {t('dbu_link_already', 'already linked.')}{' '}
-          </>
+      <div className="flex items-center gap-[14px] flex-wrap">
+        {(data.links?.length > 0 || data.creates?.length > 0) && (
+          <Button onClick={apply} disabled={applying}>
+            {applying
+              ? t('dbu_link_applying', 'Linking…')
+              : t('dbu_link_apply', 'Link them')}
+          </Button>
         )}
-        {data.channelsWithoutDbuClient}{' '}
-        {t(
-          'dbu_link_untouched',
-          'channels have no DBU client and are untouched.'
-        )}
+        <div className="text-[11.5px] text-textItemBlur">
+          {data.alreadyLinked > 0 && (
+            <>
+              {data.alreadyLinked} {t('dbu_link_already', 'already linked.')}{' '}
+            </>
+          )}
+          {data.channelsWithoutDbuClient}{' '}
+          {t(
+            'dbu_link_untouched',
+            'channels have no DBU client and are untouched.'
+          )}
+        </div>
       </div>
     </div>
   );
@@ -362,7 +399,11 @@ export const ClientsComponent = () => {
         </div>
       </div>
 
-      <DbuLinkPreview />
+      <DbuLinkPreview
+        onApplied={async () => {
+          await Promise.all([mutateCustomers(), mutateIntegrations()]);
+        }}
+      />
 
       {/* Table */}
       <div className="bg-newBgColorInner border border-newTableBorder rounded-[16px] overflow-hidden">
