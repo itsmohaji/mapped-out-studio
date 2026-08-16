@@ -26,6 +26,7 @@ import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/us
 import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
 import { ChangePasswordDto } from '@gitroom/nestjs-libraries/dtos/users/change.password.dto';
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
+import { TimezoneDto } from '@gitroom/nestjs-libraries/dtos/users/timezone.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { RealIP } from 'nestjs-real-ip';
 import { UserAgent } from '@gitroom/nestjs-libraries/user/user.agent';
@@ -218,6 +219,18 @@ export class UsersController {
     @Body() body: EmailNotificationsDto
   ) {
     return this._userService.updateEmailNotifications(user.id, body);
+  }
+
+  // No matching GET: `/user/self` already returns `timezoneName` with the rest
+  // of the user, and a second read path is one more thing to keep in sync.
+  @Post('/timezone')
+  @ClientAllowed()
+  async updateTimezone(
+    @GetUserFromRequest() user: User,
+    @Body() body: TimezoneDto
+  ) {
+    await this._userService.updateTimezone(user.id, body.timezone);
+    return { timezoneName: body.timezone };
   }
 
   @Post('/api-key/rotate')

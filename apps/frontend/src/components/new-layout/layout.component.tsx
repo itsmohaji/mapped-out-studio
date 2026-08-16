@@ -30,6 +30,7 @@ import { NewSubscription } from '@gitroom/frontend/components/layout/new.subscri
 import { Support } from '@gitroom/frontend/components/layout/support';
 import { ContinueProvider } from '@gitroom/frontend/components/layout/continue.provider';
 import { ContextWrapper } from '@gitroom/frontend/components/layout/user.context';
+import { TimezoneSync } from '@gitroom/frontend/components/layout/timezone.sync';
 import { CopilotKit } from '@copilotkit/react-core';
 import { MantineWrapper } from '@gitroom/react/helpers/mantine.wrapper';
 import { Impersonate } from '@gitroom/frontend/components/layout/impersonate';
@@ -117,6 +118,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   if (user.role === 'CLIENT' && !user.admin) {
     return (
       <ContextWrapper user={user}>
+        <TimezoneSync />
         <MantineWrapper>
           <Toaster />
           <ClientPortal />
@@ -127,6 +129,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   return (
     <ContextWrapper user={user}>
+      {/* First child on purpose: it applies the account's timezone during its
+          own render, before anything below it formats a date. */}
+      <TimezoneSync />
       <CopilotKit
         credentials="include"
         runtimeUrl={backendUrl + '/copilot/chat'}

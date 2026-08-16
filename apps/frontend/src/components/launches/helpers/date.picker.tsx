@@ -6,6 +6,7 @@ import { Button } from '@gitroom/react/form/button';
 import { isUSCitizen } from './isuscitizen.utils';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { toWidgetDate } from '@gitroom/helpers/utils/dayjs.zone';
 import { CalendarIcon } from '@gitroom/frontend/components/ui/icons';
 export const DatePicker: FC<{
   date: dayjs.Dayjs;
@@ -21,13 +22,19 @@ export const DatePicker: FC<{
   const ref = useClickOutside<HTMLDivElement>(() => {
     setOpen(false);
   });
+  // The Mantine widgets speak native `Date`s whose components are read in the
+  // BROWSER's timezone, while `date` is in the user's. So the digits are read
+  // off the widget with plain dayjs, and the assembled wall-clock string is
+  // handed to `newDayjs`, which interprets it in the user's timezone. Reading
+  // the widget with `newDayjs` instead would shift the picked time by the
+  // difference between the two zones.
   const changeDate = useCallback(
     (type: 'date' | 'time') => (day: Date) => {
       onChange(
         newDayjs(
           type === 'time'
-            ? date.format('YYYY-MM-DD') + ' ' + newDayjs(day).format('HH:mm:ss')
-            : newDayjs(day).format('YYYY-MM-DD') + ' ' + date.format('HH:mm:ss')
+            ? date.format('YYYY-MM-DD') + ' ' + dayjs(day).format('HH:mm:ss')
+            : dayjs(day).format('YYYY-MM-DD') + ' ' + date.format('HH:mm:ss')
         )
       );
     },
@@ -52,7 +59,7 @@ export const DatePicker: FC<{
         >
           <Calendar
             onChange={changeDate('date')}
-            value={date.toDate()}
+            value={toWidgetDate(date)}
             dayClassName={(date, modifiers) => {
               if (modifiers.weekend) {
                 return '!text-customColor28';
@@ -79,7 +86,7 @@ export const DatePicker: FC<{
               input:
                 'bg-sixth h-[40px] border border-tableBorder text-textColor rounded-[4px] outline-none',
             }}
-            defaultValue={date.toDate()}
+            defaultValue={toWidgetDate(date)}
           />
           <Button className="mt-[12px]" onClick={changeShow}>
             {t('close', 'Close')}

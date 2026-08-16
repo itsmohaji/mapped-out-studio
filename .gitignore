@@ -67,3 +67,6 @@ reports/
 .env.local
 .env*.local
 .gstack/
+
+# Node writes its compile cache here when the build runs.
+node-compile-cache

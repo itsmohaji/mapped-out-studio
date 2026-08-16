@@ -449,7 +449,13 @@ export const MonthView = () => {
     const currentMonth = monthStart.month();
     const currentYear = monthStart.year();
 
-    const startOfMonth = newDayjs(new Date(currentYear, currentMonth, 1));
+    // Built as a wall-clock string, not `new Date(y, m, 1)`: a native Date is
+    // midnight in the BROWSER's timezone, and re-expressed in the user's it can
+    // land on the last day of the previous month — a whole month grid off by a
+    // day.
+    const startOfMonth = newDayjs(
+      `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`
+    );
 
     // Calculate the day offset for Monday (isoWeekday() returns 1 for Monday)
     const startDayOfWeek = startOfMonth.isoWeekday(); // 1 for Monday, 7 for Sunday
@@ -729,8 +735,8 @@ export const CalendarColumn: FC<{
       const targetDate =
         display === 'month' && item.date
           ? getDate
-              .hour(dayjs(item.date).hour())
-              .minute(dayjs(item.date).minute())
+              .hour(newDayjs(item.date).hour())
+              .minute(newDayjs(item.date).minute())
               .second(0)
           : getDate;
 
@@ -748,7 +754,7 @@ export const CalendarColumn: FC<{
       // 400/401/403 left the post visually moved while the server rejected it.
       if (status < 200 || status >= 300) {
         if (!item.interval && item.date) {
-          changeDate(item.id, dayjs(item.date));
+          changeDate(item.id, newDayjs(item.date));
         }
         toaster.show(
           t('could_not_move_post', 'Could not move the post'),

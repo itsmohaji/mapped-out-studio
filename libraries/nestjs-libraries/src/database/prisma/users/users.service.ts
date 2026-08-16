@@ -99,4 +99,8 @@ export class UsersService {
   updateEmailNotifications(userId: string, body: EmailNotificationsDto) {
     return this._usersRepository.updateEmailNotifications(userId, body);
   }
+
+  updateTimezone(userId: string, timezone: string) {
+    return this._usersRepository.updateTimezone(userId, timezone);
+  }
 }
