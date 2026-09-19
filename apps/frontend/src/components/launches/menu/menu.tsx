@@ -28,7 +28,7 @@ import { CustomVariables } from '@gitroom/frontend/components/launches/add.provi
 import { useRouter } from 'next/navigation';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal.lazy';
 import dayjs from 'dayjs';
 import { ModalWrapperComponent } from '@gitroom/frontend/components/new-launch/modal.wrapper.component';
 import copy from 'copy-to-clipboard';

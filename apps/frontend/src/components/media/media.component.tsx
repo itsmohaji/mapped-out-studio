@@ -18,7 +18,6 @@ import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { Media } from '@prisma/client';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.values';
-import EventEmitter from 'events';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
@@ -56,7 +55,6 @@ import { useDebounce } from 'use-debounce';
 const Polonto = dynamic(
   () => import('@gitroom/frontend/components/launches/polonto')
 );
-const showModalEmitter = new EventEmitter();
 export const Pagination: FC<{
   current: number;
   totalPages: number;
@@ -169,35 +167,9 @@ export const Pagination: FC<{
     </ul>
   );
 };
-export const ShowMediaBoxModal: FC = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [callBack, setCallBack] =
-    useState<(params: { id: string; path: string }[]) => void | undefined>();
-  const closeModal = useCallback(() => {
-    setShowModal(false);
-    setCallBack(undefined);
-  }, []);
-  useEffect(() => {
-    showModalEmitter.on('show-modal', (cCallback) => {
-      setShowModal(true);
-      setCallBack(() => cCallback);
-    });
-    return () => {
-      showModalEmitter.removeAllListeners('show-modal');
-    };
-  }, []);
-  if (!showModal) return null;
-  return (
-    <div className="text-textColor">
-      <MediaBox setMedia={callBack!} closeModal={closeModal} />
-    </div>
-  );
-};
-export const showMediaBox = (
-  callback: (params: { id: string; path: string }) => void
-) => {
-  showModalEmitter.emit('show-modal', callback);
-};
+// The modal listener and showMediaBox() live in a light module so the site
+// layout does not pull this whole file (uploader, AI tools) into every page.
+export { ShowMediaBoxModal, showMediaBox } from '@gitroom/frontend/components/media/media.box.modal';
 const CHUNK_SIZE = 1024 * 1024;
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 export const MediaBox: FC<{

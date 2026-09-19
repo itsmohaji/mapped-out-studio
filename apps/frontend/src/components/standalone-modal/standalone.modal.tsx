@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import dayjs from 'dayjs';
 import { useParams } from 'next/navigation';
-import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal.lazy';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 export const StandaloneModal: FC = () => {

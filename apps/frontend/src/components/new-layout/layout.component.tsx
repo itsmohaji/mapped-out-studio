@@ -21,7 +21,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { ToolTip } from '@gitroom/frontend/components/layout/top.tip';
-import { ShowMediaBoxModal } from '@gitroom/frontend/components/media/media.component';
+import { ShowMediaBoxModal } from '@gitroom/frontend/components/media/media.box.modal';
 import { ShowLinkedinCompany } from '@gitroom/frontend/components/launches/helpers/linkedin.component';
 import { MediaSettingsLayout } from '@gitroom/frontend/components/launches/helpers/media.settings.component';
 import { Toaster } from '@gitroom/react/toaster/toaster';

@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { AddEditModalProps } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import type { AddEditModalProps } from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import clsx from 'clsx';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/picks.socials.component';

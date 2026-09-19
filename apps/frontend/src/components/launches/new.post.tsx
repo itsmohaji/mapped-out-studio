@@ -5,7 +5,7 @@ import { useCalendar } from '@gitroom/frontend/components/launches/calendar.cont
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { SetSelectionModal } from '@gitroom/frontend/components/launches/calendar';
-import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { AddEditModal, preloadComposer } from '@gitroom/frontend/components/new-launch/add.edit.modal.lazy';
 import { ModalWrapperComponent } from '@gitroom/frontend/components/new-launch/modal.wrapper.component';
 
 export const NewPost = () => {
@@ -77,6 +77,9 @@ export const NewPost = () => {
   return (
     <button
       onClick={createAPost}
+      onMouseEnter={preloadComposer}
+      onFocus={preloadComposer}
+      onTouchStart={preloadComposer}
       className="text-white flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-md bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
     >
       <svg

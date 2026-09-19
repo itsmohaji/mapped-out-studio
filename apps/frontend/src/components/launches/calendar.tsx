@@ -47,7 +47,7 @@ import { StatisticsModal } from '@gitroom/frontend/components/launches/statistic
 import { MissingReleaseModal } from '@gitroom/frontend/components/launches/missing-release.modal';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import i18next from 'i18next';
-import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { AddEditModal, preloadComposer } from '@gitroom/frontend/components/new-launch/add.edit.modal.lazy';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
@@ -588,8 +588,10 @@ export const ListView = () => {
 
 export const Calendar = () => {
   const { display } = useCalendar();
+  // Pointing at the grid is intent to open a slot: start fetching the composer
+  // (loaded lazily) so the first open does not wait for it.
   return (
-    <>
+    <div className="contents" onPointerEnter={preloadComposer}>
       {display === 'list' ? (
         <ListView />
       ) : display === 'day' ? (
@@ -599,7 +601,7 @@ export const Calendar = () => {
       ) : (
         <MonthView />
       )}
-    </>
+    </div>
   );
 };
 export const CalendarColumn: FC<{
