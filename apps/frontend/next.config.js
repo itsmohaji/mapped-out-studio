@@ -21,6 +21,27 @@ const nextConfig = {
     ];
   },
   reactStrictMode: false,
+  // Thumbnails for previews (see libraries/react-shared-libraries/src/helpers/image.url.ts).
+  // Only our own uploads and the Instagram/Facebook CDNs may be optimised. WebP
+  // only: AVIF encoding is far heavier on CPU. Upload URLs never change, so the
+  // optimised result can be cached for a year.
+  images: {
+    remotePatterns: [
+      ...(process.env.FRONTEND_URL
+        ? [
+            {
+              protocol: /** @type {'https'|'http'} */ (new URL(process.env.FRONTEND_URL).protocol.replace(':', '')),
+              hostname: new URL(process.env.FRONTEND_URL).hostname,
+              pathname: '/uploads/**',
+            },
+          ]
+        : []),
+      { protocol: 'https', hostname: '**.cdninstagram.com' },
+      { protocol: 'https', hostname: '**.fbcdn.net' },
+    ],
+    formats: ['image/webp'],
+    minimumCacheTTL: 31536000,
+  },
   transpilePackages: ['crypto-hash'],
   // Enable production sourcemaps for Sentry
   productionBrowserSourceMaps: true,

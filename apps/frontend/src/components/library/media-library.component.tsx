@@ -1,5 +1,6 @@
 'use client';
 
+import SafeImage from '@gitroom/react/helpers/safe.image';
 import React, {
   FC,
   useCallback,
@@ -75,10 +76,10 @@ const MediaTile: FC<{
             className="w-full h-full object-cover"
           />
         ) : (
-          <img
+          <SafeImage
             src={url}
+            width={192}
             alt={m.alt || m.originalName || ''}
-            loading="lazy"
             className="w-full h-full object-cover"
           />
         )}

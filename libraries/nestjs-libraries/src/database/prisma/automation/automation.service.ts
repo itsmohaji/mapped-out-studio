@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AutomationRepository, WorkflowWrite } from './automation.repository';
+import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
+import { persistExpiringImage } from '@gitroom/nestjs-libraries/upload/persist.expiring.image';
 import {
   ActionKind,
   AutomationEventInput,
@@ -103,6 +105,7 @@ export class AutomationService {
    * Redis then, not before.
    */
   private static mediaCache = new Map<string, { at: number; posts: InstagramMedia[] }>();
+  private storage = UploadFactory.createStorage();
 
   constructor(
     private _repo: AutomationRepository,
@@ -940,7 +943,10 @@ export class AutomationService {
         // How the automation was targeted, not how this one comment arrived.
         sourceScope: bindings.length ? 'specific_post' : 'all_posts',
         sourcePostId: mediaId,
-        sourcePostThumbnail: post?.thumbnail ?? null,
+        // Instagram thumbnail URLs expire; the lead keeps our own copy.
+        sourcePostThumbnail: await persistExpiringImage(post?.thumbnail, (u) =>
+          this.storage.uploadSimple(u)
+        ),
         sourcePostCaption: post?.caption ?? null,
         sourcePostUrl: post?.permalink ?? null,
         sourcePostDate: post?.timestamp ? new Date(post.timestamp) : null,

@@ -1,5 +1,6 @@
 'use client';
 
+import SafeImage from '@gitroom/react/helpers/safe.image';
 import React, {
   ChangeEvent,
   ClipboardEvent,
@@ -330,9 +331,8 @@ export const MediaBox: FC<{
                 url={mediaDirectory.set(media.path)}
               />
             ) : (
-              <img
-                width="100%"
-                height="100%"
+              <SafeImage
+                width={160}
                 className="w-full h-full max-h-[100%] max-w-[100%] object-cover"
                 src={mediaDirectory.set(media.path)}
                 alt="media"
@@ -555,9 +555,8 @@ export const MediaBox: FC<{
                       {hasExtension(media.path, 'mp4') ? (
                         <VideoFrame url={mediaDirectory.set(media.path)} />
                       ) : (
-                        <img
-                          width="100%"
-                          height="100%"
+                        <SafeImage
+                          width={160}
                           className="w-full h-full object-cover"
                           src={mediaDirectory.set(media.path)}
                           alt="media"
@@ -779,9 +778,11 @@ export const MultiMediaComponent: FC<{
                       {hasExtension(media?.path, 'mp4') ? (
                         <VideoFrame url={mediaDirectory.set(media?.path)} />
                       ) : (
-                        <img
+                        <SafeImage
+                          width={80}
                           className="w-full h-full object-cover rounded-[4px]"
                           src={mediaDirectory.set(media?.path)}
+                          alt=""
                         />
                       )}
                     </div>
@@ -948,9 +949,11 @@ export const MediaComponent: FC<{
       <div className="text-[12px]">{description}</div>
       {!!currentMedia && (
         <div className="my-[20px] cursor-pointer w-[200px] h-[200px] border-2 border-tableBorder">
-          <img
+          <SafeImage
+            width={200}
             className="w-full h-full object-cover"
             src={currentMedia.path}
+            alt=""
             onClick={() => window.open(mediaDirectory.set(currentMedia.path))}
           />
         </div>

@@ -1219,6 +1219,8 @@ const CalendarItem: FC<{
           {thumb ? (
             <>
               <SafeImage
+                width={34}
+                height={34}
                 className="w-[34px] h-[34px] rounded-[8px] object-cover bg-fifth"
                 src={thumb}
                 alt=""
