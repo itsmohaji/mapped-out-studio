@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     bash \
     nginx \
+    libnginx-mod-http-brotli-static \
 && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system www \
@@ -21,8 +22,15 @@ WORKDIR /app
 
 COPY . /app
 COPY var/docker/nginx.conf /etc/nginx/nginx.conf
+RUN nginx -t
 
 RUN pnpm install
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
+
+# Serve Next's immutable static files straight from disk, pre-compressed
+# (see the /_next/static/ block in var/docker/nginx.conf).
+RUN node var/docker/precompress.mjs apps/frontend/.next/static \
+ && mkdir -p /www/next-static \
+ && ln -s /app/apps/frontend/.next /www/next-static/_next
 
 CMD ["sh", "-c", "nginx && pnpm run pm2"]
