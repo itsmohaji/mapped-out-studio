@@ -233,15 +233,4 @@ export class UsersRepository {
       },
     });
   }
-
-  async updateTimezone(userId: string, timezone: string) {
-    await this._user.model.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        timezoneName: timezone,
-      },
-    });
-  }
 }

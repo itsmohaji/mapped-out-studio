@@ -98,9 +98,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           }
         >
           <SentryComponent>
-            {/* The timezone is applied by `TimezoneSync`, inside the user
-                context — it needs the account's value, which this layout does
-                not have. */}
+            {/*<SetTimezone />*/}
             <HtmlComponent />
             <DubAnalytics />
             <FacebookComponent />
