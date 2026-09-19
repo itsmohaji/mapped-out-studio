@@ -29,7 +29,7 @@ import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { ThirdPartyMedia } from '@gitroom/frontend/components/third-parties/third-party.media';
-import { ReactSortable } from 'react-sortablejs';
+import { SortableList } from '@gitroom/frontend/components/media/sortable.list';
 import { MediaComponentInner } from '@gitroom/frontend/components/launches/helpers/media.settings.component';
 import { AiVideo } from '@gitroom/frontend/components/launches/ai.video';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
@@ -729,7 +729,7 @@ export const MultiMediaComponent: FC<{
       <div className="b1 flex flex-col gap-[8px] rounded-bl-[8px] select-none w-full">
         <div className="flex gap-[10px] px-[12px]">
           {!!currentMedia && (
-            <ReactSortable
+            <SortableList
               list={currentMedia}
               setList={(value) =>
                 onChange({ target: { name: 'upload', value } })
@@ -792,7 +792,7 @@ export const MultiMediaComponent: FC<{
                     />
                   </div>
               ))}
-            </ReactSortable>
+            </SortableList>
           )}
         </div>
         <div className="flex gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">

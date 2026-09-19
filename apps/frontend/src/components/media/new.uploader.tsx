@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 // @ts-ignore
 import Uppy, { BasePlugin, UploadResult, UppyFile } from '@uppy/core';
+import { disposeUppy } from '@gitroom/frontend/components/media/uppy.dispose';
 // @ts-ignore
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { getUppyUploadPlugin } from '@gitroom/react/helpers/uppy.upload';
@@ -48,7 +49,7 @@ export function useUppyUploader(props: {
     useVariables();
   const { onUploadSuccess, allowedFileTypes } = props;
   const fetch = useFetch();
-  return useMemo(() => {
+  const uppy = useMemo(() => {
     // Track file order to maintain original sequence after upload
     let fileOrderIndex = 0;
 
@@ -281,4 +282,12 @@ export function useUppyUploader(props: {
     });
     return uppy2;
   }, []);
+
+  // Each composer open created an Uppy that was never destroyed; its Dashboard
+  // plugin's document-level focus listener then kept the instance and its DOM
+  // alive (heap snapshots, 2026-09-19: one retained uploader per open).
+  // Deferred so Uppy's own <Dashboard> unmounts first (parents clean up before
+  // children), and never cancels an upload that is still running.
+  useEffect(() => () => void setTimeout(() => disposeUppy(uppy), 0), [uppy]);
+  return uppy;
 }
