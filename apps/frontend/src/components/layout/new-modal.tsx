@@ -15,7 +15,7 @@ import { Button } from '@gitroom/react/form/button';
 import { useHotkeys } from 'react-hotkeys-hook';
 import clsx from 'clsx';
 import { EventEmitter } from 'events';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from '@gitroom/react/sentry/report';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { ErrorBoundary } from '@gitroom/frontend/components/layout/error.boundary';
@@ -291,7 +291,7 @@ export const ModalManagerInner: FC = () => {
         <ErrorBoundary
           key={modal.id}
           onError={(error) => {
-            Sentry.captureException(error, { tags: { area: 'modal' } });
+            reportError(error, { tags: { area: 'modal' } });
             closeModal(modal.id);
             toaster.show(
               t(

@@ -12,8 +12,10 @@ import { render, screen } from '@testing-library/react';
 
 const captureException = jest.fn();
 const showReportDialog = jest.fn();
+jest.mock('@gitroom/react/sentry/report', () => ({
+  reportError: (...a: any[]) => captureException(...a),
+}));
 jest.mock('@sentry/nextjs', () => ({
-  captureException: (...a: any[]) => captureException(...a),
   showReportDialog: (...a: any[]) => showReportDialog(...a),
 }));
 // global-error replaces the ROOT layout, so no provider is mounted above it.

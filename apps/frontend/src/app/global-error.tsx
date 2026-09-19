@@ -1,5 +1,5 @@
 'use client';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from '@gitroom/react/sentry/report';
 import { useEffect } from 'react';
 import { resetUiLock } from '@gitroom/frontend/components/layout/ui.lock';
 
@@ -9,7 +9,7 @@ import { resetUiLock } from '@gitroom/frontend/components/layout/ui.lock';
  *
  * It used to read the Sentry DSN from a provider that is not mounted here (so
  * the report depended on luck) and then opened Sentry's "Something broke!"
- * dialog in front of the user. Now it reports silently — `captureException` is a
+ * dialog in front of the user. Now it reports silently — `reportError` is a
  * no-op when Sentry was never initialised — releases any page lock the crashed
  * tree was holding, and gives the user a way back.
  */
@@ -20,7 +20,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     resetUiLock();
-    Sentry.captureException(error);
+    reportError(error);
   }, [error]);
 
   return (

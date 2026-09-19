@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from '@gitroom/react/sentry/report';
 
 /**
  * Without this file a crash inside any page renders NOTHING — a white page with
@@ -21,7 +21,7 @@ export default function SiteError({
   useEffect(() => {
     // A caught error never reaches Sentry on its own — report it, so a crashed
     // page is known about without a client having to tell us.
-    Sentry.captureException(error, { tags: { area: 'page' } });
+    reportError(error, { tags: { area: 'page' } });
     // Also put it in the console with a stack, for whoever has devtools open.
     console.error('[Mapped Out] page crashed:', error);
   }, [error]);

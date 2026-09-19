@@ -19,8 +19,8 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 
 const captureException = jest.fn();
-jest.mock('@sentry/nextjs', () => ({
-  captureException: (...args: any[]) => captureException(...args),
+jest.mock('@gitroom/react/sentry/report', () => ({
+  reportError: (...args: any[]) => captureException(...args),
 }));
 // ESM-only package; Escape-to-close is not what these tests are about.
 jest.mock('react-hotkeys-hook', () => ({ useHotkeys: () => undefined }));

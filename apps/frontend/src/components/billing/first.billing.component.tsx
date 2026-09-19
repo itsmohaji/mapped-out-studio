@@ -4,7 +4,11 @@ import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
+// `/pure`: the default entry injects Stripe.js (and its tracking iframe) the
+// moment this module is imported — and the site layout imports it on every
+// page. `/pure` loads Stripe only when loadStripe() actually runs.
+import { loadStripe } from '@stripe/stripe-js/pure';
+import type { Stripe } from '@stripe/stripe-js';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
 import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
 import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';

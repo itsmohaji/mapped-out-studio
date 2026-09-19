@@ -1,7 +1,6 @@
 'use client';
 
 import { FC, useEffect, useRef, useState } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 
 export const AttachToFeedbackIcon: FC = () => {
@@ -11,12 +10,10 @@ export const AttachToFeedbackIcon: FC = () => {
 
   useEffect(() => {
     if (!sentryDsn) return;
-    try {
-      const fb = (Sentry as any).getFeedback?.();
-      setFeedback(fb);
-    } catch (e) {
-      setFeedback(undefined);
-    }
+    // Loaded on demand so the SDK is not in every page's bundle.
+    import('@sentry/nextjs')
+      .then((Sentry) => setFeedback((Sentry as any).getFeedback?.()))
+      .catch(() => setFeedback(undefined));
   }, [sentryDsn]);
 
   useEffect(() => {

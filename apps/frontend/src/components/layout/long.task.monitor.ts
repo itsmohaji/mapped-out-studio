@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/nextjs';
+import { reportMessage } from '@gitroom/react/sentry/report';
 
 /**
  * Evidence for "the UI froze" (P0, 2026-09-19).
@@ -89,27 +89,26 @@ export function startLongTaskMonitor(
       lastReportAt[route] = now;
       reports += 1;
 
-      let replay = 'off';
-      try {
-        replay = (Sentry as any).getReplay?.()?.getReplayId?.() ? 'on' : 'off';
-      } catch {
-        /* diagnostics must never throw */
-      }
-
-      Sentry.captureMessage('Main thread blocked', {
-        level: 'warning',
-        fingerprint: ['long-task', route],
-        tags: {
-          kind: 'long_task',
-          route,
-          severity: ms >= FREEZE_MS ? 'freeze' : 'jank',
-          replay,
-        },
-        extra: {
-          durationMs: ms,
-          countOnRoute: onRoute.count,
-          worstOnRouteMs: onRoute.worstMs,
-        },
+      const countOnRoute = onRoute.count;
+      const worstOnRouteMs = onRoute.worstMs;
+      reportMessage('Main thread blocked', (S) => {
+        let replay = 'off';
+        try {
+          replay = (S as any).getReplay?.()?.getReplayId?.() ? 'on' : 'off';
+        } catch {
+          /* diagnostics must never throw */
+        }
+        return {
+          level: 'warning',
+          fingerprint: ['long-task', route],
+          tags: {
+            kind: 'long_task',
+            route,
+            severity: ms >= FREEZE_MS ? 'freeze' : 'jank',
+            replay,
+          },
+          extra: { durationMs: ms, countOnRoute, worstOnRouteMs },
+        };
       });
     }
   });

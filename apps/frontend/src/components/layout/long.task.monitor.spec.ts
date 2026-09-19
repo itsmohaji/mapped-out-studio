@@ -3,9 +3,11 @@
  */
 const captureMessage = jest.fn();
 let replayId: string | undefined;
-jest.mock('@sentry/nextjs', () => ({
-  captureMessage: (...a: any[]) => captureMessage(...a),
-  getReplay: () => ({ getReplayId: () => replayId }),
+// The monitor reports through the lazy reporter; resolve its context function
+// against a fake SDK so the tests see exactly what Sentry would receive.
+jest.mock('@gitroom/react/sentry/report', () => ({
+  reportMessage: (msg: string, ctx: any) =>
+    captureMessage(msg, typeof ctx === 'function' ? ctx({ getReplay: () => ({ getReplayId: () => replayId }) }) : ctx),
 }));
 
 import {
