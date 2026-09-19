@@ -14,6 +14,7 @@ import React, {
 } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
+import { SETTINGS_SWR } from '@gitroom/react/helpers/swr.settings';
 import { TopTitle } from '@gitroom/frontend/components/launches/helpers/top.title.component';
 import './providers/heygen.provider';
 import { thirdPartyList } from '@gitroom/frontend/components/third-parties/third-party.wrapper';
@@ -166,14 +167,10 @@ export const ThirdPartyMedia: FC<{
     );
   }, []);
 
-  const { data, isLoading, mutate } = useSWR('third-party', thirdParties, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-  });
+  // Own key: 'third-party' is also used by the settings page with an UNFILTERED
+  // fetcher, and SWR shares one entry per key — whichever loaded first decided
+  // what the other saw.
+  const { data, isLoading, mutate } = useSWR('third-party-media', thirdParties, SETTINGS_SWR);
 
   if (isLoading || !data.length) {
     return null;

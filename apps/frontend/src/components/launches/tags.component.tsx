@@ -4,6 +4,7 @@ import { FC, useCallback, useMemo, useState } from 'react';
 import { ReactTags } from 'react-tag-autocomplete';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
+import { SETTINGS_SWR } from '@gitroom/react/helpers/swr.settings';
 import { Input } from '@gitroom/react/form/input';
 import { ColorPicker } from '@gitroom/react/form/color.picker';
 import { Button } from '@gitroom/react/form/button';
@@ -36,7 +37,8 @@ export const TagsComponent: FC<{
     return (await fetch('/posts/tags')).json();
   }, []);
 
-  const { data, isLoading, mutate } = useSWR('load-tags', loadTags);
+  // One key for the tag list: 'load-tags' and 'tags' fetched the same /posts/tags.
+  const { data, isLoading, mutate } = useSWR('tags', loadTags, SETTINGS_SWR);
 
   if (isLoading) {
     return null;
@@ -298,14 +300,7 @@ export const TagsComponentA: FC<{
       name: string;
       color: string;
     }[];
-  }>('tags', loadTags, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-  });
+  }>('tags', loadTags, SETTINGS_SWR);
   const onDelete = useCallback(
     (tagIndex: number) => {
       const modify = tagValue.filter((_, i) => i !== tagIndex);

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
+import { SETTINGS_SWR } from '@gitroom/react/helpers/swr.settings';
 import { Select } from '@gitroom/react/form/select';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -20,14 +21,7 @@ export const useShortlinkPreference = () => {
     return (await fetch('/settings/shortlink')).json();
   }, []);
 
-  return useSWR<ShortlinkPreferenceResponse>('shortlink-preference', load, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-  });
+  return useSWR<ShortlinkPreferenceResponse>('shortlink-preference', load, SETTINGS_SWR);
 };
 
 const ShortlinkPreferenceComponent = () => {

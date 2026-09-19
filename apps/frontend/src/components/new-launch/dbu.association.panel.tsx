@@ -5,10 +5,15 @@ import {
   FC,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
+import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { SETTINGS_SWR } from '@gitroom/react/helpers/swr.settings';
+
+const NO_CHANNELS: ChannelMapRow[] = [];
 
 // DBU System association selector for the composer. Cascading Client -> Active
 // Project -> Monthly Cycle, fed by the session-authed /dbu-options/* proxy
@@ -74,11 +79,8 @@ export const DbuAssociationPanel: FC<{
   integrations?: OrgChannel[];
 }> = ({ value, onChange, onResolveChannels, integrations = [] }) => {
   const fetch = useFetch();
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [clients, setClients] = useState<Opt[]>([]);
   const [projects, setProjects] = useState<Opt[]>([]);
   const [cycles, setCycles] = useState<Opt[]>([]);
-  const [channelMap, setChannelMap] = useState<ChannelMapRow[]>([]);
   const [clientId, setClientId] = useState(value?.clientId || '');
   const [projectId, setProjectId] = useState(value?.projectId || '');
   const [milestoneId, setMilestoneId] = useState(value?.milestoneId || '');
@@ -100,24 +102,27 @@ export const DbuAssociationPanel: FC<{
     [fetch]
   );
 
-  const loadChannels = useCallback(async () => {
-    const ch = await getJson('/dbu-options/channels');
-    setChannelMap(Array.isArray(ch?.channels) ? ch.channels : []);
-  }, [getJson]);
-
-  useEffect(() => {
-    (async () => {
-      const e = await getJson('/dbu-options/enabled');
-      if (!e?.enabled) {
-        setEnabled(false);
-        return;
-      }
-      setEnabled(true);
-      const c = await getJson('/dbu-options/clients');
-      setClients(c?.clients || []);
-      await loadChannels();
-    })();
-  }, [getJson, loadChannels]);
+  // Cached across composer opens (they used to be refetched on every open).
+  // A failed fetch returns null, which still renders nothing — as before.
+  const { data: enabledRes } = useSWR('/dbu-options/enabled', getJson, SETTINGS_SWR);
+  const enabled: boolean | null =
+    enabledRes === undefined ? null : !!enabledRes?.enabled;
+  const { data: clientsRes } = useSWR(
+    enabled ? '/dbu-options/clients' : null,
+    getJson,
+    SETTINGS_SWR
+  );
+  const clients: Opt[] = clientsRes?.clients || [];
+  const { data: channelsRes, mutate: refreshChannels } = useSWR(
+    enabled ? '/dbu-options/channels' : null,
+    getJson,
+    SETTINGS_SWR
+  );
+  // Stable identity: the auto-detect effect below depends on it.
+  const channelMap = useMemo<ChannelMapRow[]>(
+    () => (Array.isArray(channelsRes?.channels) ? channelsRes.channels : NO_CHANNELS),
+    [channelsRes]
+  );
 
   useEffect(() => {
     if (!clientId) {
@@ -191,11 +196,11 @@ export const DbuAssociationPanel: FC<{
     setLinking(false);
     if (r?.ok) {
       setLinkChannelId('');
-      await loadChannels(); // refresh the map -> auto-detect fires and lights the icon
+      await refreshChannels(); // refresh the map -> auto-detect fires and lights the icon
     } else {
       setLinkError(r?.error || 'Could not link the channel.');
     }
-  }, [clientId, linkChannelId, integrations, getJson, loadChannels]);
+  }, [clientId, linkChannelId, integrations, getJson, refreshChannels]);
 
   if (enabled === false || enabled === null) return null;
 
