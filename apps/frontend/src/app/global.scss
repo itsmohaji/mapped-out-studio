@@ -763,6 +763,17 @@ html[dir='rtl'] [dir='ltr'] {
 .blur-xs {
   filter: blur(4px);
 }
+/* The page lock — see components/layout/ui.lock.ts. Same look and behaviour the
+   modal manager used to apply by hand (overflow-hidden, blur-xs,
+   pointer-events-none), but driven by one attribute that is always cleaned up. */
+body[data-ui-locked],
+html:has(body[data-ui-locked]) {
+  overflow: hidden !important;
+}
+body[data-ui-locked] .blurMe {
+  filter: blur(4px);
+  pointer-events: none;
+}
 .blur-s {
   filter: blur(5px);
 }

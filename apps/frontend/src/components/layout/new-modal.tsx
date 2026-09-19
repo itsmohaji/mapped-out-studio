@@ -15,6 +15,11 @@ import { Button } from '@gitroom/react/form/button';
 import { useHotkeys } from 'react-hotkeys-hook';
 import clsx from 'clsx';
 import { EventEmitter } from 'events';
+import * as Sentry from '@sentry/nextjs';
+import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { ErrorBoundary } from '@gitroom/frontend/components/layout/error.boundary';
+import { lockUi } from '@gitroom/frontend/components/layout/ui.lock';
 
 interface OpenModalInterface {
   title?: any;
@@ -264,35 +269,46 @@ export const ModalManagerInner: FC = () => {
     }))
   );
 
-  useEffect(() => {
-    if (modalManager.length > 0) {
-      document.querySelector('body')?.classList.add('overflow-hidden');
-      Array.from(document.querySelectorAll('.blurMe') || []).map((p) =>
-        p.classList.add('blur-xs', 'pointer-events-none')
-      );
-    } else {
-      document.querySelector('body')?.classList.remove('overflow-hidden');
-      Array.from(document.querySelectorAll('.blurMe') || []).map((p) =>
-        p.classList.remove('blur-xs', 'pointer-events-none')
-      );
-    }
-  }, [modalManager]);
+  const toaster = useToaster();
+  const t = useT();
 
-  if (modalManager.length === 0) {
+  // Lock the page while any modal is open. Returning the release function means
+  // it is released on close AND on unmount — before, an unmount with a modal
+  // open left the whole app blurred and unclickable until a reload.
+  const hasModals = modalManager.length > 0;
+  useEffect(() => (hasModals ? lockUi() : undefined), [hasModals]);
+
+  if (!hasModals) {
     return null;
   }
 
   return (
     <>
-      <style>{`body, html { overflow: hidden !important; }`}</style>
       {modalManager.map((modal, index) => (
-        <Component
-          isLast={modalManager.length - 1 === index}
+        // One boundary per modal: a crash inside one closes that modal only,
+        // instead of escaping past the layout to global-error and taking the
+        // whole app down (the composer is a modal).
+        <ErrorBoundary
           key={modal.id}
-          modal={modal}
-          zIndex={200 + index}
-          closeModal={closeModal}
-        />
+          onError={(error) => {
+            Sentry.captureException(error, { tags: { area: 'modal' } });
+            closeModal(modal.id);
+            toaster.show(
+              t(
+                'modal_crashed',
+                'Something went wrong in that window, so it was closed. The problem has been reported.'
+              ),
+              'warning'
+            );
+          }}
+        >
+          <Component
+            isLast={modalManager.length - 1 === index}
+            modal={modal}
+            zIndex={200 + index}
+            closeModal={closeModal}
+          />
+        </ErrorBoundary>
       ))}
     </>
   );

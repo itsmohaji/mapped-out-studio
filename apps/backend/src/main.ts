@@ -19,6 +19,8 @@ import { PostValidationExceptionFilter } from '@gitroom/backend/api/routes/posts
 import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
+import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
+import { runEncryptionKeyCheck } from '@gitroom/nestjs-libraries/security/encryption.key.check';
 
 /**
  * An optional subsystem must never be able to kill the API.
@@ -116,6 +118,10 @@ async function start() {
     console.log('Backend started successfully on port ' + port);
 
     checkConfiguration(); // Do this last, so that users will see obvious issues at the end of the startup log without having to scroll up.
+
+    // After listen, not awaited: proves the at-rest key can read stored data
+    // without ever printing it. It cannot delay or fail startup.
+    void runEncryptionKeyCheck(app.get(PrismaService));
 
     Logger.log(`🚀 Backend is running on: http://localhost:${port}`);
   } catch (e) {

@@ -35,10 +35,12 @@ export const initializeSentryBasic = (environment: string, dsn: string, extensio
       environment: environment || 'development',
       spotlight: process.env.SENTRY_SPOTLIGHT === '1',
       dsn,
-      sendDefaultPii: true,
-      ...extension,
+      // No automatic IPs, cookies or request headers: this app shows client
+      // data, and Sentry is a third party.
+      sendDefaultPii: false,
       debug: environment === 'development',
-      tracesSampleRate: 1.0,
+      tracesSampleRate: environment === 'development' ? 1.0 : 0.1,
+      ...extension,
 
       beforeSend(event, hint) {
         if (event.exception && event.exception.values) {
@@ -52,27 +54,9 @@ export const initializeSentryBasic = (environment: string, dsn: string, extensio
             }
           }
 
-          // If there's an exception and an event id, present the user report dialog.
-          if (event.event_id) {
-            // Only attempt to show the dialog in a browser environment.
-            if (typeof window !== 'undefined' && window.document) {
-              // Dynamically import the package that exports showReportDialog to avoid
-              // bundler errors when this shared lib is used in non-browser builds.
-              import('@sentry/react')
-                .then((mod) => {
-                  try {
-                    mod.showReportDialog({ eventId: event.event_id });
-                  } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error('Sentry.showReportDialog failed:', err);
-                  }
-                })
-                .catch((importErr) => {
-                  // eslint-disable-next-line no-console
-                  console.error('Failed to import @sentry/react for report dialog:', importErr);
-                });
-            }
-          }
+          // Report silently. This used to open Sentry's "Something broke!"
+          // dialog on every reported error — at clients, and stacked on top of
+          // each other when an error repeated.
         }
 
         return event; // Send the event to Sentry

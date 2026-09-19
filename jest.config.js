@@ -32,6 +32,7 @@ module.exports = {
       '<rootDir>/libraries/nestjs-libraries/src/$1',
     '^@gitroom/react/(.*)$':
       '<rootDir>/libraries/react-shared-libraries/src/$1',
+    '^@gitroom/frontend/(.*)$': '<rootDir>/apps/frontend/src/$1',
   },
   testMatch: [
     '<rootDir>/libraries/**/*.spec.ts?(x)',
