@@ -18,7 +18,15 @@ import { useFireEvents } from '@gitroom/helpers/utils/use.fire.events';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useTrack } from '@gitroom/react/helpers/use.track';
 import { TrackEnum } from '@gitroom/nestjs-libraries/user/track.enum';
-import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/farcaster.provider';
+// Sign-in with Farcaster renders only when NEYNAR_CLIENT_ID is set; loaded
+// on demand so the Neynar SDK is not part of every login page.
+const FarcasterProvider = dynamic(
+  () =>
+    import('@gitroom/frontend/components/auth/providers/farcaster.provider').then(
+      (m) => m.FarcasterProvider
+    ),
+  { ssr: false }
+);
 import dynamic from 'next/dynamic';
 import { WalletUiProvider } from '@gitroom/frontend/components/auth/providers/placeholder/wallet.ui.provider';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';

@@ -27,4 +27,13 @@ describe('expensive features load on demand', () => {
     );
   });
 });
-});
+
+  it('Farcaster / Neynar is never imported statically outside its own modules', () => {
+    const own = /(wrapcaster\.provider|farcaster\.provider|nayner\.auth\.button)\.tsx$/;
+    const offenders = files.filter((f) => !own.test(f) && /from\s+['"]@neynar\//.test(src(f)));
+    expect(offenders).toEqual([]);
+    // Farcaster's own modules may import each other: they all sit inside the lazy chunk.
+    const outside = (list: string[]) => list.filter((f) => !own.test(f));
+    expect(outside(importers('@gitroom/frontend/components/launches/web3/providers/wrapcaster.provider'))).toEqual([]);
+    expect(outside(importers('@gitroom/frontend/components/auth/providers/farcaster.provider'))).toEqual([]);
+  });

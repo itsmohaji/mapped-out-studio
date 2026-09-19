@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import Link from 'next/link';
@@ -12,7 +13,15 @@ import { GithubProvider } from '@gitroom/frontend/components/auth/providers/gith
 import { OauthProvider } from '@gitroom/frontend/components/auth/providers/oauth.provider';
 import { GoogleProvider } from '@gitroom/frontend/components/auth/providers/google.provider';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/farcaster.provider';
+// Sign-in with Farcaster renders only when NEYNAR_CLIENT_ID is set; loaded
+// on demand so the Neynar SDK is not part of every login page.
+const FarcasterProvider = dynamic(
+  () =>
+    import('@gitroom/frontend/components/auth/providers/farcaster.provider').then(
+      (m) => m.FarcasterProvider
+    ),
+  { ssr: false }
+);
 import WalletProvider from '@gitroom/frontend/components/auth/providers/wallet.provider';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 type Inputs = {
