@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createReadStream, statSync } from 'fs';
 // @ts-ignore
 import mime from 'mime';
+import { resolveUploadPath } from './resolve.upload.path';
 async function* nodeStreamToIterator(stream: any) {
   for await (const chunk of stream) {
     yield chunk;
@@ -28,10 +29,12 @@ export const GET = async (
   }
 ) => {
   const { path } = await context.params;
-  const filePath =
-    process.env.UPLOAD_DIRECTORY + '/' + (path ?? []).join('/');
+  const filePath = resolveUploadPath(process.env.UPLOAD_DIRECTORY, path ?? []);
+  const fileStats = filePath ? statSync(filePath, { throwIfNoEntry: false }) : undefined;
+  if (!filePath || !fileStats?.isFile()) {
+    return new Response('Not found', { status: 404 });
+  }
   const response = createReadStream(filePath);
-  const fileStats = statSync(filePath);
   const contentType = mime.getType(filePath) || 'application/octet-stream';
   const iterator = nodeStreamToIterator(response);
   const webStream = iteratorToStream(iterator);
