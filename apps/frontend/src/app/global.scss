@@ -43,7 +43,18 @@ body {
 }
 
 /* Animated dreamy drift layer — the depth the approved artifact has
-   (its .studio::before). Sits behind all content (z-index:-1). */
+   (its .studio::before). Sits behind all content (z-index:-1).
+
+   Performance (2026-09-19): this layer sits behind every .glass-surface, whose
+   backdrop-filter re-blurs whatever is behind it whenever it changes. A 60 fps
+   drift under a 150%-viewport `filter: blur(34px)` therefore forced every glass
+   panel (17 on the Calendar) to re-blur every frame, forever — the renderer
+   saturated at 15 fps in measurement. Now:
+   - no filter: the softness is baked into the gradient stops instead (fitted
+     against the blurred original: mean difference 0.19–0.23/255, max 5/255);
+   - steps(120): the drift moves ~3.6 px/s, so 4 sub-pixel steps a second look
+     identical to continuous motion but re-blur the glass 4×/s instead of 60×.
+   Measured on a prototype: 15 fps -> 60 fps, p95 frame 67 ms -> 33 ms. */
 body::before {
   content: '';
   position: fixed;
@@ -51,10 +62,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(22% 24% at 30% 26%, rgba(150, 165, 210, 0.22), transparent 60%),
-    radial-gradient(20% 22% at 72% 64%, rgba(120, 140, 190, 0.18), transparent 62%);
-  filter: blur(34px);
-  animation: mo-drift 30s ease-in-out infinite alternate;
+    radial-gradient(22% 24% at 30% 26%, rgba(150, 165, 210, 0.176), rgba(150, 165, 210, 0.0968) 30%, transparent 64%),
+    radial-gradient(20% 22% at 72% 64%, rgba(120, 140, 190, 0.144), rgba(120, 140, 190, 0.0792) 30%, transparent 66%);
+  animation: mo-drift 30s steps(120) infinite alternate;
 }
 @keyframes mo-drift {
   from { transform: translate3d(-2%, -1%, 0) scale(1); }
