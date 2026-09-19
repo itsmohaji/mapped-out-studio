@@ -421,7 +421,8 @@ export class IntegrationsController {
   @Post('/function')
   async functionIntegration(
     @GetOrgFromRequest() org: Organization,
-    @Body() body: IntegrationFunctionDto
+    @Body() body: IntegrationFunctionDto,
+    retried = false
   ): Promise<any> {
     const getIntegration = await this._integrationService.getIntegrationById(
       org.id,
@@ -451,7 +452,8 @@ export class IntegrationsController {
 
         return load;
       } catch (err) {
-        if (err instanceof RefreshToken) {
+        // Once only: never loop refresh -> provider -> refresh (incident 2026-09-19).
+        if (err instanceof RefreshToken && !retried) {
           const data = await this._refreshIntegrationService.refresh(
             getIntegration
           );
@@ -466,7 +468,7 @@ export class IntegrationsController {
             if (integrationProvider.refreshWait) {
               await timer(10000);
             }
-            return this.functionIntegration(org, body);
+            return this.functionIntegration(org, body, true);
           }
 
           return false;

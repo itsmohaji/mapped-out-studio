@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
+import { providerLabel } from '@gitroom/nestjs-libraries/integrations/refresh.policy';
 import { IntegrationTimeDto } from '@gitroom/nestjs-libraries/dtos/integrations/integration.time.dto';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { PlugDto } from '@gitroom/nestjs-libraries/dtos/plugs/plug.dto';
@@ -369,9 +370,42 @@ export class IntegrationService {
     }
   }
 
+  /**
+   * "Disconnect" has only ever meant flagging refreshNeeded — the channel and
+   * its tokens are kept. Kept as the name callers use; now notifies once.
+   */
   async disconnectChannel(orgId: string, integration: Integration) {
-    await this._integrationRepository.disconnectChannel(orgId, integration.id);
-    await this.informAboutRefreshError(orgId, integration);
+    await this.markNeedsAttention(orgId, integration);
+  }
+
+  /**
+   * The channel needs a human to reconnect it. Flags it and sends ONE
+   * notification — only the caller that actually flipped the flag sends it, so
+   * retries, concurrent workers and page views cannot produce a storm
+   * (incident 2026-09-19: ~30 emails for one expired Instagram token).
+   * Reconnecting clears the flag, which re-arms the notification.
+   */
+  async markNeedsAttention(orgId: string, integration: Integration, cause = '') {
+    const flipped = await this._integrationRepository.flagRefreshNeededOnce(
+      orgId,
+      integration.id
+    );
+    if (!flipped) return false;
+
+    const label = providerLabel(integration.providerIdentifier);
+    await this._notificationService.inAppNotification(
+      orgId,
+      `${label} connection requires attention`,
+      `We could not renew the connection to your ${label} channel "${integration.name}"${
+        cause ? ` (${cause})` : ''
+      }. Posting and analytics for this channel are paused until you reconnect it: ${
+        process.env.FRONTEND_URL
+      }/launches. Your other channels are not affected.`,
+      true,
+      false,
+      'info'
+    );
+    return true;
   }
 
   async informAboutRefreshError(
@@ -407,15 +441,8 @@ export class IntegrationService {
       const data = await this.refreshToken(provider, integration.refreshToken!);
 
       if (!data) {
-        await this.informAboutRefreshError(
-          integration.organizationId,
-          integration
-        );
-        await this._integrationRepository.refreshNeeded(
-          integration.organizationId,
-          integration.id
-        );
-        return;
+        await this.markNeedsAttention(integration.organizationId, integration);
+        continue; // one failing channel must not stop the others
       }
 
       const { refreshToken, accessToken, expiresIn } = data;
@@ -588,7 +615,9 @@ export class IntegrationService {
         );
         return loadAnalytics;
       } catch (e) {
-        if (e instanceof RefreshToken) {
+        // Once only: a provider that keeps rejecting a freshly refreshed token
+        // must not loop refresh -> analytics -> refresh against its API.
+        if (e instanceof RefreshToken && !forceRefresh) {
           return this.checkAnalytics(org, integration, date, true);
         }
       }

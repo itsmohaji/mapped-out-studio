@@ -395,6 +395,19 @@ export class IntegrationRepository {
       },
     });
   }
+  /**
+   * Compare-and-set: flags the channel only if it was not flagged yet. The
+   * returned count (0 or 1) tells the ONE caller that flipped it to notify —
+   * concurrent workers and repeated failures get 0.
+   */
+  async flagRefreshNeededOnce(org: string, id: string) {
+    const { count } = await this._integration.model.integration.updateMany({
+      where: { id, organizationId: org, refreshNeeded: false },
+      data: { refreshNeeded: true },
+    });
+    return count;
+  }
+
   refreshNeeded(org: string, id: string) {
     return this._integration.model.integration.update({
       where: {

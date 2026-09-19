@@ -1,3 +1,4 @@
+import { ProviderRefreshError } from '@gitroom/nestjs-libraries/integrations/refresh.policy';
 import {
   AuthTokenDetails,
   PostDetails,
@@ -89,11 +90,17 @@ export class InstagramStandaloneProvider
   }
 
   async refreshToken(refresh_token: string): Promise<AuthTokenDetails> {
-    const { access_token } = await (
-      await fetch(
-        `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${refresh_token}`
-      )
-    ).json();
+    // Meta's answer is kept (never the token) so a failure can be classified —
+    // expired/revoked vs rate limit vs outage. It used to be discarded.
+    const res = await fetch(
+      `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${refresh_token}`,
+      { signal: AbortSignal.timeout(20_000) }
+    );
+    const body = await res.json().catch(() => ({}));
+    const { access_token } = body;
+    if (!res.ok || !access_token) {
+      throw new ProviderRefreshError(res.status, body);
+    }
 
     const {
       user_id,

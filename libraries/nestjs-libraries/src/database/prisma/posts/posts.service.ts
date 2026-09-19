@@ -161,7 +161,8 @@ export class PostsService {
       );
     } catch (e) {
       console.log(e);
-      if (e instanceof RefreshToken) {
+      // Once only: never loop refresh -> provider -> refresh (incident 2026-09-19).
+      if (e instanceof RefreshToken && !forceRefresh) {
         return this.getMissingContent(orgId, postId, true);
       }
     }
@@ -272,7 +273,8 @@ export class PostsService {
       return loadAnalytics;
     } catch (e) {
       console.log(e);
-      if (e instanceof RefreshToken) {
+      // Once only: never loop refresh -> provider -> refresh (incident 2026-09-19).
+      if (e instanceof RefreshToken && !forceRefresh) {
         // Carry the allow-list into the retry. The check above has already
         // passed by this point, so dropping it was not exploitable — but a
         // re-entry that silently widens its own permissions is the shape of the
