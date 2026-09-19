@@ -7,6 +7,8 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { ChartSocial } from '@gitroom/frontend/components/analytics/chart-social';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { usePostsList } from '@gitroom/frontend/components/dashboard/use.posts.list';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import {
   Aggregate,
@@ -137,12 +139,19 @@ export const AudiencePerformance: FC = () => {
   const { disableXAnalytics } = useVariables();
   const [date, setDate] = useState(7);
 
+  // The shared channel list (already cached by the Dashboard and the rest of the
+  // app) instead of a hand-rolled second fetch of /integrations/list.
+  const { data: channels } = useIntegrationList();
+  const eligible = useMemo(
+    () =>
+      (channels || [])
+        .filter((f: any) => !(f.identifier === 'x' && disableXAnalytics))
+        .filter((f: any) => ANALYTICS_PLATFORMS.includes(f.identifier)),
+    [channels, disableXAnalytics]
+  );
+
   const load = useCallback(async (): Promise<ChannelBlock[]> => {
-    const list = (
-      await (await fetch('/integrations/list')).json()
-    ).integrations
-      .filter((f: any) => !(f.identifier === 'x' && disableXAnalytics))
-      .filter((f: any) => ANALYTICS_PLATFORMS.includes(f.identifier));
+    const list = eligible;
 
     return Promise.all(
       orderBy(list, ['disabled'], ['asc']).map(async (integration: any) => {
@@ -157,10 +166,10 @@ export const AudiencePerformance: FC = () => {
         }
       })
     );
-  }, [date, disableXAnalytics]);
+  }, [date, eligible]);
 
   const { data: blocks, isLoading } = useSWR(
-    `dashboard-analytics-${date}`,
+    channels ? `dashboard-analytics-${date}-${eligible.map((c: any) => c.id).join(',')}` : null,
     load,
     { revalidateOnFocus: false, revalidateOnReconnect: false, fallbackData: [] }
   );
@@ -197,16 +206,7 @@ export const AudiencePerformance: FC = () => {
   );
 
   // The heatmap is our OWN publish history — real rows, not a platform guess.
-  const loadPublished = useCallback(async () => {
-    const res = await (
-      await fetch('/posts/list?state=published&page=0&limit=100')
-    ).json();
-    const { expandPostsList } = await import(
-      '@gitroom/helpers/utils/posts.list.minify'
-    );
-    return expandPostsList(res);
-  }, []);
-  const { data: publishedData } = useSWR('dashboard-published', loadPublished, {
+  const { data: publishedData } = usePostsList('published', 100, {
     revalidateOnFocus: false,
   });
 

@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { TaskRow } from '@gitroom/frontend/components/tasks/task.api';
 import { AudiencePerformance } from '@gitroom/frontend/components/dashboard/audience.performance';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { usePostsList } from '@gitroom/frontend/components/dashboard/use.posts.list';
 import { NormalizedIntegration } from '@gitroom/helpers/utils/integration.contract';
 
 interface Customer {
@@ -171,10 +171,6 @@ export const DashboardComponent: FC = () => {
   const firstName = (((user?.name as string) || '').trim().split(/\s+/)[0]) || '';
 
   const load = useCallback(async (url: string) => (await fetch(url)).json(), []);
-  const loadPosts = useCallback(
-    async (url: string) => expandPostsList(await (await fetch(url)).json()),
-    []
-  );
 
   // MUST go through the shared hook. Registering `useSWR('/integrations/list', …)`
   // with a local fetcher here put a SECOND shape under a cache key SWR treats as
@@ -188,9 +184,9 @@ export const DashboardComponent: FC = () => {
     '/integrations/last-published',
     load
   );
-  const { data: scheduled } = useSWR('/posts/list?state=scheduled&page=0&limit=100', loadPosts);
-  const { data: published } = useSWR('/posts/list?state=published&page=0&limit=100', loadPosts);
-  const { data: drafts } = useSWR('/posts/list?state=draft&page=0&limit=50', loadPosts);
+  const { data: scheduled } = usePostsList('scheduled', 100);
+  const { data: published } = usePostsList('published', 100);
+  const { data: drafts } = usePostsList('draft', 50);
   const { data: myTasksRaw } = useSWR<TaskRow[]>(
     user?.id ? `/tasks?assigneeId=${user.id}` : null,
     load

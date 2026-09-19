@@ -41,7 +41,9 @@ export const useTaskReminders = () => {
   const toast = useToaster();
   const askedRef = useRef(false);
 
-  const { data: tasks } = useSWR<TaskRow[]>('/tasks/reminders', () => api.list(), {
+  // Same key and fetcher as the Tasks page: a separate key sent the identical
+  // GET /tasks twice whenever both were mounted.
+  const { data: tasks } = useSWR<TaskRow[]>('/tasks', () => api.list(), {
     refreshInterval: POLL_MS,
     revalidateOnFocus: true,
   });
