@@ -35,7 +35,9 @@ export const Modal: FC<{
     ).json();
   }, []);
 
-  const { data } = useSWR('copilot-credits', loadCredits);
+  // Per credit type: the image generator caches IMAGE credits; sharing one key
+  // let either tool show the other's balance.
+  const { data } = useSWR('copilot-credits-ai_videos', loadCredits);
 
   const generate = useCallback(async () => {
     await fetch(`/media/generate-video/${type.identifier}/allowed`);

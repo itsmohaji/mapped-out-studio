@@ -74,7 +74,10 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
 
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
 
-  const { data } = useSWR('integrations', load, {
+  // Own key: Autopost and Webhooks cache the RAW `{integrations: [...]}` envelope
+  // under 'integrations', while this stores the normalised ARRAY. One SWR entry
+  // per key, so whichever page loaded first decided what the other received.
+  const { data } = useSWR('integrations-normalized', load, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,

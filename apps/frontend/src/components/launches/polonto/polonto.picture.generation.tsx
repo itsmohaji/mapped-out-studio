@@ -32,7 +32,7 @@ const GenerateTab = observer(({ store }: any) => {
       })
     ).json();
   }, []);
-  const { data, mutate } = useSWR('copilot-credits', loadCredits);
+  const { data, mutate } = useSWR('copilot-credits-ai_images', loadCredits);
   const t = useT();
 
   const handleGenerate = async () => {
