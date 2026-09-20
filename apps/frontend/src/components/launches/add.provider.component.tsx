@@ -2,6 +2,7 @@
 
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import React, { FC, useCallback, useMemo } from 'react';
+import { isSupportedProvider } from '@gitroom/nestjs-libraries/integrations/supported.providers';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Input } from '@gitroom/react/form/input';
 import { FieldValues, FormProvider, useForm } from 'react-hook-form';
@@ -682,25 +683,10 @@ export const AddProviderComponent: FC<{
         >
           {social
             .filter((item) => {
-              // Mapped Out: ALLOWLIST — only these networks show in the Add
-              // Channel UI. UI-only; backend/provider code & DB enums untouched,
-              // and already-connected channels keep working regardless.
-              const MAPPEDOUT_ALLOWED = [
-                'instagram',
-                'instagram-standalone',
-                'facebook',
-                'tiktok',
-                'linkedin',
-                'linkedin-page',
-                'youtube',
-                'x',
-                'threads',
-                'pinterest',
-                'reddit',
-                'wordpress',
-                'telegram',
-              ];
-              if (!MAPPEDOUT_ALLOWED.includes(item.identifier)) {
+              // Mapped Out supports these channels only (SUPPORTED_SOCIAL_PROVIDERS,
+              // shared with the backend, which refuses to connect anything else).
+              // Provider code and connected channels are untouched.
+              if (!isSupportedProvider(item.identifier)) {
                 return false;
               }
 

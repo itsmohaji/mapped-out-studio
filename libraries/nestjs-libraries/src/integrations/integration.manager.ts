@@ -37,6 +37,8 @@ import { SkoolProvider } from '@gitroom/nestjs-libraries/integrations/social/sko
 import { WhopProvider } from '@gitroom/nestjs-libraries/integrations/social/whop.provider';
 import { MeweProvider } from '@gitroom/nestjs-libraries/integrations/social/mewe.provider';
 
+import { isSupportedProvider } from '@gitroom/nestjs-libraries/integrations/supported.providers';
+
 export const socialIntegrationList: Array<SocialAbstract & SocialProvider> = [
   new XProvider(),
   new LinkedinProvider(),
@@ -164,8 +166,15 @@ export class IntegrationManager {
     };
   }
 
+  /**
+   * What may be CONNECTED. Narrowed to the supported product set — the provider
+   * classes stay registered, so channels already connected keep working (they
+   * resolve through getSocialIntegration, which is not filtered).
+   */
   getAllowedSocialsIntegrations() {
-    return socialIntegrationList.map((p) => p.identifier);
+    return socialIntegrationList
+      .map((p) => p.identifier)
+      .filter((identifier) => isSupportedProvider(identifier));
   }
   getSocialIntegration(integration: string): SocialProvider {
     return socialIntegrationList.find((i) => i.identifier === integration)!;
