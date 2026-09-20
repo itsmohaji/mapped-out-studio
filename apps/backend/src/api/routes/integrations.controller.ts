@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,6 +9,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { UNSUPPORTED_PROVIDER_MESSAGE } from '@gitroom/nestjs-libraries/integrations/supported.providers';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
@@ -305,7 +307,7 @@ export class IntegrationsController {
         .getAllowedSocialsIntegrations()
         .includes(integration)
     ) {
-      throw new Error('Integration not allowed');
+      throw new BadRequestException(UNSUPPORTED_PROVIDER_MESSAGE);
     }
 
     const integrationProvider =

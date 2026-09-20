@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,6 +8,7 @@ import {
   Post,
   UseFilters,
 } from '@nestjs/common';
+import { UNSUPPORTED_PROVIDER_MESSAGE } from '@gitroom/nestjs-libraries/integrations/supported.providers';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { ConnectIntegrationDto } from '@gitroom/nestjs-libraries/dtos/integrations/connect.integration.dto';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
@@ -56,7 +58,7 @@ export class NoAuthIntegrationsController {
         .getAllowedSocialsIntegrations()
         .includes(integration)
     ) {
-      throw new Error('Integration not allowed');
+      throw new BadRequestException(UNSUPPORTED_PROVIDER_MESSAGE);
     }
 
     const integrationProvider =

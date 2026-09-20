@@ -35,3 +35,11 @@ export type SupportedSocialProvider = (typeof SUPPORTED_SOCIAL_PROVIDERS)[number
 
 export const isSupportedProvider = (identifier: string) =>
   (SUPPORTED_SOCIAL_PROVIDERS as readonly string[]).includes(identifier);
+
+/**
+ * The one answer for "that provider is not part of this product". A bare
+ * `throw new Error(...)` surfaced as HTTP 500 "Internal server error", which
+ * reads as a broken server rather than a deliberate limit (owner, 2026-09-20).
+ */
+export const UNSUPPORTED_PROVIDER_MESSAGE =
+  'This provider is not supported in Mapped Out.';

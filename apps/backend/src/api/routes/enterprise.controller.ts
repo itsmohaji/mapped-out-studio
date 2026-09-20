@@ -1,4 +1,12 @@
-import { Body, Controller, Param, Post, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
+import { UNSUPPORTED_PROVIDER_MESSAGE } from '@gitroom/nestjs-libraries/integrations/supported.providers';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -86,7 +94,7 @@ export class EnterpriseController {
           .getAllowedSocialsIntegrations()
           .includes(load.provider)
       ) {
-        throw new Error('Integration not allowed');
+        throw new BadRequestException(UNSUPPORTED_PROVIDER_MESSAGE);
       }
 
       const integrationProvider = this._integrationManager.getSocialIntegration(

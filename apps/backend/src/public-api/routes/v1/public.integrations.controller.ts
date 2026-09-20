@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
+import { UNSUPPORTED_PROVIDER_MESSAGE } from '@gitroom/nestjs-libraries/integrations/supported.providers';
 import { CustomFileValidationPipe } from '@gitroom/nestjs-libraries/upload/custom.upload.validation';
 import { ApiTags } from '@nestjs/swagger';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
@@ -310,7 +311,7 @@ export class PublicIntegrationsController {
         .getAllowedSocialsIntegrations()
         .includes(integration)
     ) {
-      throw new HttpException({ msg: 'Integration not allowed' }, 400);
+      throw new HttpException({ msg: UNSUPPORTED_PROVIDER_MESSAGE }, 400);
     }
 
     const integrationProvider =
