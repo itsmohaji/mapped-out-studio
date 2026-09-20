@@ -385,9 +385,13 @@ export const ContinueIntegration: FC<{
             </svg>
           </div>
           <div className="text-[28px] font-semibold mb-[12px]">
-            {t('could_not_add_provider', 'Could not add provider')}
+            {/* A reconnect is not an "add": saying so sent the owner looking in
+                the wrong place (2026-09-20). */}
+            {searchParams.refresh
+              ? t('could_not_reconnect_channel', 'Could not reconnect channel')
+              : t('could_not_add_provider', 'Could not add provider')}
           </div>
-          <div className="text-[16px] text-gray-400 max-w-[400px]">
+          <div className="text-[16px] text-gray-400 max-w-[500px]">
             {errorMessage ||
               t(
                 'you_are_being_redirected_back',

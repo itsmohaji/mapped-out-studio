@@ -22,6 +22,11 @@ import {
   Sections,
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
+import {
+  isSameAccount,
+  mergeReconnectAuth,
+  reconnectMismatchMessage,
+} from '@gitroom/nestjs-libraries/integrations/reconnect.guard';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
 
 @ApiTags('Integrations')
@@ -135,7 +140,12 @@ export class NoAuthIntegrationsController {
               refresh,
               auth.accessToken
             );
-            return res({ ...newAuth, refreshToken: body.refresh });
+            // reConnect returns the page/company identity and ITS access token;
+            // the refresh token and the lifetime belong to the user token from
+            // authenticate(). Before, `body.refresh` (an account id) was stored
+            // as the refresh token and expiresIn was dropped entirely, so every
+            // later token refresh for these providers was doomed.
+            return res(mergeReconnectAuth(auth, newAuth));
           } catch (err: any) {
             return res({
               error: err.message,
@@ -183,9 +193,27 @@ export class NoAuthIntegrationsController {
       throw new NotEnoughScopes('Invalid API key');
     }
 
-    if (refresh && String(id) !== String(refresh)) {
+    if (refresh && !isSameAccount(refresh, String(id))) {
+      // Name both accounts: the old message said nothing, so a reconnect that
+      // landed on the wrong account looked like a broken "add channel".
+      const existing = (
+        await this._integrationService.getIntegrationsList(org.id)
+      ).find(
+        (p) => p.internalId === String(refresh) && p.providerIdentifier === integration
+      );
+      console.warn(
+        `[reconnect] provider=${integration} org=${org.id} expected=${refresh} ` +
+          `got=${String(id)} channel=${existing?.name ?? 'unknown'} — refused`
+      );
       throw new NotEnoughScopes(
-        'Please refresh the channel that needs to be refreshed'
+        reconnectMismatchMessage({
+          channelName: existing?.name,
+          provider: integrationProvider.name || integration,
+          expectedId: String(refresh),
+          expectedUsername: existing?.profile,
+          actualId: String(id),
+          actualUsername: username,
+        })
       );
     }
 
