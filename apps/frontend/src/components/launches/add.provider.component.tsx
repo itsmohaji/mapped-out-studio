@@ -1,7 +1,14 @@
 'use client';
 
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import React, { FC, useCallback, useMemo } from 'react';
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   buildProviderGroups,
   ProviderGroup,
@@ -385,7 +392,10 @@ const PlatformIcon: FC<{ icon: string }> = ({ icon }) => (
   <img
     src={`/icons/platforms/${icon}`}
     alt=""
-    className={clsx('w-[32px] h-[32px] shrink-0', !icon.endsWith('.svg') && 'rounded-full')}
+    className={clsx(
+      'w-[32px] h-[32px] shrink-0',
+      !icon.endsWith('.svg') && 'rounded-full'
+    )}
   />
 );
 
@@ -713,26 +723,82 @@ export const AddProviderComponent: FC<{
     [social, props.invite, getSocialLink]
   );
 
+  // Which platform's account types are showing — null = the platform grid.
+  // Swapped inside the SAME Add Channel modal: a second modal stacked a second
+  // overlay, focus trap and body lock on top of the first (owner, 2026-09-21).
+  // Plain component state, so closing the modal (which unmounts this) resets it.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openedGroup = groups.find((g) => g.key === openKey) || null;
+  const returnFocusTo = useRef<string | null>(null);
+  const viewRoot = useRef<HTMLDivElement>(null);
+
+  // Keyboard users land on the first account type when it opens, and back on
+  // the platform they came from when they return.
+  useEffect(() => {
+    const root = viewRoot.current;
+    if (!root) return;
+    const target = openKey
+      ? root.querySelector<HTMLElement>('[data-option]')
+      : returnFocusTo.current
+      ? root.querySelector<HTMLElement>(
+          `[data-group="${returnFocusTo.current}"]`
+        )
+      : null;
+    target?.focus();
+  }, [openKey]);
+
   const openGroup = useCallback(
     (group: ProviderGroup) => async () => {
       if (group.options.length === 1) {
         return connect(group.options[0].identifier)();
       }
-      modal.openModal({
-        title: `${t('add', 'Add')} ${group.label}`,
-        withCloseButton: true,
-        classNames: { modal: 'bg-newBgColorInner text-textColor' },
-        children: (
-          <div className="flex flex-col gap-[10px] max-w-[460px] pt-[8px]">
-            {group.options.map((option) => (
+      returnFocusTo.current = group.key;
+      setOpenKey(group.key);
+    },
+    [connect]
+  );
+
+  return (
+    <div className="w-full flex flex-col gap-[20px] rounded-[4px] relative]">
+      <div className="flex flex-col" ref={viewRoot}>
+        {openedGroup ? (
+          <div className="flex flex-col gap-[10px] max-w-[520px] w-full mx-auto">
+            <div className="flex items-center gap-[10px] mb-[4px]">
               <button
                 type="button"
+                onClick={() => setOpenKey(null)}
+                className="flex items-center gap-[6px] text-[14px] text-textItemBlur hover:text-textColor outline-none focus-visible:text-textColor rounded-[6px] px-[4px] py-[2px]"
+              >
+                <svg
+                  width="8"
+                  height="13"
+                  viewBox="0 0 8 13"
+                  fill="none"
+                  className="rotate-180 rtl:rotate-0"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M1 1.5L6.5 6.5L1 11.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {t('back', 'Back')}
+              </button>
+              <div className="text-[16px] font-[600] flex items-center gap-[8px]">
+                <PlatformIcon icon={openedGroup.icon} />
+                {openedGroup.label}
+              </div>
+            </div>
+            {openedGroup.options.map((option) => (
+              <button
+                type="button"
+                data-option
                 key={option.identifier}
-                onClick={async () => {
-                  modal.closeAll();
-                  await connect(option.identifier)();
-                }}
-                className="w-full flex items-center gap-[14px] text-start p-[16px] rounded-[10px] bg-newTableHeader outline-none transition-colors hover:bg-[var(--glass-hover)]"
+                onClick={connect(option.identifier)}
+                className="w-full flex items-center gap-[14px] text-start p-[16px] rounded-[10px] bg-newTableHeader outline-none transition-colors hover:bg-[var(--glass-hover)] focus-visible:bg-[var(--glass-hover)]"
               >
                 <PlatformIcon icon={`${option.identifier}.png`} />
                 <div className="flex-1">
@@ -743,53 +809,60 @@ export const AddProviderComponent: FC<{
                     </div>
                   )}
                 </div>
-                <svg width="8" height="13" viewBox="0 0 8 13" fill="none" className="shrink-0 text-textItemBlur rtl:rotate-180">
-                  <path d="M1 1.5L6.5 6.5L1 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  width="8"
+                  height="13"
+                  viewBox="0 0 8 13"
+                  fill="none"
+                  className="shrink-0 text-textItemBlur rtl:rotate-180"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M1 1.5L6.5 6.5L1 11.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </button>
             ))}
           </div>
-        ),
-      });
-    },
-    [connect, modal, t]
-  );
-
-  return (
-    <div className="w-full flex flex-col gap-[20px] rounded-[4px] relative]">
-      <div className="flex flex-col">
-        <div
-          className={clsx(
-            isMobile && 'gap-[12px] flex flex-col',
-            !isMobile &&
-              'grid gap-[10px] justify-items-center justify-center',
-            isMobile ? {} : onboarding ? 'grid-cols-9' : 'grid-cols-5'
-          )}
-        >
-          {groups.map((group) => (
-            <button
-              type="button"
-              key={group.key}
-              onClick={openGroup(group)}
-              className={clsx(
-                isMobile
-                  ? 'flex-row h-[72px] p-[16px]'
-                  : 'flex-col p-[10px] h-[100px] justify-center',
-                'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer outline-none transition-colors hover:bg-[var(--glass-hover)]'
-              )}
-            >
-              <PlatformIcon icon={group.icon} />
-              <div className="text-center flex items-center gap-[6px]">
-                {group.label}
-                {group.options.length > 1 && (
-                  <span className="text-[11px] text-textItemBlur">
-                    {group.options.length} {t('options', 'options')}
-                  </span>
+        ) : (
+          <div
+            className={clsx(
+              isMobile && 'gap-[12px] flex flex-col',
+              !isMobile &&
+                'grid gap-[10px] justify-items-center justify-center',
+              isMobile ? {} : onboarding ? 'grid-cols-9' : 'grid-cols-5'
+            )}
+          >
+            {groups.map((group) => (
+              <button
+                type="button"
+                key={group.key}
+                data-group={group.key}
+                onClick={openGroup(group)}
+                className={clsx(
+                  isMobile
+                    ? 'flex-row h-[72px] p-[16px]'
+                    : 'flex-col p-[10px] h-[100px] justify-center',
+                  'w-full text-[14px] rounded-[8px] bg-newTableHeader text-textColor relative items-center flex gap-[10px] cursor-pointer outline-none transition-colors hover:bg-[var(--glass-hover)] focus-visible:bg-[var(--glass-hover)]'
                 )}
-              </div>
-            </button>
-          ))}
-        </div>
+              >
+                <PlatformIcon icon={group.icon} />
+                <div className="text-center flex items-center gap-[6px]">
+                  {group.label}
+                  {group.options.length > 1 && (
+                    <span className="text-[11px] text-textItemBlur">
+                      {group.options.length} {t('options', 'options')}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
