@@ -46,12 +46,12 @@ describe('buildProviderGroups', () => {
     expect(groups.find((g) => g.key === 'instagram')!.options).toHaveLength(1);
   });
 
-  it('honours the caller filter (the invite flow excludes WordPress, which needs an instance URL)', () => {
+  it('honours the caller filter (the invite flow excludes WordPress, which needs a custom-fields form)', () => {
     const social = [
       { identifier: 'x', name: 'X' },
-      { identifier: 'wordpress', name: 'WordPress', isExternal: true },
+      { identifier: 'wordpress', name: 'WordPress', customFields: [{ key: 'domain' }] },
     ];
-    const groups = buildProviderGroups(social, (p: any) => !p.isExternal);
+    const groups = buildProviderGroups(social, (p: any) => !p.customFields);
     expect(groups.map((g) => g.label)).toEqual(['X']);
   });
 

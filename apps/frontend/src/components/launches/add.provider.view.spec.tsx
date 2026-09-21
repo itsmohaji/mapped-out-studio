@@ -25,8 +25,13 @@ jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
   useT: () => (_k: string, d: string) => d,
 }));
 jest.mock('@gitroom/frontend/components/launches/web3/web3.list', () => ({ web3List: [] }));
-jest.mock('@gitroom/react/form/input', () => ({ Input: () => null }));
-jest.mock('@gitroom/react/form/button', () => ({ Button: () => null }));
+jest.mock('@gitroom/react/form/input', () => ({
+  Input: ({ label, name, type }: any) =>
+    require('react').createElement('input', { 'aria-label': label, name, type: type || 'text' }),
+}));
+jest.mock('@gitroom/react/form/button', () => ({
+  Button: ({ children, type }: any) => require('react').createElement('button', { type }, children),
+}));
 jest.mock('@gitroom/frontend/components/launches/helpers/top.title.component', () => ({ TopTitle: () => null }));
 
 import { AddProviderComponent } from '@gitroom/frontend/components/launches/add.provider.component';
@@ -37,8 +42,18 @@ const social = [
 ].map((identifier) => ({
   identifier,
   name: identifier,
-  isExternal: identifier === 'wordpress',
+  isExternal: false,
   isWeb3: false,
+  // Same shape as WordpressProvider.customFields(): site, user, application password.
+  ...(identifier === 'wordpress'
+    ? {
+        customFields: [
+          { key: 'domain', label: 'Domain URL', validation: '/.+/', type: 'text' },
+          { key: 'username', label: 'Username', validation: '/.+/', type: 'text' },
+          { key: 'password', label: 'Password', validation: '/.+/', type: 'password', hint: 'Application password' },
+        ],
+      }
+    : {}),
 }));
 
 const renderPicker = () =>
@@ -117,5 +132,39 @@ describe('Add Channel view state', () => {
   it('never offers an unsupported platform even if the API lists it', () => {
     renderPicker();
     expect(document.querySelector('[data-group="reddit"]')).toBeNull();
+  });
+
+  describe('WordPress (connection form)', () => {
+    it('shows its form in the same modal, with Back — no second modal', () => {
+      renderPicker();
+      fireEvent.click(document.querySelector('[data-group="wordpress"]')!);
+      expect(openModal).not.toHaveBeenCalled();
+      expect(cards()).toHaveLength(0);
+      expect(screen.getByLabelText('Domain URL')).toBeTruthy();
+      expect(screen.getByLabelText('Username')).toBeTruthy();
+      expect((screen.getByLabelText('Password') as HTMLInputElement).type).toBe('password');
+      expect(screen.getByText('Back')).toBeTruthy();
+      expect(fetchMock).not.toHaveBeenCalled(); // nothing is sent until the form is submitted
+    });
+
+    it('focuses the first field, and Back returns to the grid with focus on WordPress', () => {
+      renderPicker();
+      fireEvent.click(document.querySelector('[data-group="wordpress"]')!);
+      expect(document.activeElement).toBe(screen.getByLabelText('Domain URL'));
+
+      fireEvent.click(screen.getByText('Back'));
+      expect(cards()).toHaveLength(9);
+      expect(document.activeElement).toBe(document.querySelector('[data-group="wordpress"]'));
+      expect(openModal).not.toHaveBeenCalled();
+    });
+
+    it('resets to the grid when the modal is closed and reopened', () => {
+      const first = renderPicker();
+      fireEvent.click(document.querySelector('[data-group="wordpress"]')!);
+      first.unmount();
+      renderPicker();
+      expect(cards()).toHaveLength(9);
+      expect(document.querySelector('form')).toBeNull();
+    });
   });
 });

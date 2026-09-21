@@ -248,30 +248,28 @@ export const CustomVariables: FC<{
         >
           {variables.map((variable) => (
             <div key={variable.key}>
-              {variable.hint ? (
-                <div className="flex flex-col gap-[6px]">
-                  <div className="text-[14px] flex items-center gap-[6px]">
-                    <span>{variable.label}</span>
-                    <span
-                      data-tooltip-id="tooltip"
-                      data-tooltip-content={variable.hint}
-                      className="w-[16px] h-[16px] rounded-full border border-textColor/60 text-textColor/60 flex items-center justify-center text-[11px] leading-none cursor-help select-none"
-                    >
-                      i
-                    </span>
-                  </div>
-                  <Input
-                    label=""
-                    name={variable.key}
-                    type={variable.type == 'text' ? 'text' : 'password'}
-                  />
+              {/* Each field is named for assistive tech (the shared Input's label
+                  is not linked to its <input>), shows a visible focus border,
+                  and shows its hint as text — it was a hover-only tooltip on a
+                  non-focusable "i", so keyboard users never saw that WordPress
+                  wants an APPLICATION password (2026-09-21). */}
+              <Input
+                label={variable.label}
+                aria-label={variable.label}
+                name={variable.key}
+                type={variable.type == 'text' ? 'text' : 'password'}
+                className="focus-within:border-btnPrimary"
+                {...(variable.hint
+                  ? { 'aria-describedby': `hint-${identifier}-${variable.key}` }
+                  : {})}
+              />
+              {!!variable.hint && (
+                <div
+                  id={`hint-${identifier}-${variable.key}`}
+                  className="text-[12px] text-textItemBlur -mt-[2px] mb-[8px]"
+                >
+                  {variable.hint}
                 </div>
-              ) : (
-                <Input
-                  label={variable.label}
-                  name={variable.key}
-                  type={variable.type == 'text' ? 'text' : 'password'}
-                />
               )}
             </div>
           ))}
@@ -708,9 +706,37 @@ export const AddProviderComponent: FC<{
     [social, props.invite]
   );
 
+  // What the Add Channel modal shows: the platform grid, a platform's account
+  // types, or a provider's connection form (WordPress). All three are swapped
+  // inside the SAME modal — a second modal stacked a second overlay, focus trap
+  // and body lock on top of the first (owner, 2026-09-21). Plain component
+  // state, so closing the modal (which unmounts this) always resets to the grid.
+  type View =
+    | { kind: 'grid' }
+    | { kind: 'choose'; key: string }
+    | { kind: 'form'; identifier: string };
+  const [view, setView] = useState<View>({ kind: 'grid' });
+  const openedGroup =
+    view.kind === 'choose'
+      ? groups.find((g) => g.key === view.key) || null
+      : null;
+  const formProvider =
+    view.kind === 'form'
+      ? social.find((p) => p.identifier === view.identifier) || null
+      : null;
+  const returnFocusTo = useRef<string | null>(null);
+  const viewRoot = useRef<HTMLDivElement>(null);
+
   const connect = useCallback(
     (identifier: string) => {
       const item = social.find((p) => p.identifier === identifier)!;
+      // A provider that needs a form first (WordPress: site, user, application
+      // password) shows it in place. The other special flows — instance URL,
+      // web3, browser extension — belong only to hidden providers and still use
+      // their original dialogs.
+      if (item.customFields && !props.invite) {
+        return async () => setView({ kind: 'form', identifier });
+      }
       return getSocialLink(
         props.invite,
         identifier,
@@ -723,75 +749,92 @@ export const AddProviderComponent: FC<{
     [social, props.invite, getSocialLink]
   );
 
-  // Which platform's account types are showing — null = the platform grid.
-  // Swapped inside the SAME Add Channel modal: a second modal stacked a second
-  // overlay, focus trap and body lock on top of the first (owner, 2026-09-21).
-  // Plain component state, so closing the modal (which unmounts this) resets it.
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const openedGroup = groups.find((g) => g.key === openKey) || null;
-  const returnFocusTo = useRef<string | null>(null);
-  const viewRoot = useRef<HTMLDivElement>(null);
-
-  // Keyboard users land on the first account type when it opens, and back on
-  // the platform they came from when they return.
+  // Keyboard users land on the first control of the new view, and back on the
+  // platform they came from when they return to the grid.
   useEffect(() => {
     const root = viewRoot.current;
     if (!root) return;
-    const target = openKey
-      ? root.querySelector<HTMLElement>('[data-option]')
-      : returnFocusTo.current
-      ? root.querySelector<HTMLElement>(
-          `[data-group="${returnFocusTo.current}"]`
-        )
-      : null;
+    const target =
+      view.kind === 'choose'
+        ? root.querySelector<HTMLElement>('[data-option]')
+        : view.kind === 'form'
+        ? root.querySelector<HTMLElement>(
+            'form input, form textarea, form select'
+          )
+        : returnFocusTo.current
+        ? root.querySelector<HTMLElement>(
+            `[data-group="${returnFocusTo.current}"]`
+          )
+        : null;
     target?.focus();
-  }, [openKey]);
+  }, [view]);
 
   const openGroup = useCallback(
     (group: ProviderGroup) => async () => {
+      returnFocusTo.current = group.key;
       if (group.options.length === 1) {
         return connect(group.options[0].identifier)();
       }
-      returnFocusTo.current = group.key;
-      setOpenKey(group.key);
+      setView({ kind: 'choose', key: group.key });
     },
     [connect]
+  );
+
+  const backHeader = (icon: string, label: string) => (
+    <div className="flex items-center gap-[10px] mb-[4px]">
+      <button
+        type="button"
+        onClick={() => setView({ kind: 'grid' })}
+        className="flex items-center gap-[6px] text-[14px] text-textItemBlur hover:text-textColor outline-none focus-visible:text-textColor focus-visible:underline rounded-[6px] px-[4px] py-[2px]"
+      >
+        <svg
+          width="8"
+          height="13"
+          viewBox="0 0 8 13"
+          fill="none"
+          className="rotate-180 rtl:rotate-0"
+          aria-hidden="true"
+        >
+          <path
+            d="M1 1.5L6.5 6.5L1 11.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {t('back', 'Back')}
+      </button>
+      <div className="text-[16px] font-[600] flex items-center gap-[8px]">
+        <PlatformIcon icon={icon} />
+        {label}
+      </div>
+    </div>
   );
 
   return (
     <div className="w-full flex flex-col gap-[20px] rounded-[4px] relative]">
       <div className="flex flex-col" ref={viewRoot}>
-        {openedGroup ? (
+        {formProvider ? (
           <div className="flex flex-col gap-[10px] max-w-[520px] w-full mx-auto">
-            <div className="flex items-center gap-[10px] mb-[4px]">
-              <button
-                type="button"
-                onClick={() => setOpenKey(null)}
-                className="flex items-center gap-[6px] text-[14px] text-textItemBlur hover:text-textColor outline-none focus-visible:text-textColor rounded-[6px] px-[4px] py-[2px]"
-              >
-                <svg
-                  width="8"
-                  height="13"
-                  viewBox="0 0 8 13"
-                  fill="none"
-                  className="rotate-180 rtl:rotate-0"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M1 1.5L6.5 6.5L1 11.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {t('back', 'Back')}
-              </button>
-              <div className="text-[16px] font-[600] flex items-center gap-[8px]">
-                <PlatformIcon icon={openedGroup.icon} />
-                {openedGroup.label}
-              </div>
-            </div>
+            {backHeader(
+              groups.find((g) =>
+                g.options.some((o) => o.identifier === formProvider.identifier)
+              )?.icon || `${formProvider.identifier}.png`,
+              groups.find((g) =>
+                g.options.some((o) => o.identifier === formProvider.identifier)
+              )?.label || formProvider.name
+            )}
+            <CustomVariables
+              identifier={formProvider.identifier}
+              variables={formProvider.customFields || []}
+              gotoUrl={(url: string) => router.push(url)}
+              onboarding={onboarding}
+            />
+          </div>
+        ) : openedGroup ? (
+          <div className="flex flex-col gap-[10px] max-w-[520px] w-full mx-auto">
+            {backHeader(openedGroup.icon, openedGroup.label)}
             {openedGroup.options.map((option) => (
               <button
                 type="button"
