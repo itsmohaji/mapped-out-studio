@@ -4,7 +4,7 @@ import { AutomationComponent } from '@gitroom/frontend/components/automation/aut
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Automation`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Automation`,
   description: '',
 };
 

@@ -937,7 +937,7 @@ export const ClientDashboardComponent: FC = () => {
           <div className="text-[11.5px] text-textItemBlur">
             {t(
               'analytics_note_v2',
-              'Post volume is computed from this client’s posts in Mapped Out. Platform metrics are read live from each channel (read-only, cached ~1h); some metrics may be unavailable depending on the platform API.'
+              'Post volume is computed from this client’s posts in Mapped Lab. Platform metrics are read live from each channel (read-only, cached ~1h); some metrics may be unavailable depending on the platform API.'
             )}
           </div>
         </div>

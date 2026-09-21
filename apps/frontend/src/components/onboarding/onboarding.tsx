@@ -32,7 +32,7 @@ export const Onboarding: FC = () => {
     }
     modalOpen.current = true;
     modal.openModal({
-      // title: t('onboarding', 'Welcome to Mapped Out Social'),
+      // title: t('onboarding', 'Welcome to Mapped Lab'),
       withCloseButton: true,
       closeOnEscape: false,
       removeLayout: true,

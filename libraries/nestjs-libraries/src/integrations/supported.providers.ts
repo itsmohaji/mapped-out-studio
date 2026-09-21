@@ -1,5 +1,5 @@
 /**
- * The channels Mapped Out supports as a product (owner decision, 2026-09-20).
+ * The channels Mapped Lab supports as a product (owner decision, 2026-09-20).
  *
  * This is an ALLOW-LIST, not a deletion: every provider class stays registered
  * in `socialIntegrationList`, so channels that are already connected keep
@@ -42,4 +42,4 @@ export const isSupportedProvider = (identifier: string) =>
  * reads as a broken server rather than a deliberate limit (owner, 2026-09-20).
  */
 export const UNSUPPORTED_PROVIDER_MESSAGE =
-  'This provider is not supported in Mapped Out.';
+  'This provider is not supported in Mapped Lab.';

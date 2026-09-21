@@ -48,7 +48,7 @@ describe('refusing an unsupported provider', () => {
   const source = (f: string) => readFileSync(join(__dirname, '../../../..', f), 'utf8');
 
   it('says so plainly', () => {
-    expect(UNSUPPORTED_PROVIDER_MESSAGE).toBe('This provider is not supported in Mapped Out.');
+    expect(UNSUPPORTED_PROVIDER_MESSAGE).toBe('This provider is not supported in Mapped Lab.');
   });
 
   it.each(ENTRY_POINTS)('%s answers 4xx with that message, never a bare Error', (file) => {

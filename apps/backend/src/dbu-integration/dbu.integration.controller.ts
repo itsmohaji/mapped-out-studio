@@ -23,7 +23,7 @@ export class DbuIntegrationController {
     return {
       ok: true,
       org,
-      name: 'Mapped Out Social Studio',
+      name: 'Mapped Lab',
       version: process.env.NEXT_PUBLIC_VERSION || 'unknown',
       at: Date.now(),
     };

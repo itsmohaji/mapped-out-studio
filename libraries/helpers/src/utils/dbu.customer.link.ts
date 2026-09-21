@@ -214,7 +214,7 @@ export function deriveDbuCustomerLinks(
           reason: 'dbu-client-claimed-twice',
           dbuClientId: link.dbuClientId,
           dbuClientName: link.dbuClientName,
-          detail: `DBU client "${link.dbuClientName}" is claimed by more than one Mapped Out client: ${names.join(
+          detail: `DBU client "${link.dbuClientName}" is claimed by more than one Mapped Lab client: ${names.join(
             ', '
           )}. None were linked — merge them first.`,
         });

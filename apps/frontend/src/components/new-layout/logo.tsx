@@ -1,7 +1,7 @@
 'use client';
 
-// Mapped Out brand mark. Uses currentColor so it adapts to dark/light themes.
-// `withText` shows the "Mapped Out" wordmark (expanded sidebar); `collapsed`
+// Mapped Lab brand mark. Uses currentColor so it adapts to dark/light themes.
+// `withText` shows the "Mapped Lab" wordmark (expanded sidebar); `collapsed`
 // renders a smaller mark for the icon-rail.
 export const Logo = ({
   withText,
@@ -19,7 +19,7 @@ export const Logo = ({
       viewBox="0 0 668.01 453.98"
       fill="none"
       className="shrink-0"
-      aria-label="Mapped Out"
+      aria-label="Mapped Lab"
     >
       <path
         fill="currentColor"
@@ -36,7 +36,7 @@ export const Logo = ({
     </svg>
       {withText && (
         <span className="text-[16px] font-[600] whitespace-nowrap tracking-tight">
-          Mapped Out
+          Mapped Lab
         </span>
       )}
     </div>

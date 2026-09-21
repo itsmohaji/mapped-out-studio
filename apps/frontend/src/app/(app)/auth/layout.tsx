@@ -27,7 +27,7 @@ export default async function AuthLayout({
           Welcome to
           <br />
           <span className="text-[42px] text-[#8fbbe4]">
-            Mapped Out Social Studio
+            Mapped Lab
           </span>
           <div className="text-[18px] text-gray-400 mt-[24px]">
             Plan, schedule &amp; publish across all your social channels.

@@ -4,7 +4,7 @@ import { CampaignsComponent } from '@gitroom/frontend/components/campaigns/campa
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Campaigns`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Campaigns`,
   description: '',
 };
 

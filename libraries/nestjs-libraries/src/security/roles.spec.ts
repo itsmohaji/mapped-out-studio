@@ -35,7 +35,7 @@ describe('role model (Option B: enum kept, product roles on top)', () => {
     expect(productRoleLabel('CLIENT')).toBe('Client');
   });
 
-  it('CLIENT is never assignable to staff inside Mapped Out', () => {
+  it('CLIENT is never assignable to staff inside Mapped Lab', () => {
     expect(ASSIGNABLE_PRODUCT_ROLES).toEqual([
       'SUPER_ADMIN',
       'AGENCY_ADMIN',

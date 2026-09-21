@@ -4,7 +4,7 @@ import { PostLibraryComponent } from '@gitroom/frontend/components/library/post-
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Post Library`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Post Library`,
   description: '',
 };
 

@@ -77,7 +77,7 @@ export function startLongTaskMonitor(
       onRoute.count += 1;
       onRoute.worstMs = Math.max(onRoute.worstMs, ms);
 
-      console.warn(`[Mapped Out] main thread blocked for ${ms}ms on ${route}`);
+      console.warn(`[Mapped Lab] main thread blocked for ${ms}ms on ${route}`);
 
       const now = Date.now();
       if (

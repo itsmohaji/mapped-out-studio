@@ -4,7 +4,7 @@ import { MediaLibraryComponent } from '@gitroom/frontend/components/library/medi
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Media Library`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Media Library`,
   description: '',
 };
 

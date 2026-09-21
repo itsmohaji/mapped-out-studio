@@ -79,7 +79,7 @@ describe('deriveDbuCustomerLinks', () => {
     expect(plan.conflicts[0].reason).toBe('already-linked-elsewhere');
   });
 
-  it('never links one DBU client to two Mapped Out clients', () => {
+  it('never links one DBU client to two Mapped Lab clients', () => {
     const plan = deriveDbuCustomerLinks(
       [
         { id: 'i1', customerId: 'c1', dbuClientId: 'd1', dbuClientName: 'Époque' },

@@ -213,7 +213,7 @@ const DbuLinkPreview: FC<{ onApplied: () => void }> = ({ onApplied }) => {
             {data.creates.length}{' '}
             {t(
               'dbu_link_creates',
-              'DBU clients have channels in no Mapped Out client — these would be created'
+              'DBU clients have channels in no Mapped Lab client — these would be created'
             )}
           </div>
           {data.creates.map((create) => (

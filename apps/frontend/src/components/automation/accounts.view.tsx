@@ -184,7 +184,7 @@ export const AccountsView: FC<{
       {!!rest.length && (
         <div className="flex flex-col gap-[12px]">
           <div className="text-[12.5px] text-textItemBlur">
-            These platforms do not offer the APIs automation needs. Not a Mapped Out limitation.
+            These platforms do not offer the APIs automation needs. Not a Mapped Lab limitation.
           </div>
           <div className="grid gap-[14px] sm:gap-[16px] grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))]">
             {rest.map((a) => (

@@ -4,7 +4,7 @@ import { AiOrchestraComponent } from '@gitroom/frontend/components/ai-orchestra/
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} AI Assistant`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} AI Assistant`,
   description: '',
 };
 

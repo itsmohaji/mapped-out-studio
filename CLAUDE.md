@@ -1,5 +1,10 @@
 This project is Postiz, a tool to schedule social media and chat posts to 28+ channels.
 
+**Product name: Mapped Lab** (renamed from Mapped Out, 2026-09-21). Everything the user sees says Mapped Lab.
+Technical names deliberately still say mappedout until a planned domain migration: the domain
+`social.mappedout.co`, the branch `mappedout-branding`, the image tag `:mappedout`, the workflow
+"Build Mapped Out Image", env vars such as `MAPPED_OUT_SIGNING_SECRET`, and the vault folder `30-MappedOut`.
+
 ## ⛔ No local environment — production is the only environment
 
 **Mapped Out runs at `https://social.mappedout.co`. Do not run it locally and do not ask for a local URL.**

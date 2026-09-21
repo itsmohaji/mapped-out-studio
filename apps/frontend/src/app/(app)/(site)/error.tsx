@@ -23,7 +23,7 @@ export default function SiteError({
     // page is known about without a client having to tell us.
     reportError(error, { tags: { area: 'page' } });
     // Also put it in the console with a stack, for whoever has devtools open.
-    console.error('[Mapped Out] page crashed:', error);
+    console.error('[Mapped Lab] page crashed:', error);
   }, [error]);
 
   return (

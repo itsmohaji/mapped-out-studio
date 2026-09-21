@@ -15,7 +15,7 @@ import { RenderPreviewDateClient } from '@gitroom/frontend/components/preview/re
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Preview`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Preview`,
   description: '',
 };
 export default async function Auth(

@@ -190,7 +190,7 @@ export function pageContextFor(pathname?: string | null): PageContext {
 
   return {
     page: 'other',
-    label: 'Mapped Out',
+    label: 'Mapped Lab',
     focus: 'the workspace as a whole',
     task: 'chat',
     suggestions: [

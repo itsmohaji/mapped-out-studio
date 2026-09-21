@@ -4,7 +4,7 @@ import { ClientsComponent } from '@gitroom/frontend/components/clients/clients.c
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Clients`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Clients`,
   description: '',
 };
 

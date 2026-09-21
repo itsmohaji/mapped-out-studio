@@ -240,12 +240,12 @@ const OnboardingStep2: FC<{ onBack: () => void; onFinish: () => void }> = ({
     <div className="flex flex-col gap-[24px] flex-1">
       <div className="flex gap-[4px] flex-col text-center">
         <div className="text-[24px] font-semibold">
-          {t('watch_tutorial_title', 'Learn How to Use Mapped Out Social')}
+          {t('watch_tutorial_title', 'Learn How to Use Mapped Lab')}
         </div>
         <div className="text-[14px] text-customColor18">
           {t(
             'watch_tutorial_description',
-            'Watch this short video to learn how to get the most out of Mapped Out Social'
+            'Watch this short video to learn how to get the most out of Mapped Lab'
           )}
         </div>
       </div>
@@ -256,7 +256,7 @@ const OnboardingStep2: FC<{ onBack: () => void; onFinish: () => void }> = ({
           <iframe
             className="h-full aspect-video"
             src="https://www.youtube.com/embed/BdsCVvEYgHU?si=vvhaZJ8I5oXXvVJS?autoplay=1"
-            title="Mapped Out Social Tutorial"
+            title="Mapped Lab Tutorial"
             allow="autoplay"
             allowFullScreen
           />

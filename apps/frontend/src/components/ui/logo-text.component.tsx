@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Mapped Out brand mark (login / header). currentColor adapts to theme.
+// Mapped Lab brand mark (login / header). currentColor adapts to theme.
 export const LogoTextComponent = () => {
   return (
     <div className="flex items-center gap-[10px]">
@@ -10,7 +10,7 @@ export const LogoTextComponent = () => {
         viewBox="0 0 668.01 453.98"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="Mapped Out Social"
+        aria-label="Mapped Lab"
       >
         <path
           fill="currentColor"
@@ -26,7 +26,7 @@ export const LogoTextComponent = () => {
         />
       </svg>
       <span className="text-[20px] font-semibold tracking-tight">
-        Mapped Out Social
+        Mapped Lab
       </span>
     </div>
   );

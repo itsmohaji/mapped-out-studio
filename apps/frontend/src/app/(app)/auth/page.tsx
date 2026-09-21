@@ -6,7 +6,7 @@ import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.si
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Mapped Out Social' : 'Gitroom'} Register`,
+  title: `${isGeneralServerSide() ? 'Mapped Lab' : 'Gitroom'} Register`,
   description: '',
 };
 export default async function Auth(params: {

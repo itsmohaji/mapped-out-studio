@@ -290,7 +290,7 @@ export const ReportsComponent: FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `mapped-out-report-${dayjs().format('YYYY-MM-DD')}-${date}d.csv`;
+    a.download = `mapped-lab-report-${dayjs().format('YYYY-MM-DD')}-${date}d.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.show(t('report_exported', 'Report exported'));
